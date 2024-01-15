@@ -17,11 +17,12 @@ using Dalamud.Logging;
 using System.Threading.Tasks;
 using Dalamud.Game.Text.SeStringHandling.Payloads;
 using Dalamud.Game.Text.SeStringHandling;
+using Dalamud.Plugin.Ipc.Exceptions;
 using System.Text.RegularExpressions;
 
 namespace HuntAlert
 {
-    public sealed class Plugin : IDalamudPlugin
+    public sealed partial class Plugin : IDalamudPlugin
     {
         public string Name => "Hunt Alert";
         private const string CommandName = "/huntalert";
@@ -74,9 +75,10 @@ namespace HuntAlert
 
             LinkPayload = PluginInterface.AddChatLinkHandler(0, (id, s) =>
             {
+                var msg = RemoveSymbolsRegex().Replace(s.ToString(), "");
                 NotifyWindow.IsOpen = true;
-                NotifyWindow.CurrentPayload = s.ToString();
-                PluginLog.Debug($"Opening window for message {s}");
+                NotifyWindow.CurrentPayload = msg;
+                PluginLog.Debug($"Opening window for message {msg}");
             });
         }
 
@@ -102,7 +104,7 @@ namespace HuntAlert
 
         private async Task ReconnectWebSocket()
         {
-            int retryInterval = 5000; // milliseconds to wait before retrying to connect
+            var retryInterval = 5000; // milliseconds to wait before retrying to connect
             while (!_cancellationTokenSource.IsCancellationRequested && _webSocket.State != WebSocketState.Open)
             {
                 try
@@ -238,7 +240,7 @@ namespace HuntAlert
 
                     try
                     {
-                        HuntMessage huntMessage = JsonConvert.DeserializeObject<HuntMessage>(messageString);
+                        var huntMessage = JsonConvert.DeserializeObject<HuntMessage>(messageString);
 
 
                         // Create a dictionary mapping hunt types to their corresponding configuration flags
@@ -253,8 +255,8 @@ namespace HuntAlert
 
                         foreach (var huntType in huntTypeConfigMap.Keys)
                         {
-                            bool isCorrectHuntType = huntMessage.Kind.Contains(huntType) && huntTypeConfigMap[huntType];
-                            bool isDataCenterEnabled = worldDataCenterMap.TryGetValue(huntMessage.World, out var dataCenter) &&
+                            var isCorrectHuntType = huntMessage.Kind.Contains(huntType) && huntTypeConfigMap[huntType];
+                            var isDataCenterEnabled = worldDataCenterMap.TryGetValue(huntMessage.World, out var dataCenter) &&
                                                        IsDataCenterEnabled(dataCenter);
 
                             if (isCorrectHuntType && isDataCenterEnabled)
@@ -279,8 +281,9 @@ namespace HuntAlert
                                 // Since the handling code is the same for all hunts, place it here
                                 var message = new SeStringBuilder().Add(LinkPayload).AddText("New " + huntMessage.Kind + " train starting soon on " + huntMessage.World + "!!").Add(RawPayload.LinkTerminator).Build();
                                 ChatGui.Print(new() { Message = message });
-                                PluginLog.Debug($"Adding cache entry {message}");
-                                NotifyWindow.Cache[message.ToString()] = messageContent;
+                                var msg = RemoveSymbolsRegex().Replace(message.ToString(), "");
+                                PluginLog.Debug($"Adding cache entry {msg}");
+                                NotifyWindow.Cache[msg] = huntMessage.Content;
 
                                 // Break out of the loop once a matching hunt type is found and handled
                                 break;
@@ -315,13 +318,23 @@ namespace HuntAlert
             }
         }
 
+        public void Test()
+        {
 
+            var message = new SeStringBuilder().Add(LinkPayload).AddText($"New test train starting soon on test !! {Environment.TickCount64}").Add(RawPayload.LinkTerminator).Build();
+            ChatGui.Print(new() { Message = message });
+            var msg = RemoveSymbolsRegex().Replace(message.ToString(), "");
+            PluginLog.Debug($"Adding cache entry {msg}");
+            NotifyWindow.Cache[msg] = $"Content {Environment.TickCount64}";
+        }
 
         public void Dispose()
         {
             this.WindowSystem.RemoveAllWindows();
             
             ConfigWindow.Dispose();
+
+            PluginInterface.RemoveChatLinkHandler();
 
             // Dispose of websocket
             try
@@ -359,5 +372,8 @@ namespace HuntAlert
         {
             ConfigWindow.IsOpen = true;
         }
+
+        [GeneratedRegex("[^a-zA-Z0-9]")]
+        private static partial Regex RemoveSymbolsRegex();
     }
 }

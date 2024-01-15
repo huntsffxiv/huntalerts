@@ -8,12 +8,14 @@ namespace HuntAlert.Windows;
 public class ConfigWindow : Window, IDisposable
 {
     private Configuration Configuration;
+    Plugin Plugin;
 
     public ConfigWindow(Plugin plugin) : base(
         "HuntAlerts Config",
         ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoScrollbar |
         ImGuiWindowFlags.NoScrollWithMouse)
     {
+        this.Plugin = plugin;
         this.Size = new Vector2(232, 280);
         this.SizeCondition = ImGuiCond.Always;
 
@@ -92,5 +94,6 @@ public class ConfigWindow : Window, IDisposable
             this.Configuration.Save();
         }
 
+        if (ImGui.Button("Test")) Plugin.Test();
     }
 }
