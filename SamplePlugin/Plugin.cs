@@ -19,6 +19,7 @@ using Dalamud.Game.Text.SeStringHandling.Payloads;
 using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Plugin.Ipc.Exceptions;
 using System.Text.RegularExpressions;
+using FFXIVClientStructs.FFXIV.Client.UI;
 
 namespace HuntAlert
 {
@@ -82,25 +83,95 @@ namespace HuntAlert
             });
         }
 
+        public static string WordWrap(string text, int maxLineLength)
+        {
+            var words = text.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            var currentLineLength = 0;
+            var result = new StringBuilder();
+
+            foreach (var word in words)
+            {
+                if (currentLineLength + word.Length + 1 > maxLineLength)
+                {
+                    result.AppendLine();
+                    currentLineLength = 0;
+                }
+
+                if (currentLineLength > 0)
+                {
+                    result.Append(' ');
+                    currentLineLength++;
+                }
+
+                result.Append(word);
+                currentLineLength += word.Length;
+            }
+
+            return result.ToString();
+        }
+
+
+        private System.Timers.Timer _pingTimer;
+        private bool _receivedPong = true;
+        private const int PingInterval = 15000; // 10 seconds
+
+        private void StartPingPong()
+        {
+            _pingTimer = new System.Timers.Timer(PingInterval);
+            _pingTimer.Elapsed += async (sender, e) =>
+            {
+                if (_webSocket.State == WebSocketState.Open)
+                {
+                    if (!_receivedPong)
+                    {
+                        // Pong not received, try to reconnect
+                        PluginLog.Warning("Pong not received, reconnecting...");
+                        await ReconnectWebSocket();
+                    }
+                    else
+                    {
+                        _receivedPong = false; // Reset the flag
+                        await SendPing();
+                    }
+                }
+            };
+            _pingTimer.AutoReset = true;
+            _pingTimer.Enabled = true;
+        }
+
+        private async Task SendPing()
+        {
+            if (_webSocket.State == WebSocketState.Open)
+            {
+                PluginLog.Verbose("Sending ping to server");
+                var buffer = new ArraySegment<byte>(Encoding.UTF8.GetBytes("ping"));
+                await _webSocket.SendAsync(buffer, WebSocketMessageType.Text, true, CancellationToken.None);
+            }
+        }
+
         private async void InitializeWebSocket()
         {
             _webSocket = new ClientWebSocket();
             try
             {
                 _cancellationTokenSource = new CancellationTokenSource();
+
                 // Connect to WebSocket
                 await _webSocket.ConnectAsync(new Uri("ws://huntrelay.eastus.cloudapp.azure.com:6789"), CancellationToken.None);
                 PluginLog.Information("Connected to WebSocket.");
+                //StartPingPong();
                 // Start listening for messages
                 StartReceiving(_cancellationTokenSource.Token);
             }
             catch (Exception ex)
             {
-                PluginLog.Error($"WebSocket connection error: {ex}");
+                PluginLog.Warning("Websocket connection error");
+                PluginLog.Verbose($"WebSocket connection error: {ex}");
                 // Start reconnection logic
                 await ReconnectWebSocket();
             }
         }
+
 
         private async Task ReconnectWebSocket()
         {
@@ -109,17 +180,20 @@ namespace HuntAlert
             {
                 try
                 {
+                    //_pingTimer?.Stop();
                     PluginLog.Information("Attempting to reconnect WebSocket...");
                     await Task.Delay(retryInterval); // Wait before reconnecting
                     _webSocket.Dispose(); // Dispose the old instance
                     _webSocket = new ClientWebSocket(); // Create a new instance
                     await _webSocket.ConnectAsync(new Uri("ws://huntrelay.eastus.cloudapp.azure.com:6789"), CancellationToken.None);
                     PluginLog.Information("Reconnected to WebSocket.");
+                    //_pingTimer?.Start();
                     StartReceiving(_cancellationTokenSource.Token); // Start listening for messages again
                 }
                 catch (Exception ex)
                 {
-                    PluginLog.Error($"WebSocket reconnection error: {ex}");
+                    PluginLog.Warning($"Websocket reconnection error");
+                    PluginLog.Verbose($"WebSocket reconnection error: {ex}");
                     // Loop will continue until connection is re-established
                 }
             }
@@ -151,7 +225,7 @@ namespace HuntAlert
         private static string ReplaceTimestampsWithLocalTime(string input)
         {
             // Regex pattern to find timestamps
-            string pattern = @"<t:(\d+):t>";
+            string pattern = @"<t:(\d+):R>";
 
             // Replace each match in the input string
             return Regex.Replace(input, pattern, match =>
@@ -170,7 +244,7 @@ namespace HuntAlert
         private static string RemoveDiscordEmojis(string input)
         {
             // Regex pattern to find Discord emojis
-            string emojiPattern = @"<:[^:]+:\d+>";
+            string emojiPattern = @"<a?:(\w+):\d+>";
 
             // Replace each match (Discord emoji) with an empty string
             return Regex.Replace(input, emojiPattern, "");
@@ -238,10 +312,18 @@ namespace HuntAlert
                     // Process received message
                     var messageString = Encoding.UTF8.GetString(buffer, 0, result.Count);
 
+                    if (messageString == "pong")
+                    {
+                        _receivedPong = true;
+                        PluginLog.Verbose("Recieved a pong response");
+                        continue;
+                    }
+
                     try
                     {
                         var huntMessage = JsonConvert.DeserializeObject<HuntMessage>(messageString);
 
+                        PluginLog.Verbose($"New train data received: Kind:" + huntMessage.Kind + " | World:" + huntMessage.World);
 
                         // Create a dictionary mapping hunt types to their corresponding configuration flags
                         var huntTypeConfigMap = new Dictionary<string, bool>
@@ -277,13 +359,18 @@ namespace HuntAlert
                                 // Adds header to the message
                                 messageContent = "Hunt: " + huntMessage.Kind + Environment.NewLine + "World: " + huntMessage.World + Environment.NewLine + Environment.NewLine + messageContent;
 
+                                // Wordwrap really long lines
+                                messageContent = WordWrap(messageContent,200);
+
                                 // Code to handle the hunt
                                 // Since the handling code is the same for all hunts, place it here
                                 var message = new SeStringBuilder().Add(LinkPayload).AddText("New " + huntMessage.Kind + " train starting soon on " + huntMessage.World + "!!").Add(RawPayload.LinkTerminator).Build();
                                 ChatGui.Print(new() { Message = message });
                                 var msg = RemoveSymbolsRegex().Replace(message.ToString(), "");
                                 PluginLog.Debug($"Adding cache entry {msg}");
-                                NotifyWindow.Cache[msg] = huntMessage.Content;
+                                NotifyWindow.Cache[msg] = messageContent;
+
+                                UIModule.PlayChatSoundEffect((uint)this.Configuration.soundEffect); // Play the selected sound effect
 
                                 // Break out of the loop once a matching hunt type is found and handled
                                 break;
@@ -295,8 +382,8 @@ namespace HuntAlert
                     catch (JsonException ex)
                     {
                         // Handle JSON parsing error
-                        ChatGui.Print("Plugin had issues parsing json");
-                        PluginLog.Warning($"{ex}");
+                        PluginLog.Warning("Plugin had issues parsing json");
+                        PluginLog.Verbose($"Plugin had issues parsing json: {ex}");
                     }
                 }
             }
