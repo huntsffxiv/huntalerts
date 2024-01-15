@@ -17,6 +17,7 @@ using Dalamud.Logging;
 using System.Threading.Tasks;
 using Dalamud.Game.Text.SeStringHandling.Payloads;
 using Dalamud.Game.Text.SeStringHandling;
+using System.Text.RegularExpressions;
 
 namespace HuntAlert
 {
@@ -145,6 +146,34 @@ namespace HuntAlert
         }
 
 
+        private static string ReplaceTimestampsWithLocalTime(string input)
+        {
+            // Regex pattern to find timestamps
+            string pattern = @"<t:(\d+):t>";
+
+            // Replace each match in the input string
+            return Regex.Replace(input, pattern, match =>
+            {
+                // Extract the Unix timestamp from the match
+                long unixTimestamp = long.Parse(match.Groups[1].Value);
+
+                // Convert Unix timestamp to DateTime
+                DateTime dateTime = DateTimeOffset.FromUnixTimeSeconds(unixTimestamp).ToLocalTime().DateTime;
+
+                // Format the DateTime as needed, e.g., "MM/dd/yyyy HH:mm:ss"
+                return dateTime.ToString("g"); // or any other format
+            });
+        }
+
+        private static string RemoveDiscordEmojis(string input)
+        {
+            // Regex pattern to find Discord emojis
+            string emojiPattern = @"<:[^:]+:\d+>";
+
+            // Replace each match (Discord emoji) with an empty string
+            return Regex.Replace(input, emojiPattern, "");
+        }
+
 
         private async void StartReceiving(CancellationToken cancellationToken)
         {
@@ -234,12 +263,24 @@ namespace HuntAlert
                                 PluginLog.Debug($"ShadowbringersHunts setting: {this.Configuration.ShadowbringersHunts}");
                                 PluginLog.Debug($"CenturioHunts setting: {this.Configuration.CenturioHunts}");
 
+                                // Format the main hunt message
+                                string messageContent = huntMessage.Content;
+
+                                // Fix timestamps from unix time to local time
+                                messageContent = ReplaceTimestampsWithLocalTime(messageContent);
+
+                                // Remove emojis from the message
+                                messageContent = RemoveDiscordEmojis(messageContent);
+
+                                // Adds header to the message
+                                messageContent = "Hunt: " + huntMessage.Kind + Environment.NewLine + "World: " + huntMessage.World + Environment.NewLine + Environment.NewLine + messageContent;
+
                                 // Code to handle the hunt
                                 // Since the handling code is the same for all hunts, place it here
                                 var message = new SeStringBuilder().Add(LinkPayload).AddText("New " + huntMessage.Kind + " train starting soon on " + huntMessage.World + "!!").Add(RawPayload.LinkTerminator).Build();
                                 ChatGui.Print(new() { Message = message });
                                 PluginLog.Debug($"Adding cache entry {message}");
-                                NotifyWindow.Cache[message.ToString()] = huntMessage.Content;
+                                NotifyWindow.Cache[message.ToString()] = messageContent;
 
                                 // Break out of the loop once a matching hunt type is found and handled
                                 break;
