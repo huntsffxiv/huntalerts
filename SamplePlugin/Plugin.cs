@@ -86,7 +86,7 @@ namespace HuntAlert
             {
                 _cancellationTokenSource = new CancellationTokenSource();
                 // Connect to WebSocket
-                await _webSocket.ConnectAsync(new Uri("ws://localhost:6789"), CancellationToken.None);
+                await _webSocket.ConnectAsync(new Uri("ws://huntrelay.eastus.cloudapp.azure.com:6789"), CancellationToken.None);
                 PluginLog.Information("Connected to WebSocket.");
                 // Start listening for messages
                 StartReceiving(_cancellationTokenSource.Token);
@@ -110,7 +110,7 @@ namespace HuntAlert
                     await Task.Delay(retryInterval); // Wait before reconnecting
                     _webSocket.Dispose(); // Dispose the old instance
                     _webSocket = new ClientWebSocket(); // Create a new instance
-                    await _webSocket.ConnectAsync(new Uri("ws://localhost:6789"), CancellationToken.None);
+                    await _webSocket.ConnectAsync(new Uri("ws://huntrelay.eastus.cloudapp.azure.com:6789"), CancellationToken.None);
                     PluginLog.Information("Reconnected to WebSocket.");
                     StartReceiving(_cancellationTokenSource.Token); // Start listening for messages again
                 }
