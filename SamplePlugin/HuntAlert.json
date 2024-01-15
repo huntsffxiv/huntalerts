@@ -1,7 +1,7 @@
 {
-  "Author": "your name here",
-  "Name": "Sample Plugin",
-  "Punchline": "A short one-liner that shows up in /xlplugins.",
+  "Author": "FFXIV Hunts",
+  "Name": "Hunt Alert",
+  "Punchline": "Notifys you when a Hunt is happening soon",
   "Description": "A description that shows up in /xlplugins. List any major slash-command(s).",
   "ApplicableVersion": "any",
   "Tags": [
