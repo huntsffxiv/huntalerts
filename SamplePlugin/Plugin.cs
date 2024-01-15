@@ -15,6 +15,8 @@ using static HuntAlert.Plugin;
 using FFXIVClientStructs.FFXIV.Client.System;
 using Dalamud.Logging;
 using System.Threading.Tasks;
+using Dalamud.Game.Text.SeStringHandling.Payloads;
+using Dalamud.Game.Text.SeStringHandling;
 
 namespace HuntAlert
 {
@@ -31,17 +33,22 @@ namespace HuntAlert
 
         private DalamudPluginInterface PluginInterface { get; init; }
         private ICommandManager CommandManager { get; init; }
+        private IDataManager Data { get; init; }
         public Configuration Configuration { get; init; }
-        public WindowSystem WindowSystem = new("SamplePlugin");
+        public WindowSystem WindowSystem = new("HuntAlert");
 
         private ConfigWindow ConfigWindow { get; init; }
 
+        DalamudLinkPayload LinkPayload;
+        NotifyWindow NotifyWindow;
+
         public Plugin(
-            [RequiredVersion("1.0")] DalamudPluginInterface pluginInterface,
-            [RequiredVersion("1.0")] ICommandManager commandManager)
+            DalamudPluginInterface pluginInterface,
+            ICommandManager commandManager, IDataManager data)
         {
             this.PluginInterface = pluginInterface;
             this.CommandManager = commandManager;
+            this.Data = data;
 
             this.Configuration = this.PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
             this.Configuration.Initialize(this.PluginInterface);
@@ -51,6 +58,8 @@ namespace HuntAlert
             ConfigWindow = new ConfigWindow(this);
             
             WindowSystem.AddWindow(ConfigWindow);
+            NotifyWindow = new();
+            WindowSystem.AddWindow(NotifyWindow);
 
             this.CommandManager.AddHandler(CommandName, new CommandInfo(OnCommand)
             {
@@ -61,6 +70,13 @@ namespace HuntAlert
             this.PluginInterface.UiBuilder.OpenConfigUi += DrawConfigUI;
 
             InitializeWebSocket();
+
+            LinkPayload = PluginInterface.AddChatLinkHandler(0, (id, s) =>
+            {
+                NotifyWindow.IsOpen = true;
+                NotifyWindow.CurrentPayload = s.ToString();
+                PluginLog.Debug($"Opening window for message {s}");
+            });
         }
 
         private async void InitializeWebSocket()
@@ -220,8 +236,10 @@ namespace HuntAlert
 
                                 // Code to handle the hunt
                                 // Since the handling code is the same for all hunts, place it here
-                                ChatGui.Print("New " + huntMessage.Kind + " train starting soon on " + huntMessage.World + "!!");
-                                ChatGui.Print(huntMessage.Content);
+                                var message = new SeStringBuilder().Add(LinkPayload).AddText("New " + huntMessage.Kind + " train starting soon on " + huntMessage.World + "!!").Add(RawPayload.LinkTerminator).Build();
+                                ChatGui.Print(new() { Message = message });
+                                PluginLog.Debug($"Adding cache entry {message}");
+                                NotifyWindow.Cache[message.ToString()] = huntMessage.Content;
 
                                 // Break out of the loop once a matching hunt type is found and handled
                                 break;
