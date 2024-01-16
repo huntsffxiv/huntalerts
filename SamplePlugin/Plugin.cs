@@ -25,7 +25,7 @@ namespace HuntAlerts
 {
     public sealed partial class Plugin : IDalamudPlugin
     {
-        public string Name => "Hunt Alert";
+        public string Name => "Hunt Alerts";
         private const string CommandName = "/huntalerts";
         private ClientWebSocket _webSocket;
         private IChatGui _chatGui;
@@ -188,6 +188,81 @@ namespace HuntAlerts
             };
         }
 
+        private bool IsWorldEnabled(string world)
+        {
+            return world switch
+            {
+                // Aether
+                "Midgardsormr" => this.Configuration.MidgardsormrWorld,
+                "Faerie" => this.Configuration.FaerieWorld,
+                "Jenova" => this.Configuration.JenovaWorld,
+                "Cactuar" => this.Configuration.CactuarWorld,
+                "Sargatanas" => this.Configuration.SargatanasWorld,
+                "Adamantoise" => this.Configuration.AdamantoiseWorld,
+                "Siren" => this.Configuration.SirenWorld,
+                "Gilgamesh" => this.Configuration.GilgameshWorld,
+
+                // Primal
+                "Behemoth" => this.Configuration.BehemothWorld,
+                "Excalibur" => this.Configuration.ExcaliburWorld,
+                "Exodus" => this.Configuration.ExodusWorld,
+                "Famfrit" => this.Configuration.FamfritWorld,
+                "Hyperion" => this.Configuration.HyperionWorld,
+                "Lamia" => this.Configuration.LamiaWorld,
+                "Leviathan" => this.Configuration.LeviathanWorld,
+                "Ultros" => this.Configuration.UltrosWorld,
+
+                // Crystal
+                "Balmung" => this.Configuration.BalmungWorld,
+                "Brynhildr" => this.Configuration.BrynhildrWorld,
+                "Coeurl" => this.Configuration.CoeurlWorld,
+                "Diabolos" => this.Configuration.DiabolosWorld,
+                "Goblin" => this.Configuration.GoblinWorld,
+                "Malboro" => this.Configuration.MalboroWorld,
+                "Mateus" => this.Configuration.MateusWorld,
+                "Zalera" => this.Configuration.ZaleraWorld,
+
+                // Dynamis
+                "Halicarnassus" => this.Configuration.HalicarnassusWorld,
+                "Maduin" => this.Configuration.MaduinWorld,
+                "Marilith" => this.Configuration.MarilithWorld,
+                "Seraph" => this.Configuration.SeraphWorld,
+
+                // Chaos
+                "Cerberus" => this.Configuration.CerberusWorld,
+                "Louisoix" => this.Configuration.LouisoixWorld,
+                "Moogle" => this.Configuration.MoogleWorld,
+                "Omega" => this.Configuration.OmegaWorld,
+                "Phantom" => this.Configuration.PhantomWorld,
+                "Ragnarok" => this.Configuration.RagnarokWorld,
+                "Sagittarius" => this.Configuration.SagittariusWorld,
+                "Spriggan" => this.Configuration.SprigganWorld,
+
+                // Light
+                "Alpha" => this.Configuration.AlphaWorld,
+                "Lich" => this.Configuration.LichWorld,
+                "Odin" => this.Configuration.OdinWorld,
+                "Phoenix" => this.Configuration.PhoenixWorld,
+                "Raiden" => this.Configuration.RaidenWorld,
+                "Shiva" => this.Configuration.ShivaWorld,
+                "Twintania" => this.Configuration.TwintaniaWorld,
+                "Zodiark" => this.Configuration.ZodiarkWorld,
+                _ => false,
+            };
+        }
+
+
+        private bool IsHuntEnabled(string hunt)
+        {
+            return hunt switch
+            {
+                "Endwalker" => this.Configuration.EndwalkerHunts,
+                "Shadowbringers" => this.Configuration.ShadowbringersHunts,
+                "Centurio" => this.Configuration.CenturioHunts,
+                _ => false,
+            };
+        }
+
 
         private static string ReplaceTimestampsWithLocalTime(string input)
         {
@@ -233,65 +308,13 @@ namespace HuntAlerts
         private async void StartReceiving(CancellationToken cancellationToken)
         {
 
-            var worldDataCenterMap = new Dictionary<string, string>
+            // Create a dictionary mapping hunt types to their corresponding configuration flags
+            var HuntTypeEnabledMap = new Dictionary<string, bool>
             {
-                // Aether
-                { "Adamantoise", "Aether" },
-                { "Cactuar", "Aether" },
-                { "Faerie", "Aether" },
-                { "Gilgamesh", "Aether" },
-                { "Jenova", "Aether" },
-                { "Midgardsormr", "Aether" },
-                { "Sargatanas", "Aether" },
-                { "Siren", "Aether" },
-
-                // Crystal
-                { "Balmung", "Crystal" },
-                { "Brynhildr", "Crystal" },
-                { "Coeurl", "Crystal" },
-                { "Diabolos", "Crystal" },
-                { "Goblin", "Crystal" },
-                { "Malboro", "Crystal" },
-                { "Mateus", "Crystal" },
-                { "Zalera", "Crystal" },
-
-                // Primal
-                { "Behemoth", "Primal" },
-                { "Excalibur", "Primal" },
-                { "Exodus", "Primal" },
-                { "Famfrit", "Primal" },
-                { "Hyperion", "Primal" },
-                { "Lamia", "Primal" },
-                { "Leviathan", "Primal" },
-                { "Ultros", "Primal" },
-
-                // Dynamis
-                { "Halicarnassus", "Dynamis" },
-                { "Maduin", "Dynamis" },
-                { "Marilith", "Dynamis" },
-                { "Seraph", "Dynamis" },
-
-                // Light
-                { "Cerberus", "Chaos" },
-                { "Louisoix", "Chaos" },
-                { "Moogle", "Chaos" },
-                { "Omega", "Chaos" },
-                { "Phantom", "Chaos" },
-                { "Ragnarok", "Chaos" },
-                { "Sagittarius", "Chaos" },
-                { "Spriggan", "Chaos" },
-
-                // Chaos
-                { "Alpha", "Light" },
-                { "Lich", "Light" },
-                { "Odin", "Light" },
-                { "Phoenix", "Light" },
-                { "Raiden", "Light" },
-                { "Shiva", "Light" },
-                { "Twintania", "Light" },
-                { "Zodiark", "Light" },
-
-                // Add mappings for all worlds in their respective data centers
+                { "Shadowbringers", this.Configuration.ShadowbringersHunts },
+                { "Centurio", this.Configuration.CenturioHunts },
+                { "Endwalker", this.Configuration.EndwalkerHunts },
+                // Add more mappings as necessary
             };
 
 
@@ -313,8 +336,25 @@ namespace HuntAlerts
 
                         PluginLog.Verbose($"New train data received: Kind:" + huntMessage.Kind + " | World:" + huntMessage.World);
 
+
+
+                        // Check if datacenter is enabled
+                        bool isDataCenterEnabled = this.Configuration.WorldDatacenterMap.TryGetValue(huntMessage.World, out var dataCenter) && IsDataCenterEnabled(dataCenter);
+
+                        // Check if the world is enabled
+                        bool isWorldEnabled = IsWorldEnabled(huntMessage.World);
+
+
+                        // Check if the hunt type is enabled
+                        bool isHuntEnabled = IsHuntEnabled(huntMessage.Kind);
+                        
+
+
+
                         string homeworldName = "";
                         string currentworldName = "";
+
+
                         if(this.ClientState.IsLoggedIn && this.ClientState.LocalPlayer != null)
                         {
                             homeworldName = ClientState.LocalPlayer.HomeWorld.GameData.Name;
@@ -328,96 +368,83 @@ namespace HuntAlerts
                         bool currentworldOnly = this.Configuration.CurrentWorldOnly;
                         bool homeworldOnly = this.Configuration.HomeWorldOnly;
 
-                        // Create a dictionary mapping hunt types to their corresponding configuration flags
-                        var huntTypeConfigMap = new Dictionary<string, bool>
-                        {
-                            { "Shadowbringers", this.Configuration.ShadowbringersHunts },
-                            { "Centurio", this.Configuration.CenturioHunts },
-                            { "Endwalker", this.Configuration.EndwalkerHunts },
-                            // Add more mappings as necessary
-                        };
-
-                        bool logPrinted = false;
-                        foreach (var huntType in huntTypeConfigMap.Keys)
-                        {
-                            var isCorrectHuntType = huntMessage.Kind.Contains(huntType) && huntTypeConfigMap[huntType];
-                            var isDataCenterEnabled = worldDataCenterMap.TryGetValue(huntMessage.World, out var dataCenter) &&
-                                                      IsDataCenterEnabled(dataCenter);
-
-                            bool isWorldMatch = true;
-                            if (currentworldOnly && huntMessage.World != currentworldName)
-                            {
-                                isWorldMatch = false; // Hunt is not in the player's current world
-                                if (!logPrinted)
-                                {
-                                    PluginLog.Verbose("Current World Only option is enabled and player is not on the hunt world currently, supressing notification");
-                                    logPrinted = true;
-                                }
-                                
-                            }
-                            if (homeworldOnly && huntMessage.World != homeworldName)
-                            {
-                                isWorldMatch = false; // Hunt is not in the player's home world
-                                if (!logPrinted)
-                                {
-                                    PluginLog.Verbose("Home World Only option is enabled and hunt is not for player's home world, supressing notification");
-                                    logPrinted = true;
-                                }
-                            }
-
-                            // Ensure the data center is still checked if neither world-specific setting is enabled
-                            bool isDataCenterCheckRequired = !currentworldOnly && !homeworldOnly;
-                            if (isDataCenterCheckRequired && !isDataCenterEnabled)
-                            {
-                                isWorldMatch = false; // Data center is not enabled
-                                if (!logPrinted)
-                                {
-                                    PluginLog.Verbose("Datacenter that hunt is for is not enabled in settings, supressing notification");
-                                    logPrinted = true;
-                                }
-                            }
-
-                            if (isCorrectHuntType && isWorldMatch)
-                            {
-                                PluginLog.Debug($"EndwalkerHunts setting: {this.Configuration.EndwalkerHunts}");
-                                PluginLog.Debug($"ShadowbringersHunts setting: {this.Configuration.ShadowbringersHunts}");
-                                PluginLog.Debug($"CenturioHunts setting: {this.Configuration.CenturioHunts}");
-
-                                // Format the main hunt message
-                                string messageContent = huntMessage.Content;
-
-                                // Fix timestamps from unix time to local time
-                                messageContent = ReplaceTimestampsWithLocalTime(messageContent);
-
-                                // Remove emojis from the message
-                                messageContent = RemoveDiscordEmojis(messageContent);
-
-                                // Adds header to the message
-                                messageContent = "Hunt: " + huntMessage.Kind + Environment.NewLine + "World: " + huntMessage.World + Environment.NewLine + "Posted: "+ convertTime(huntMessage.Posted_Epoch) + Environment.NewLine + Environment.NewLine + messageContent;
-
-                                // Wordwrap really long lines
-                                int maxlineLength = this.Configuration.MaxLineLength;
-                                messageContent = WordWrap(messageContent,maxlineLength);
-
-                                // Code to handle the hunt
-                                // Since the handling code is the same for all hunts, place it here
-                                var message = new SeStringBuilder().Add(LinkPayload).AddText("New " + huntMessage.Kind + " train starting soon on " + huntMessage.World + "!!").Add(RawPayload.LinkTerminator).Build();
-                                ChatGui.Print(new() { Message = message });
-                                var msg = RemoveSymbolsRegex().Replace(message.ToString(), "");
-                                PluginLog.Debug($"Adding cache entry {msg}");
-                                NotifyWindow.Cache[msg] = messageContent;
-
-                                // Play sound effect if one is set
-                                if (this.Configuration.soundEffect != 0)
-                                {
-                                    UIModule.PlayChatSoundEffect((uint)this.Configuration.soundEffect); // Play the selected sound effect
-                                }
-
-                                // Break out of the loop once a matching hunt type is found and handled
-                                break;
-                            }
+                        // Checks against Current world only option
+                        if (currentworldOnly && huntMessage.World != currentworldName)
+                        {        
+                            PluginLog.Verbose("Current World Only option is enabled and player is not on the hunt world currently, suppressing notification");
+                            continue;
                         }
 
+                        // Checks against Homeworld Only option
+                        if (homeworldOnly && huntMessage.World != homeworldName)
+                        {
+                            PluginLog.Verbose("Home World Only option is enabled and hunt is not for player's home world, suppressing notification");
+                            continue;
+                        }
+
+
+                        // Check if the data center is enabled
+                        if (!isDataCenterEnabled)
+                        {
+                            // Data center is not enabled or unknown world
+                            PluginLog.Verbose("Datacenter is not enabled, suppressing notification");
+                            continue;
+                        }
+
+                        // Check if the world is enabled
+                        if (!isWorldEnabled)
+                        {
+                            // World is not enabled
+                            PluginLog.Verbose("World is not enabled, suppressing notification");
+                            continue;
+                        }
+
+                        // Check if the hunt type is enabled
+                        if (!isHuntEnabled)
+                        {
+                            // Hunt type is not enabled
+                            PluginLog.Verbose("Hunt type is not enabled, suppressing notification");
+                            continue;
+                        }
+
+
+                        
+                        PluginLog.Debug($"EndwalkerHunts setting: {this.Configuration.EndwalkerHunts}");
+                        PluginLog.Debug($"ShadowbringersHunts setting: {this.Configuration.ShadowbringersHunts}");
+                        PluginLog.Debug($"CenturioHunts setting: {this.Configuration.CenturioHunts}");
+
+                        // Format the main hunt message
+                        string messageContent = huntMessage.Content;
+
+                        // Fix timestamps from unix time to local time
+                        messageContent = ReplaceTimestampsWithLocalTime(messageContent);
+
+                        // Remove emojis from the message
+                        messageContent = RemoveDiscordEmojis(messageContent);
+
+                        // Adds header to the message
+                        messageContent = "Hunt: " + huntMessage.Kind + Environment.NewLine + "World: " + huntMessage.World + Environment.NewLine + "Posted: "+ convertTime(huntMessage.Posted_Epoch) + Environment.NewLine + Environment.NewLine + messageContent;
+
+                        // Wordwrap really long lines
+                        int maxlineLength = this.Configuration.MaxLineLength;
+                        messageContent = WordWrap(messageContent,maxlineLength);
+
+                        // Code to handle the hunt
+                        // Since the handling code is the same for all hunts, place it here
+                        var message = new SeStringBuilder().Add(LinkPayload).AddText("New " + huntMessage.Kind + " train starting soon on " + huntMessage.World + "!!").Add(RawPayload.LinkTerminator).Build();
+                        ChatGui.Print(new() { Message = message });
+                        var msg = RemoveSymbolsRegex().Replace(message.ToString(), "");
+                        PluginLog.Debug($"Adding cache entry {msg}");
+                        NotifyWindow.Cache[msg] = messageContent;
+
+                        // Play sound effect if one is set
+                        if (this.Configuration.soundEffect != 0)
+                        {
+                            UIModule.PlayChatSoundEffect((uint)this.Configuration.soundEffect); // Play the selected sound effect
+                        }
+
+                        // Break out of the loop once a matching hunt type is found and handled
+                        //break;
 
                     }
                     catch (JsonException ex)

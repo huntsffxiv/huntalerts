@@ -1,6 +1,7 @@
 using Dalamud.Configuration;
 using Dalamud.Plugin;
 using System;
+using System.Collections.Generic;
 
 namespace HuntAlerts
 {
@@ -84,9 +85,77 @@ namespace HuntAlerts
         [NonSerialized]
         private DalamudPluginInterface? PluginInterface;
 
+
+        // Add a dictionary to map world names to their Datacenter
+        [NonSerialized]
+        public Dictionary<string, string> WorldDatacenterMap;
+
         public void Initialize(DalamudPluginInterface pluginInterface)
         {
             this.PluginInterface = pluginInterface;
+
+            
+
+            WorldDatacenterMap = new Dictionary<string, string>
+            {
+                // Aether
+                { "Adamantoise", "Aether" },
+                { "Cactuar", "Aether" },
+                { "Faerie", "Aether" },
+                { "Gilgamesh", "Aether" },
+                { "Jenova", "Aether" },
+                { "Midgardsormr", "Aether" },
+                { "Sargatanas", "Aether" },
+                { "Siren", "Aether" },
+
+                // Crystal
+                { "Balmung", "Crystal" },
+                { "Brynhildr", "Crystal" },
+                { "Coeurl", "Crystal" },
+                { "Diabolos", "Crystal" },
+                { "Goblin", "Crystal" },
+                { "Malboro", "Crystal" },
+                { "Mateus", "Crystal" },
+                { "Zalera", "Crystal" },
+
+                // Primal
+                { "Behemoth", "Primal" },
+                { "Excalibur", "Primal" },
+                { "Exodus", "Primal" },
+                { "Famfrit", "Primal" },
+                { "Hyperion", "Primal" },
+                { "Lamia", "Primal" },
+                { "Leviathan", "Primal" },
+                { "Ultros", "Primal" },
+
+                // Dynamis
+                { "Halicarnassus", "Dynamis" },
+                { "Maduin", "Dynamis" },
+                { "Marilith", "Dynamis" },
+                { "Seraph", "Dynamis" },
+
+                // Light
+                { "Cerberus", "Chaos" },
+                { "Louisoix", "Chaos" },
+                { "Moogle", "Chaos" },
+                { "Omega", "Chaos" },
+                { "Phantom", "Chaos" },
+                { "Ragnarok", "Chaos" },
+                { "Sagittarius", "Chaos" },
+                { "Spriggan", "Chaos" },
+
+                // Chaos
+                { "Alpha", "Light" },
+                { "Lich", "Light" },
+                { "Odin", "Light" },
+                { "Phoenix", "Light" },
+                { "Raiden", "Light" },
+                { "Shiva", "Light" },
+                { "Twintania", "Light" },
+                { "Zodiark", "Light" },
+
+                // Add mappings for all worlds in their respective data centers
+            };
         }
 
         public void Save()
