@@ -31,8 +31,8 @@ namespace HuntAlerts
         private IChatGui _chatGui;
         private CancellationTokenSource _cancellationTokenSource;
 
-        //public string serverURI = "ws://huntrelay.eastus.cloudapp.azure.com:6789";
-        public string serverURI = "ws://localhost:6789";
+        public string serverURI = "ws://huntrelay.eastus.cloudapp.azure.com:6789";
+        //public string serverURI = "ws://localhost:6789";
 
 
         [PluginService] private static IChatGui ChatGui { get; set; }  // Use Dalamud's IoC container to get the IChatGui service
@@ -348,7 +348,6 @@ namespace HuntAlerts
                         // Check if the hunt type is enabled
                         bool isHuntEnabled = IsHuntEnabled(huntMessage.Kind);
                         
-
 
 
                         string homeworldName = "";
