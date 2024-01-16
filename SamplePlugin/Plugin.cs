@@ -37,6 +37,7 @@ namespace HuntAlert
         private DalamudPluginInterface PluginInterface { get; init; }
         private ICommandManager CommandManager { get; init; }
         private IDataManager Data { get; init; }
+        private IClientState ClientState { get; set; }
         public Configuration Configuration { get; init; }
         public WindowSystem WindowSystem = new("HuntAlert");
 
@@ -47,11 +48,12 @@ namespace HuntAlert
 
         public Plugin(
             DalamudPluginInterface pluginInterface,
-            ICommandManager commandManager, IDataManager data)
+            ICommandManager commandManager, IDataManager data, IClientState clientState)
         {
             this.PluginInterface = pluginInterface;
             this.CommandManager = commandManager;
             this.Data = data;
+            this.ClientState = clientState;
 
             this.Configuration = this.PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
             this.Configuration.Initialize(this.PluginInterface);
@@ -121,7 +123,6 @@ namespace HuntAlert
                 // Connect to WebSocket
                 await _webSocket.ConnectAsync(new Uri("ws://huntrelay.eastus.cloudapp.azure.com:6789"), _cancellationTokenSource.Token);
                 PluginLog.Information("Connected to WebSocket.");
-                //StartPingPong();
                 // Start listening for messages
                 StartReceiving(_cancellationTokenSource.Token);
             }
@@ -214,7 +215,6 @@ namespace HuntAlert
         private async void StartReceiving(CancellationToken cancellationToken)
         {
 
-
             var worldDataCenterMap = new Dictionary<string, string>
             {
                 // Aether
@@ -258,6 +258,7 @@ namespace HuntAlert
 
             try
             {
+                
                 var buffer = new byte[2048];
                 while (_webSocket.State == WebSocketState.Open && !cancellationToken.IsCancellationRequested)
                 {
@@ -268,9 +269,21 @@ namespace HuntAlert
 
                     try
                     {
+                        
                         var huntMessage = JsonConvert.DeserializeObject<HuntMessage>(messageString);
 
                         PluginLog.Verbose($"New train data received: Kind:" + huntMessage.Kind + " | World:" + huntMessage.World);
+
+                        string homeworldName = "";
+                        string currentworldName = "";
+                        if(this.ClientState.IsLoggedIn && this.ClientState.LocalPlayer != null)
+                        {
+                            homeworldName = ClientState.LocalPlayer.HomeWorld.GameData.Name;
+                            currentworldName = ClientState.LocalPlayer.CurrentWorld.GameData.Name;
+                        }
+
+                        bool currentworldOnly = this.Configuration.CurrentWorldOnly;
+                        bool homeworldOnly = this.Configuration.HomeWorldOnly;
 
                         // Create a dictionary mapping hunt types to their corresponding configuration flags
                         var huntTypeConfigMap = new Dictionary<string, bool>
@@ -317,7 +330,11 @@ namespace HuntAlert
                                 PluginLog.Debug($"Adding cache entry {msg}");
                                 NotifyWindow.Cache[msg] = messageContent;
 
-                                UIModule.PlayChatSoundEffect((uint)this.Configuration.soundEffect); // Play the selected sound effect
+                                // Play sound effect if one is set
+                                if (this.Configuration.soundEffect != 0)
+                                {
+                                    UIModule.PlayChatSoundEffect((uint)this.Configuration.soundEffect); // Play the selected sound effect
+                                }
 
                                 // Break out of the loop once a matching hunt type is found and handled
                                 break;

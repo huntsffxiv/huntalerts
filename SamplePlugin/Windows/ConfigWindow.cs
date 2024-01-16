@@ -4,6 +4,7 @@ using Dalamud.Interface.Windowing;
 using ImGuiNET;
 using FFXIVClientStructs.FFXIV.Client.UI;
 using System.Collections.Generic;
+using FFXIVClientStructs.Havok;
 
 namespace HuntAlert.Windows;
 
@@ -11,6 +12,8 @@ public class ConfigWindow : Window, IDisposable
 {
     private Configuration Configuration;
     Plugin Plugin;
+
+    string[] aetherWorlds = { "Any", "Midgardsormr" };
 
     public ConfigWindow(Plugin plugin) : base(
         "HuntAlerts Config",
@@ -60,10 +63,47 @@ public class ConfigWindow : Window, IDisposable
 
         // Create a simple header
         ImGui.NewLine();
+
+        // Optional: Draw a separator line
+        ImGui.Separator();
+
+        var homeworldonlyValue = this.Configuration.HomeWorldOnly;
+        if (ImGui.Checkbox("Homeworld Only", ref homeworldonlyValue))
+        {
+            this.Configuration.HomeWorldOnly = homeworldonlyValue;
+            if(homeworldonlyValue)
+            {
+                this.Configuration.CurrentWorldOnly = false;
+            }
+
+            // can save immediately on change, if you don't want to provide a "Save and Close" button
+            this.Configuration.Save();
+        }
+
+        var currentworldonlyValue = this.Configuration.CurrentWorldOnly;
+        if (ImGui.Checkbox("Current World Only", ref currentworldonlyValue))
+        {
+            this.Configuration.CurrentWorldOnly = currentworldonlyValue;
+            if(currentworldonlyValue)
+            {
+                this.Configuration.HomeWorldOnly = false;
+            }
+            // can save immediately on change, if you don't want to provide a "Save and Close" button
+
+            this.Configuration.Save();
+        }
+
+        // Create a simple header
+        ImGui.NewLine();
         ImGui.Text("Datacenter");
 
         // Optional: Draw a separator line
         ImGui.Separator();
+
+        if(currentworldonlyValue || homeworldonlyValue)
+        {
+            ImGui.BeginDisabled();
+        }
 
         var aetherValue = this.Configuration.Aether;
         if (ImGui.Checkbox("Aether", ref aetherValue))
@@ -95,6 +135,11 @@ public class ConfigWindow : Window, IDisposable
             this.Configuration.Dynamis = dynamisValue;
             // can save immediately on change, if you don't want to provide a "Save and Close" button
             this.Configuration.Save();
+        }
+        
+        if(currentworldonlyValue || homeworldonlyValue)
+        {
+            ImGui.EndDisabled();
         }
 
 

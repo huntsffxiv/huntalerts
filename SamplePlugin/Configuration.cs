@@ -13,6 +13,8 @@ namespace HuntAlert
         public bool ShadowbringersHunts { get; set; } = false;
         public bool CenturioHunts { get; set; } = false;
         public bool Aether { get; set; } = false;
+        public bool HomeWorldOnly { get; set; } = false;
+        public bool CurrentWorldOnly { get; set; } = false;
         public bool Primal { get; set; } = false;
         public bool Crystal { get; set; } = false;
         public bool Dynamis { get; set; } = false;
