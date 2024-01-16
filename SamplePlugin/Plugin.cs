@@ -178,6 +178,8 @@ namespace HuntAlert
                 "Primal" => this.Configuration.Primal,
                 "Crystal" => this.Configuration.Crystal,
                 "Dynamis" => this.Configuration.Dynamis,
+                "Light" => this.Configuration.Light,
+                "Chaos" => this.Configuration.Chaos,
                 _ => false,
             };
         }
@@ -252,6 +254,27 @@ namespace HuntAlert
                 { "Maduin", "Dynamis" },
                 { "Marilith", "Dynamis" },
                 { "Seraph", "Dynamis" },
+
+                // Light
+                { "Cerberus", "Light" },
+                { "Louisoix", "Light" },
+                { "Moogle", "Light" },
+                { "Omega", "Light" },
+                { "Phantom", "Light" },
+                { "Ragnarok", "Light" },
+                { "Sagittarius", "Light" },
+                { "Spriggan", "Light" },
+
+                // Chaos
+                { "Alpha", "Chaos" },
+                { "Lich", "Chaos" },
+                { "Odin", "Chaos" },
+                { "Phoenix", "Chaos" },
+                { "Raiden", "Chaos" },
+                { "Shiva", "Chaos" },
+                { "Twintania", "Chaos" },
+                { "Zodiark", "Chaos" },
+
                 // Add mappings for all worlds in their respective data centers
             };
 
@@ -280,6 +303,10 @@ namespace HuntAlert
                         {
                             homeworldName = ClientState.LocalPlayer.HomeWorld.GameData.Name;
                             currentworldName = ClientState.LocalPlayer.CurrentWorld.GameData.Name;
+                            PluginLog.Verbose($"Player is logged in. Homeworld: " + currentworldName + " | Currentworld: " + currentworldName);
+                        }else
+                        {
+                            PluginLog.Verbose($"Player is not logged in");
                         }
 
                         bool currentworldOnly = this.Configuration.CurrentWorldOnly;
@@ -294,14 +321,47 @@ namespace HuntAlert
                             // Add more mappings as necessary
                         };
 
-
+                        bool logPrinted = false;
                         foreach (var huntType in huntTypeConfigMap.Keys)
                         {
                             var isCorrectHuntType = huntMessage.Kind.Contains(huntType) && huntTypeConfigMap[huntType];
                             var isDataCenterEnabled = worldDataCenterMap.TryGetValue(huntMessage.World, out var dataCenter) &&
-                                                       IsDataCenterEnabled(dataCenter);
+                                                      IsDataCenterEnabled(dataCenter);
 
-                            if (isCorrectHuntType && isDataCenterEnabled)
+                            bool isWorldMatch = true;
+                            if (currentworldOnly && huntMessage.World != currentworldName)
+                            {
+                                isWorldMatch = false; // Hunt is not in the player's current world
+                                if (!logPrinted)
+                                {
+                                    PluginLog.Verbose("Current World Only option is enabled and player is not on the hunt world currently, supressing notification");
+                                    logPrinted = true;
+                                }
+                                
+                            }
+                            if (homeworldOnly && huntMessage.World != homeworldName)
+                            {
+                                isWorldMatch = false; // Hunt is not in the player's home world
+                                if (!logPrinted)
+                                {
+                                    PluginLog.Verbose("Home World Only option is enabled and hunt is not for player's home world, supressing notification");
+                                    logPrinted = true;
+                                }
+                            }
+
+                            // Ensure the data center is still checked if neither world-specific setting is enabled
+                            bool isDataCenterCheckRequired = !currentworldOnly && !homeworldOnly;
+                            if (isDataCenterCheckRequired && !isDataCenterEnabled)
+                            {
+                                isWorldMatch = false; // Data center is not enabled
+                                if (!logPrinted)
+                                {
+                                    PluginLog.Verbose("Datacenter that hunt is for is not enabled in settings, supressing notification");
+                                    logPrinted = true;
+                                }
+                            }
+
+                            if (isCorrectHuntType && isWorldMatch)
                             {
                                 PluginLog.Debug($"EndwalkerHunts setting: {this.Configuration.EndwalkerHunts}");
                                 PluginLog.Debug($"ShadowbringersHunts setting: {this.Configuration.ShadowbringersHunts}");

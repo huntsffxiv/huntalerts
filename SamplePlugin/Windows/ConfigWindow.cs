@@ -13,7 +13,6 @@ public class ConfigWindow : Window, IDisposable
     private Configuration Configuration;
     Plugin Plugin;
 
-    string[] aetherWorlds = { "Any", "Midgardsormr" };
 
     public ConfigWindow(Plugin plugin) : base(
         "HuntAlerts Config",
@@ -21,7 +20,7 @@ public class ConfigWindow : Window, IDisposable
         ImGuiWindowFlags.NoScrollWithMouse)
     {
         this.Plugin = plugin;
-        this.Size = new Vector2(232, 400);
+        this.Size = new Vector2(232, 450);
         this.SizeCondition = ImGuiCond.Always;
 
         this.Configuration = plugin.Configuration;
@@ -63,6 +62,7 @@ public class ConfigWindow : Window, IDisposable
 
         // Create a simple header
         ImGui.NewLine();
+        ImGui.Text("World Options");
 
         // Optional: Draw a separator line
         ImGui.Separator();
@@ -136,8 +136,24 @@ public class ConfigWindow : Window, IDisposable
             // can save immediately on change, if you don't want to provide a "Save and Close" button
             this.Configuration.Save();
         }
-        
-        if(currentworldonlyValue || homeworldonlyValue)
+
+        var lightValue = this.Configuration.Light;
+        if (ImGui.Checkbox("Light", ref lightValue))
+        {
+            this.Configuration.Light = lightValue;
+            // can save immediately on change, if you don't want to provide a "Save and Close" button
+            this.Configuration.Save();
+        }
+
+        var chaosValue = this.Configuration.Chaos;
+        if (ImGui.Checkbox("Chaos", ref chaosValue))
+        {
+            this.Configuration.Chaos = chaosValue;
+            // can save immediately on change, if you don't want to provide a "Save and Close" button
+            this.Configuration.Save();
+        }
+
+        if (currentworldonlyValue || homeworldonlyValue)
         {
             ImGui.EndDisabled();
         }

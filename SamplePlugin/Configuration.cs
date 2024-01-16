@@ -18,6 +18,8 @@ namespace HuntAlert
         public bool Primal { get; set; } = false;
         public bool Crystal { get; set; } = false;
         public bool Dynamis { get; set; } = false;
+        public bool Light { get; set; } = false;
+        public bool Chaos { get; set; } = false;
         public int soundEffect { get; set; } = 0;
 
         // the below exist just to make saving less cumbersome
