@@ -1,0 +1,12 @@
+{
+    "Author": "FFXIV Hunts",
+    "Name": "HuntAlerts",
+    "Punchline": "Notifys you when a Hunt is happening soon",
+    "Description": "Notifys you when a Hunt is happening soon",
+    "ApplicableVersion": "any",
+    "Tags": [
+        "sample",
+        "plugin",
+        "goats"
+    ]
+}

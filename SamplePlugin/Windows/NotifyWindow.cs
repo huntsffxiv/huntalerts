@@ -7,12 +7,12 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace HuntAlert.Windows;
+namespace HuntAlerts.Windows;
 public class NotifyWindow : Window
 {
     public Dictionary<string, string> Cache = [];
     public string CurrentPayload = "";
-    public NotifyWindow() : base("HuntAlert notification", ImGuiWindowFlags.AlwaysAutoResize)
+    public NotifyWindow() : base("HuntAlerts notification", ImGuiWindowFlags.AlwaysAutoResize)
     {
     }
 

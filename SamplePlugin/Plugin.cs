@@ -4,14 +4,14 @@ using Dalamud.Plugin;
 using System.IO;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin.Services;
-using HuntAlert.Windows;
+using HuntAlerts.Windows;
 using System.Net.WebSockets;
 using System.Threading;
 using System;
 using Newtonsoft.Json;
 using System.Text;
 using System.Collections.Generic;
-using static HuntAlert.Plugin;
+using static HuntAlerts.Plugin;
 using FFXIVClientStructs.FFXIV.Client.System;
 using Dalamud.Logging;
 using System.Threading.Tasks;
@@ -21,15 +21,18 @@ using Dalamud.Plugin.Ipc.Exceptions;
 using System.Text.RegularExpressions;
 using FFXIVClientStructs.FFXIV.Client.UI;
 
-namespace HuntAlert
+namespace HuntAlerts
 {
     public sealed partial class Plugin : IDalamudPlugin
     {
         public string Name => "Hunt Alert";
-        private const string CommandName = "/huntalert";
+        private const string CommandName = "/huntalerts";
         private ClientWebSocket _webSocket;
         private IChatGui _chatGui;
         private CancellationTokenSource _cancellationTokenSource;
+
+        //public string serverURI = "ws://huntrelay.eastus.cloudapp.azure.com:6789";
+        public string serverURI = "ws://localhost:6789";
 
 
         [PluginService] private static IChatGui ChatGui { get; set; }  // Use Dalamud's IoC container to get the IChatGui service
@@ -39,7 +42,7 @@ namespace HuntAlert
         private IDataManager Data { get; init; }
         private IClientState ClientState { get; set; }
         public Configuration Configuration { get; init; }
-        public WindowSystem WindowSystem = new("HuntAlert");
+        public WindowSystem WindowSystem = new("HuntAlerts");
 
         private ConfigWindow ConfigWindow { get; init; }
 
@@ -121,7 +124,7 @@ namespace HuntAlert
                 _cancellationTokenSource = new CancellationTokenSource();
 
                 // Connect to WebSocket
-                await _webSocket.ConnectAsync(new Uri("ws://huntrelay.eastus.cloudapp.azure.com:6789"), _cancellationTokenSource.Token);
+                await _webSocket.ConnectAsync(new Uri(serverURI), _cancellationTokenSource.Token);
                 PluginLog.Information("Connected to WebSocket.");
                 // Start listening for messages
                 StartReceiving(_cancellationTokenSource.Token);
@@ -136,6 +139,7 @@ namespace HuntAlert
         }
 
 
+
         private async Task ReconnectWebSocket()
         {
             var retryInterval = 5000; // milliseconds to wait before retrying to connect
@@ -147,7 +151,7 @@ namespace HuntAlert
                     await Task.Delay(retryInterval,_cancellationTokenSource.Token); // Wait before reconnecting
                     _webSocket.Dispose(); // Dispose the old instance
                     _webSocket = new ClientWebSocket(); // Create a new instance
-                    await _webSocket.ConnectAsync(new Uri("ws://huntrelay.eastus.cloudapp.azure.com:6789"), _cancellationTokenSource.Token);
+                    await _webSocket.ConnectAsync(new Uri(serverURI), _cancellationTokenSource.Token);
                     PluginLog.Information("Reconnected to WebSocket.");
                     StartReceiving(_cancellationTokenSource.Token); // Start listening for messages again
                 }
@@ -166,7 +170,7 @@ namespace HuntAlert
             public string Content { get; set; }
             public string World { get; set; }
             public string Kind { get; set; }
-            public long PostedEpoch { get; set; }
+            public long Posted_Epoch { get; set; }
             public Dictionary<string, object> AdditionalData { get; set; }
         }
 
@@ -213,6 +217,18 @@ namespace HuntAlert
             return Regex.Replace(input, emojiPattern, "");
         }
 
+        private static string convertTime(long epochTime)
+        {
+
+            // Convert Unix timestamp to DateTime
+            DateTime dateTime = DateTimeOffset.FromUnixTimeSeconds(epochTime).ToLocalTime().DateTime;
+
+            // Format the DateTime as needed, e.g., "MM/dd/yyyy HH:mm:ss"
+            PluginLog.Verbose($"Posted Time:  {epochTime}");
+            string convertedTime = dateTime.ToString("hh:mm tt"); // or any other format
+            PluginLog.Verbose($"converted time: {convertedTime}");
+            return convertedTime;
+        }
 
         private async void StartReceiving(CancellationToken cancellationToken)
         {
@@ -256,24 +272,24 @@ namespace HuntAlert
                 { "Seraph", "Dynamis" },
 
                 // Light
-                { "Cerberus", "Light" },
-                { "Louisoix", "Light" },
-                { "Moogle", "Light" },
-                { "Omega", "Light" },
-                { "Phantom", "Light" },
-                { "Ragnarok", "Light" },
-                { "Sagittarius", "Light" },
-                { "Spriggan", "Light" },
+                { "Cerberus", "Chaos" },
+                { "Louisoix", "Chaos" },
+                { "Moogle", "Chaos" },
+                { "Omega", "Chaos" },
+                { "Phantom", "Chaos" },
+                { "Ragnarok", "Chaos" },
+                { "Sagittarius", "Chaos" },
+                { "Spriggan", "Chaos" },
 
                 // Chaos
-                { "Alpha", "Chaos" },
-                { "Lich", "Chaos" },
-                { "Odin", "Chaos" },
-                { "Phoenix", "Chaos" },
-                { "Raiden", "Chaos" },
-                { "Shiva", "Chaos" },
-                { "Twintania", "Chaos" },
-                { "Zodiark", "Chaos" },
+                { "Alpha", "Light" },
+                { "Lich", "Light" },
+                { "Odin", "Light" },
+                { "Phoenix", "Light" },
+                { "Raiden", "Light" },
+                { "Shiva", "Light" },
+                { "Twintania", "Light" },
+                { "Zodiark", "Light" },
 
                 // Add mappings for all worlds in their respective data centers
             };
@@ -377,10 +393,11 @@ namespace HuntAlert
                                 messageContent = RemoveDiscordEmojis(messageContent);
 
                                 // Adds header to the message
-                                messageContent = "Hunt: " + huntMessage.Kind + Environment.NewLine + "World: " + huntMessage.World + Environment.NewLine + Environment.NewLine + messageContent;
+                                messageContent = "Hunt: " + huntMessage.Kind + Environment.NewLine + "World: " + huntMessage.World + Environment.NewLine + "Posted: "+ convertTime(huntMessage.Posted_Epoch) + Environment.NewLine + Environment.NewLine + messageContent;
 
                                 // Wordwrap really long lines
-                                messageContent = WordWrap(messageContent,200);
+                                int maxlineLength = this.Configuration.MaxLineLength;
+                                messageContent = WordWrap(messageContent,maxlineLength);
 
                                 // Code to handle the hunt
                                 // Since the handling code is the same for all hunts, place it here

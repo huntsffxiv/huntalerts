@@ -6,7 +6,7 @@ using FFXIVClientStructs.FFXIV.Client.UI;
 using System.Collections.Generic;
 using FFXIVClientStructs.Havok;
 
-namespace HuntAlert.Windows;
+namespace HuntAlerts.Windows;
 
 public class ConfigWindow : Window, IDisposable
 {
@@ -15,12 +15,11 @@ public class ConfigWindow : Window, IDisposable
 
 
     public ConfigWindow(Plugin plugin) : base(
-        "HuntAlerts Config",
-        ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoScrollbar |
-        ImGuiWindowFlags.NoScrollWithMouse)
+       "HuntAlerts Config",
+       ImGuiWindowFlags.NoResize)
     {
         this.Plugin = plugin;
-        this.Size = new Vector2(232, 450);
+        this.Size = new Vector2(400, 800);
         this.SizeCondition = ImGuiCond.Always;
 
         this.Configuration = plugin.Configuration;
@@ -30,6 +29,30 @@ public class ConfigWindow : Window, IDisposable
 
     public override void Draw()
     {
+        // Create a simple header
+        ImGui.Text("General Options");
+
+        // Optional: Draw a separator line
+        ImGui.Separator();
+
+        var maxlineLength = this.Configuration.MaxLineLength;
+        if(ImGui.InputInt("Max Line Length",ref maxlineLength))
+        {
+            if (maxlineLength > 999)
+            {
+                maxlineLength = 999;
+            }else if (maxlineLength <= 50)
+            {
+                maxlineLength = 50;
+            }
+
+            this.Configuration.MaxLineLength = maxlineLength;
+            this.Configuration.Save();
+        }
+
+        // Add blank line
+        ImGui.NewLine();
+
         // Create a simple header
         ImGui.Text("Hunt Notifications");
 
@@ -113,6 +136,7 @@ public class ConfigWindow : Window, IDisposable
             this.Configuration.Save();
         }
 
+
         var crystalValue = this.Configuration.Crystal;
         if (ImGui.Checkbox("Crystal", ref crystalValue))
         {
@@ -158,7 +182,399 @@ public class ConfigWindow : Window, IDisposable
             ImGui.EndDisabled();
         }
 
+        ImGui.NewLine();
+        ImGui.Text("World Selection");
+        ImGui.Separator();
 
+        if(!aetherValue && !crystalValue && !primalValue && !dynamisValue && !lightValue && !chaosValue)
+        {
+            ImGui.Text("No Datacenters selected, please choose a datacenter");
+        }
+
+        // Aether world selection
+        if (aetherValue)
+        {
+
+            if (ImGui.TreeNode("Aether World Selection"))
+            {
+                ImGui.Indent();
+
+                var adamantoiseWorldValue = this.Configuration.AdamantoiseWorld;
+                if (ImGui.Checkbox("Adamantoise", ref adamantoiseWorldValue))
+                {
+                    this.Configuration.AdamantoiseWorld = adamantoiseWorldValue;
+                    this.Configuration.Save();
+                }
+
+                var cactuarWorldValue = this.Configuration.CactuarWorld;
+                if (ImGui.Checkbox("Cactuar", ref cactuarWorldValue))
+                {
+                    this.Configuration.CactuarWorld = cactuarWorldValue;
+                    this.Configuration.Save();
+                }
+
+                var faerieWorldValue = this.Configuration.FaerieWorld;
+                if (ImGui.Checkbox("Faerie", ref faerieWorldValue))
+                {
+                    this.Configuration.FaerieWorld = faerieWorldValue;
+                    this.Configuration.Save();
+                }
+
+                var gilgameshWorldValue = this.Configuration.GilgameshWorld;
+                if (ImGui.Checkbox("Gilgamesh", ref gilgameshWorldValue))
+                {
+                    this.Configuration.GilgameshWorld = gilgameshWorldValue;
+                    this.Configuration.Save();
+                }
+
+                var jenovaWorldValue = this.Configuration.JenovaWorld;
+                if (ImGui.Checkbox("Jenova", ref jenovaWorldValue))
+                {
+                    this.Configuration.JenovaWorld = jenovaWorldValue;
+                    this.Configuration.Save();
+                }
+
+                var midgardsormrWorldValue = this.Configuration.MidgardsormrWorld;
+                if (ImGui.Checkbox("Midgardsormr", ref midgardsormrWorldValue))
+                {
+                    this.Configuration.MidgardsormrWorld = midgardsormrWorldValue;
+                    this.Configuration.Save();
+                }
+
+                var sargatanasWorldValue = this.Configuration.SargatanasWorld;
+                if (ImGui.Checkbox("Sargatanas", ref sargatanasWorldValue))
+                {
+                    this.Configuration.SargatanasWorld = sargatanasWorldValue;
+                    this.Configuration.Save();
+                }
+
+                var sirenWorldValue = this.Configuration.SirenWorld;
+                if (ImGui.Checkbox("Siren", ref sirenWorldValue))
+                {
+                    this.Configuration.SirenWorld = sirenWorldValue;
+                    this.Configuration.Save();
+                }
+
+                ImGui.Unindent();
+                ImGui.TreePop();
+
+            }
+        }
+
+        // Crystal world selection
+        if (crystalValue)
+        {
+
+            if (ImGui.TreeNode("Crystal World Selection"))
+            {
+                ImGui.Indent();
+
+                var balmungWorldValue = this.Configuration.BalmungWorld;
+                if (ImGui.Checkbox("Balmung", ref balmungWorldValue))
+                {
+                    this.Configuration.BalmungWorld = balmungWorldValue;
+                    this.Configuration.Save();
+                }
+
+                var brynhildrWorldValue = this.Configuration.BrynhildrWorld;
+                if (ImGui.Checkbox("Brynhildr", ref brynhildrWorldValue))
+                {
+                    this.Configuration.BrynhildrWorld = brynhildrWorldValue;
+                    this.Configuration.Save();
+                }
+
+                var coeurlWorldValue = this.Configuration.CoeurlWorld;
+                if (ImGui.Checkbox("Coeurl", ref coeurlWorldValue))
+                {
+                    this.Configuration.CoeurlWorld = coeurlWorldValue;
+                    this.Configuration.Save();
+                }
+
+                var diabolosWorldValue = this.Configuration.DiabolosWorld;
+                if (ImGui.Checkbox("Diabolos", ref diabolosWorldValue))
+                {
+                    this.Configuration.DiabolosWorld = diabolosWorldValue;
+                    this.Configuration.Save();
+                }
+
+                var goblinWorldValue = this.Configuration.GoblinWorld;
+                if (ImGui.Checkbox("Goblin", ref goblinWorldValue))
+                {
+                    this.Configuration.GoblinWorld = goblinWorldValue;
+                    this.Configuration.Save();
+                }
+
+                var malboroWorldValue = this.Configuration.MalboroWorld;
+                if (ImGui.Checkbox("Malboro", ref malboroWorldValue))
+                {
+                    this.Configuration.MalboroWorld = malboroWorldValue;
+                    this.Configuration.Save();
+                }
+
+                var mateusWorldValue = this.Configuration.MateusWorld;
+                if (ImGui.Checkbox("Mateus", ref mateusWorldValue))
+                {
+                    this.Configuration.MateusWorld = mateusWorldValue;
+                    this.Configuration.Save();
+                }
+
+                var zaleraWorldValue = this.Configuration.ZaleraWorld;
+                if (ImGui.Checkbox("Zalera", ref zaleraWorldValue))
+                {
+                    this.Configuration.ZaleraWorld = zaleraWorldValue;
+                    this.Configuration.Save();
+                }
+
+                ImGui.Unindent();
+                ImGui.TreePop();
+
+            }
+        }
+
+        // Primal world selection
+        if (primalValue)
+        {
+
+            if (ImGui.TreeNode("Primal World Selection"))
+            {
+                ImGui.Indent();
+
+                var behemothWorldValue = this.Configuration.BehemothWorld;
+                if (ImGui.Checkbox("Behemoth", ref behemothWorldValue))
+                {
+                    this.Configuration.BehemothWorld = behemothWorldValue;
+                    this.Configuration.Save();
+                }
+
+                var excaliburWorldValue = this.Configuration.ExcaliburWorld;
+                if (ImGui.Checkbox("Excalibur", ref excaliburWorldValue))
+                {
+                    this.Configuration.ExcaliburWorld = excaliburWorldValue;
+                    this.Configuration.Save();
+                }
+
+                var exodusWorldValue = this.Configuration.ExodusWorld;
+                if (ImGui.Checkbox("Exodus", ref exodusWorldValue))
+                {
+                    this.Configuration.ExodusWorld = exodusWorldValue;
+                    this.Configuration.Save();
+                }
+
+                var famfritWorldValue = this.Configuration.FamfritWorld;
+                if (ImGui.Checkbox("Famfrit", ref famfritWorldValue))
+                {
+                    this.Configuration.FamfritWorld = famfritWorldValue;
+                    this.Configuration.Save();
+                }
+
+                var hyperionWorldValue = this.Configuration.HyperionWorld;
+                if (ImGui.Checkbox("Hyperion", ref hyperionWorldValue))
+                {
+                    this.Configuration.HyperionWorld = hyperionWorldValue;
+                    this.Configuration.Save();
+                }
+
+                var lamiaWorldValue = this.Configuration.LamiaWorld;
+                if (ImGui.Checkbox("Lamia", ref lamiaWorldValue))
+                {
+                    this.Configuration.LamiaWorld = lamiaWorldValue;
+                    this.Configuration.Save();
+                }
+
+                var leviathanWorldValue = this.Configuration.LeviathanWorld;
+                if (ImGui.Checkbox("Leviathan", ref leviathanWorldValue))
+                {
+                    this.Configuration.LeviathanWorld = leviathanWorldValue;
+                    this.Configuration.Save();
+                }
+
+                var ultrosWorldValue = this.Configuration.UltrosWorld;
+                if (ImGui.Checkbox("Ultros", ref ultrosWorldValue))
+                {
+                    this.Configuration.UltrosWorld = ultrosWorldValue;
+                    this.Configuration.Save();
+                }
+
+                ImGui.Unindent();
+                ImGui.TreePop();
+
+            }
+        }
+
+        // Dynamis world selection
+        if (dynamisValue)
+        {
+
+            if (ImGui.TreeNode("Dynamis World Selection"))
+            {
+                ImGui.Indent();
+
+                var halicarnassusWorldValue = this.Configuration.HalicarnassusWorld;
+                if (ImGui.Checkbox("Halicarnassus", ref halicarnassusWorldValue))
+                {
+                    this.Configuration.HalicarnassusWorld = halicarnassusWorldValue;
+                    this.Configuration.Save();
+                }
+
+                var maduinWorldValue = this.Configuration.MaduinWorld;
+                if (ImGui.Checkbox("Maduin", ref maduinWorldValue))
+                {
+                    this.Configuration.MaduinWorld = maduinWorldValue;
+                    this.Configuration.Save();
+                }
+
+                var seraphWorldValue = this.Configuration.SeraphWorld;
+                if (ImGui.Checkbox("Seraph", ref seraphWorldValue))
+                {
+                    this.Configuration.SeraphWorld = seraphWorldValue;
+                    this.Configuration.Save();
+                }
+
+                ImGui.Unindent();
+                ImGui.TreePop();
+
+            }
+        }
+
+        // Light world selection
+        if (lightValue)
+        {
+
+            if (ImGui.TreeNode("Light World Selection"))
+            {
+                ImGui.Indent();
+
+                var alphaWorldValue = this.Configuration.AlphaWorld;
+                if (ImGui.Checkbox("Alpha", ref alphaWorldValue))
+                {
+                    this.Configuration.AlphaWorld = alphaWorldValue;
+                    this.Configuration.Save();
+                }
+
+                var lichWorldValue = this.Configuration.LichWorld;
+                if (ImGui.Checkbox("Lich", ref lichWorldValue))
+                {
+                    this.Configuration.LichWorld = lichWorldValue;
+                    this.Configuration.Save();
+                }
+
+                var odinWorldValue = this.Configuration.OdinWorld;
+                if (ImGui.Checkbox("Odin", ref odinWorldValue))
+                {
+                    this.Configuration.OdinWorld = odinWorldValue;
+                    this.Configuration.Save();
+                }
+
+                var phoenixWorldValue = this.Configuration.PhoenixWorld;
+                if (ImGui.Checkbox("Phoenix", ref phoenixWorldValue))
+                {
+                    this.Configuration.PhoenixWorld = phoenixWorldValue;
+                    this.Configuration.Save();
+                }
+
+                var raidenWorldValue = this.Configuration.RaidenWorld;
+                if (ImGui.Checkbox("Raiden", ref raidenWorldValue))
+                {
+                    this.Configuration.RaidenWorld = raidenWorldValue;
+                    this.Configuration.Save();
+                }
+
+                var shivaWorldValue = this.Configuration.ShivaWorld;
+                if (ImGui.Checkbox("Shiva", ref shivaWorldValue))
+                {
+                    this.Configuration.ShivaWorld = shivaWorldValue;
+                    this.Configuration.Save();
+                }
+
+                var twintaniaWorldValue = this.Configuration.TwintaniaWorld;
+                if (ImGui.Checkbox("Twintania", ref twintaniaWorldValue))
+                {
+                    this.Configuration.TwintaniaWorld = twintaniaWorldValue;
+                    this.Configuration.Save();
+                }
+
+                var zodiarkWorldValue = this.Configuration.ZodiarkWorld;
+                if (ImGui.Checkbox("Zodiark", ref zodiarkWorldValue))
+                {
+                    this.Configuration.ZodiarkWorld = zodiarkWorldValue;
+                    this.Configuration.Save();
+                }
+
+                ImGui.Unindent();
+                ImGui.TreePop();
+
+            }
+        }
+
+        // Chaos world selection
+        if (chaosValue)
+        {
+
+            if (ImGui.TreeNode("Chaos World Selection"))
+            {
+                ImGui.Indent();
+
+                var cerberusWorldValue = this.Configuration.CerberusWorld;
+                if (ImGui.Checkbox("Cerberus", ref cerberusWorldValue))
+                {
+                    this.Configuration.CerberusWorld = cerberusWorldValue;
+                    this.Configuration.Save();
+                }
+
+                var louisoixWorldValue = this.Configuration.LouisoixWorld;
+                if (ImGui.Checkbox("Louisoix", ref louisoixWorldValue))
+                {
+                    this.Configuration.LouisoixWorld = louisoixWorldValue;
+                    this.Configuration.Save();
+                }
+
+                var moogleWorldValue = this.Configuration.MoogleWorld;
+                if (ImGui.Checkbox("Moogle", ref moogleWorldValue))
+                {
+                    this.Configuration.MoogleWorld = moogleWorldValue;
+                    this.Configuration.Save();
+                }
+
+                var omegaWorldValue = this.Configuration.OmegaWorld;
+                if (ImGui.Checkbox("Omega", ref omegaWorldValue))
+                {
+                    this.Configuration.OmegaWorld = omegaWorldValue;
+                    this.Configuration.Save();
+                }
+
+                var phantomWorldValue = this.Configuration.PhantomWorld;
+                if (ImGui.Checkbox("Phantom", ref phantomWorldValue))
+                {
+                    this.Configuration.PhantomWorld = phantomWorldValue;
+                    this.Configuration.Save();
+                }
+
+                var ragnarokWorldValue = this.Configuration.RagnarokWorld;
+                if (ImGui.Checkbox("Ragnarok", ref ragnarokWorldValue))
+                {
+                    this.Configuration.RagnarokWorld = ragnarokWorldValue;
+                    this.Configuration.Save();
+                }
+
+                var sagittariusWorldValue = this.Configuration.SagittariusWorld;
+                if (ImGui.Checkbox("Sagittarius", ref sagittariusWorldValue))
+                {
+                    this.Configuration.SagittariusWorld = sagittariusWorldValue;
+                    this.Configuration.Save();
+                }
+
+                var sprigganWorldValue = this.Configuration.SprigganWorld;
+                if (ImGui.Checkbox("Spriggan", ref sprigganWorldValue))
+                {
+                    this.Configuration.SprigganWorld = sprigganWorldValue;
+                    this.Configuration.Save();
+                }
+
+                ImGui.Unindent();
+                ImGui.TreePop();
+
+            }
+        }
         // Create a simple header
         ImGui.NewLine();
         ImGui.Text("Notification Sound Effect");
