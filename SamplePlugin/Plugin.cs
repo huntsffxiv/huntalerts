@@ -109,45 +109,7 @@ namespace HuntAlert
 
             return result.ToString();
         }
-
-
-        private System.Timers.Timer _pingTimer;
-        private bool _receivedPong = true;
-        private const int PingInterval = 15000; // 10 seconds
-
-        private void StartPingPong()
-        {
-            _pingTimer = new System.Timers.Timer(PingInterval);
-            _pingTimer.Elapsed += async (sender, e) =>
-            {
-                if (_webSocket.State == WebSocketState.Open)
-                {
-                    if (!_receivedPong)
-                    {
-                        // Pong not received, try to reconnect
-                        PluginLog.Warning("Pong not received, reconnecting...");
-                        await ReconnectWebSocket();
-                    }
-                    else
-                    {
-                        _receivedPong = false; // Reset the flag
-                        await SendPing();
-                    }
-                }
-            };
-            _pingTimer.AutoReset = true;
-            _pingTimer.Enabled = true;
-        }
-
-        private async Task SendPing()
-        {
-            if (_webSocket.State == WebSocketState.Open)
-            {
-                PluginLog.Verbose("Sending ping to server");
-                var buffer = new ArraySegment<byte>(Encoding.UTF8.GetBytes("ping"));
-                await _webSocket.SendAsync(buffer, WebSocketMessageType.Text, true, CancellationToken.None);
-            }
-        }
+        
 
         private async void InitializeWebSocket()
         {
@@ -157,7 +119,7 @@ namespace HuntAlert
                 _cancellationTokenSource = new CancellationTokenSource();
 
                 // Connect to WebSocket
-                await _webSocket.ConnectAsync(new Uri("ws://huntrelay.eastus.cloudapp.azure.com:6789"), CancellationToken.None);
+                await _webSocket.ConnectAsync(new Uri("ws://huntrelay.eastus.cloudapp.azure.com:6789"), _cancellationTokenSource.Token);
                 PluginLog.Information("Connected to WebSocket.");
                 //StartPingPong();
                 // Start listening for messages
@@ -180,14 +142,12 @@ namespace HuntAlert
             {
                 try
                 {
-                    //_pingTimer?.Stop();
                     PluginLog.Information("Attempting to reconnect WebSocket...");
-                    await Task.Delay(retryInterval); // Wait before reconnecting
+                    await Task.Delay(retryInterval,_cancellationTokenSource.Token); // Wait before reconnecting
                     _webSocket.Dispose(); // Dispose the old instance
                     _webSocket = new ClientWebSocket(); // Create a new instance
-                    await _webSocket.ConnectAsync(new Uri("ws://huntrelay.eastus.cloudapp.azure.com:6789"), CancellationToken.None);
+                    await _webSocket.ConnectAsync(new Uri("ws://huntrelay.eastus.cloudapp.azure.com:6789"), _cancellationTokenSource.Token);
                     PluginLog.Information("Reconnected to WebSocket.");
-                    //_pingTimer?.Start();
                     StartReceiving(_cancellationTokenSource.Token); // Start listening for messages again
                 }
                 catch (Exception ex)
@@ -299,25 +259,12 @@ namespace HuntAlert
             try
             {
                 var buffer = new byte[2048];
-                while (_webSocket.State == WebSocketState.Open)
+                while (_webSocket.State == WebSocketState.Open && !cancellationToken.IsCancellationRequested)
                 {
-                    if (_webSocket.CloseStatus.HasValue || cancellationToken.IsCancellationRequested)
-                    {
-                        // Clean up or close connections here
-                        PluginLog.Information("Cancellation requested, stopping WebSocket listener.");
-                        return;
-                    }
 
-                    var result = await _webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), cancellationToken);
+                    var result = await _webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), _cancellationTokenSource.Token);
                     // Process received message
                     var messageString = Encoding.UTF8.GetString(buffer, 0, result.Count);
-
-                    if (messageString == "pong")
-                    {
-                        _receivedPong = true;
-                        PluginLog.Verbose("Recieved a pong response");
-                        continue;
-                    }
 
                     try
                     {
@@ -415,7 +362,7 @@ namespace HuntAlert
             NotifyWindow.Cache[msg] = $"Content {Environment.TickCount64}";
         }
 
-        public void Dispose()
+        public async void Dispose()
         {
             this.WindowSystem.RemoveAllWindows();
             
@@ -433,6 +380,14 @@ namespace HuntAlert
                 Task.Delay(500).Wait();
 
                 // Then, dispose of resources
+                if (_webSocket != null && _webSocket.State == WebSocketState.Open)
+                {
+                    await _webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure,
+                                                "Disposing Plugin",
+                                                _cancellationTokenSource.Token);
+                }
+
+
                 _webSocket?.Dispose();
                 _cancellationTokenSource?.Dispose();
             }
