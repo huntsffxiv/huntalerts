@@ -9,7 +9,10 @@ namespace HuntAlerts
     public class Configuration : IPluginConfiguration
     {
         public int Version { get; set; } = 0;
+        
+        // General Settings
         public bool SuppressDuplicates { get; set; } = true;
+        public int TextColor { get; set; } = 0;
 
         public bool EndwalkerHunts { get; set; } = false;
         public bool ShadowbringersHunts { get; set; } = false;

@@ -22,6 +22,8 @@ using System.Text.RegularExpressions;
 using FFXIVClientStructs.FFXIV.Client.UI;
 using System.Runtime.InteropServices;
 using System.Linq;
+using Dalamud.Game.Text;
+using System.Drawing;
 
 namespace HuntAlerts
 {
@@ -254,15 +256,32 @@ namespace HuntAlerts
         }
 
 
-        private bool IsHuntEnabled(string hunt)
+
+        private bool IsHuntEnabled(string huntKinds)
         {
-            return hunt switch
+            // Split the huntKinds string by comma and trim any whitespace
+            var huntTypes = huntKinds.Split(',').Select(h => h.Trim());
+
+            // Check if any of the hunt types are enabled in the configuration
+            foreach (var huntType in huntTypes)
             {
-                "Endwalker" => this.Configuration.EndwalkerHunts,
-                "Shadowbringers" => this.Configuration.ShadowbringersHunts,
-                "Centurio" => this.Configuration.CenturioHunts,
-                _ => false,
-            };
+                switch (huntType)
+                {
+                    case "Endwalker":
+                        if (this.Configuration.EndwalkerHunts) return true;
+                        break;
+                    case "Shadowbringers":
+                        if (this.Configuration.ShadowbringersHunts) return true;
+                        break;
+                    case "Centurio":
+                        if (this.Configuration.CenturioHunts) return true;
+                        break;
+                        // Add cases for other hunt types as necessary
+                }
+            }
+
+            // Return false if none of the hunt types are enabled
+            return false;
         }
 
 
@@ -306,6 +325,21 @@ namespace HuntAlerts
             PluginLog.Verbose($"converted time: {convertedTime}");
             return convertedTime;
         }
+
+
+
+
+        public void PrintColoredHuntMessage(HuntMessage huntMessage, string hexColor)
+        {
+            string messageText = $"New {huntMessage.Kind} train starting soon on {huntMessage.World}!!";
+            string coloredMessage = $"[3C][{hexColor}]{messageText}[/COLOR][/3C]";
+
+            ChatGui.Print(new XivChatEntry
+            {
+                Message = new SeString(new Payload[] { new TextPayload(coloredMessage) })
+            });
+        }
+
 
         private async void StartReceiving(CancellationToken cancellationToken)
         {
@@ -378,7 +412,8 @@ namespace HuntAlerts
 
                         // Check if the hunt type is enabled
                         bool isHuntEnabled = IsHuntEnabled(huntMessage.Kind);
-                        
+
+
 
 
                         string homeworldName = "";
@@ -462,7 +497,19 @@ namespace HuntAlerts
 
                         // Code to handle the hunt
                         // Since the handling code is the same for all hunts, place it here
-                        var message = new SeStringBuilder().Add(LinkPayload).AddText("New " + huntMessage.Kind + " train starting soon on " + huntMessage.World + "!!").Add(RawPayload.LinkTerminator).Build();
+
+                        int textColor = this.Configuration.TextColor;
+                        SeString message;
+                        if (textColor != 0)
+                        {
+                            message = new SeStringBuilder().AddUiForeground((ushort)textColor).Add(LinkPayload).AddText("New " + huntMessage.Kind + " train starting soon on " + huntMessage.World + "!!").Add(RawPayload.LinkTerminator).AddUiForegroundOff().Build();
+                        }
+                        else
+                        {
+                            message = new SeStringBuilder().Add(LinkPayload).AddText("New " + huntMessage.Kind + " train starting soon on " + huntMessage.World + "!!").Add(RawPayload.LinkTerminator).Build();
+                        }
+
+
                         ChatGui.Print(new() { Message = message });
                         var msg = RemoveSymbolsRegex().Replace(message.ToString(), "");
                         PluginLog.Debug($"Adding cache entry {msg}");

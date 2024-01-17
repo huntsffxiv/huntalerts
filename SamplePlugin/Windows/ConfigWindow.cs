@@ -5,6 +5,7 @@ using ImGuiNET;
 using FFXIVClientStructs.FFXIV.Client.UI;
 using System.Collections.Generic;
 using FFXIVClientStructs.Havok;
+using System.Linq;
 
 namespace HuntAlerts.Windows;
 
@@ -41,7 +42,30 @@ public class ConfigWindow : Window, IDisposable
             this.Configuration.SuppressDuplicates = suppressDuplicates;
             // can save immediately on change, if you don't want to provide a "Save and Close" button
             this.Configuration.Save();
-        }    
+        }
+
+
+
+        // Local variable for color options
+        Dictionary<string, int> _colorOptions = new Dictionary<string, int>
+    {
+        { "Default", 0 },
+        { "Red", 16 },
+        { "Green", 43 },
+        { "Blue", 57 },
+        { "Yellow", 25 },
+        { "Purple", 48 }
+    };
+
+        string[] items = _colorOptions.Keys.ToArray();
+        var textColor = Array.IndexOf(items, _colorOptions.FirstOrDefault(x => x.Value == this.Configuration.TextColor).Key);
+        if (ImGui.Combo("Text Color", ref textColor, items, items.Length))
+        {
+            // Update the configuration when the selection changes
+            this.Configuration.TextColor = _colorOptions[items[textColor]];
+            this.Configuration.Save(); // Method to save your configuration
+        }
+
 
         var maxlineLength = this.Configuration.MaxLineLength;
         if(ImGui.InputInt("Max Line Length",ref maxlineLength))
