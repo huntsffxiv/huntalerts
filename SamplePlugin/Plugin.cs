@@ -20,6 +20,8 @@ using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Plugin.Ipc.Exceptions;
 using System.Text.RegularExpressions;
 using FFXIVClientStructs.FFXIV.Client.UI;
+using System.Runtime.InteropServices;
+using System.Linq;
 
 namespace HuntAlerts
 {
@@ -71,7 +73,7 @@ namespace HuntAlerts
 
             this.CommandManager.AddHandler(CommandName, new CommandInfo(OnCommand)
             {
-                HelpMessage = "A useful message to display in /xlhelp"
+                HelpMessage = "Opens the HuntAlerts options"
             });
 
             this.PluginInterface.UiBuilder.Draw += DrawUI;
@@ -267,7 +269,7 @@ namespace HuntAlerts
         private static string ReplaceTimestampsWithLocalTime(string input)
         {
             // Regex pattern to find timestamps
-            string pattern = @"<t:(\d+):R>";
+            string pattern = @"<t:(\d+):(t|T|d|D|f|F|R)>";
 
             // Replace each match in the input string
             return Regex.Replace(input, pattern, match =>
@@ -308,23 +310,35 @@ namespace HuntAlerts
         private async void StartReceiving(CancellationToken cancellationToken)
         {
 
-            // Create a dictionary mapping hunt types to their corresponding configuration flags
-            var HuntTypeEnabledMap = new Dictionary<string, bool>
-            {
-                { "Shadowbringers", this.Configuration.ShadowbringersHunts },
-                { "Centurio", this.Configuration.CenturioHunts },
-                { "Endwalker", this.Configuration.EndwalkerHunts },
-                // Add more mappings as necessary
-            };
+            
 
 
             try
             {
-                
+                // Create a dictionary mapping hunt types to their corresponding configuration flags
+                var HuntTypeEnabledMap = new Dictionary<string, bool>
+                {
+                    { "Shadowbringers", this.Configuration.ShadowbringersHunts },
+                    { "Centurio", this.Configuration.CenturioHunts },
+                    { "Endwalker", this.Configuration.EndwalkerHunts },
+                    // Add more mappings as necessary
+                };
+
+                Dictionary<(string Kind, string World), DateTime> recentMessagesCache = new Dictionary<(string Kind, string World), DateTime>();
+
+
                 var buffer = new byte[2048];
                 while (_webSocket.State == WebSocketState.Open && !cancellationToken.IsCancellationRequested)
                 {
+                    // Remove entries older than 2 minutes
+                    var twoMinutesAgo = DateTime.Now - TimeSpan.FromMinutes(2);
+                    var keysToRemove = recentMessagesCache.Where(kvp => kvp.Value < twoMinutesAgo).Select(kvp => kvp.Key).ToList();
+                    foreach (var key in keysToRemove)
+                    {
+                        recentMessagesCache.Remove(key);
+                    }
 
+                    // Get received message
                     var result = await _webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), _cancellationTokenSource.Token);
                     // Process received message
                     var messageString = Encoding.UTF8.GetString(buffer, 0, result.Count);
@@ -336,6 +350,23 @@ namespace HuntAlerts
 
                         PluginLog.Verbose($"New train data received: Kind:" + huntMessage.Kind + " | World:" + huntMessage.World);
 
+                        var key = (huntMessage.Kind, huntMessage.World);
+                        if (recentMessagesCache.TryGetValue(key, out var lastTimestamp))
+                        {
+                            if (DateTime.Now - lastTimestamp < TimeSpan.FromMinutes(2))
+                            {
+                                // Message with same Kind and World received within last 2 minutes
+                                PluginLog.Verbose("Similar message received recently, suppressing notification");
+                                continue;
+                            }
+                        }
+
+                        // Check if suppress duplicate message is enabled and record if true
+                        if (this.Configuration.SuppressDuplicates)
+                        {
+                            // Update the cache with the new timestamp
+                            recentMessagesCache[key] = DateTime.Now;
+                        }
 
 
                         // Check if datacenter is enabled
@@ -426,6 +457,7 @@ namespace HuntAlerts
 
                         // Wordwrap really long lines
                         int maxlineLength = this.Configuration.MaxLineLength;
+                        PluginLog.Verbose($"maxlinelength = {maxlineLength}");
                         messageContent = WordWrap(messageContent,maxlineLength);
 
                         // Code to handle the hunt
@@ -442,8 +474,6 @@ namespace HuntAlerts
                             UIModule.PlayChatSoundEffect((uint)this.Configuration.soundEffect); // Play the selected sound effect
                         }
 
-                        // Break out of the loop once a matching hunt type is found and handled
-                        //break;
 
                     }
                     catch (JsonException ex)
@@ -463,7 +493,7 @@ namespace HuntAlerts
             {
                 if (!cancellationToken.IsCancellationRequested)
                 {
-                    //PluginLog.Error($"WebSocket connection error: {ex}");
+                    // PluginLog.Error($"WebSocket connection error: {ex}");
                     // If cancellation hasn't been requested, this is an actual error.
                     PluginLog.Warning($"Lost connection to the server");
                     // Start reconnection logic.

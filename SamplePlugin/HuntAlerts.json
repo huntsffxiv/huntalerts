@@ -1,12 +1,13 @@
 {
     "Author": "FFXIV Hunts",
     "Name": "HuntAlerts",
-    "Punchline": "Notifys you when a Hunt is happening soon",
-    "Description": "Notifys you when a Hunt is happening soon",
+    "Punchline": "Notifys you when hunt trains are starting soon",
+    "Description": "Notifys you when hunt trains are starting soon",
     "ApplicableVersion": "any",
     "Tags": [
-        "sample",
-        "plugin",
-        "goats"
+        "hunt",
+        "train",
+        "boat",
+        "rank"
     ]
 }

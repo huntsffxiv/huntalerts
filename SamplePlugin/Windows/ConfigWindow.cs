@@ -35,6 +35,14 @@ public class ConfigWindow : Window, IDisposable
         // Optional: Draw a separator line
         ImGui.Separator();
 
+        var suppressDuplicates = this.Configuration.SuppressDuplicates;
+        if(ImGui.Checkbox("Suppress Duplicate Messages", ref suppressDuplicates))
+        {
+            this.Configuration.SuppressDuplicates = suppressDuplicates;
+            // can save immediately on change, if you don't want to provide a "Save and Close" button
+            this.Configuration.Save();
+        }    
+
         var maxlineLength = this.Configuration.MaxLineLength;
         if(ImGui.InputInt("Max Line Length",ref maxlineLength))
         {
@@ -186,11 +194,17 @@ public class ConfigWindow : Window, IDisposable
         ImGui.Text("World Selection");
         ImGui.Separator();
 
-        if(!aetherValue && !crystalValue && !primalValue && !dynamisValue && !lightValue && !chaosValue)
+
+
+        if (!aetherValue && !crystalValue && !primalValue && !dynamisValue && !lightValue && !chaosValue)
         {
             ImGui.Text("No Datacenters selected, please choose a datacenter");
         }
 
+        if (currentworldonlyValue || homeworldonlyValue)
+        {
+            ImGui.BeginDisabled();
+        }
         // Aether world selection
         if (aetherValue)
         {
@@ -574,6 +588,11 @@ public class ConfigWindow : Window, IDisposable
                 ImGui.TreePop();
 
             }
+        }
+
+        if (currentworldonlyValue || homeworldonlyValue)
+        {
+            ImGui.EndDisabled();
         }
         // Create a simple header
         ImGui.NewLine();
