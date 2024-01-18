@@ -18,7 +18,7 @@ using Dalamud.Interface.Utility;
 namespace HuntAlerts.Windows;
 public class NotifyWindow : Window
 {
-    public Dictionary<string, (string Message, string huntKind, string huntWorld, string currentworldName, string currentregionName, string huntregionName, string Posted_Time, bool teleporterEnabled,bool lifestreamEnabled)> Cache = new Dictionary<string, (string, string, string, string, string, string, string, bool, bool)>();
+    public Dictionary<string, (string Message, string huntKind, string huntWorld, string currentworldName, string currentregionName, string huntregionName, string Posted_Time,string startLocation, string startZone, bool teleporterEnabled,bool lifestreamEnabled)> Cache = new Dictionary<string, (string, string, string, string, string, string, string, string, string, bool, bool)>();
     public string CurrentPayload = "";
 
 
@@ -36,6 +36,8 @@ public class NotifyWindow : Window
             string currentworldName = entry.currentworldName;
             string currentregionName = entry.currentregionName;
             string huntregionname = entry.huntregionName;
+            string startLocation = entry.startLocation;
+            string startZone = entry.startZone;
             string huntType = entry.huntKind;
             string postedTime = entry.Posted_Time;
             bool teleporterEnabled = entry.teleporterEnabled;
@@ -59,8 +61,6 @@ public class NotifyWindow : Window
             if (currentregionName == huntregionname)
             {
 
-                string startlocation = Plugin.ParseForStartLocation(message);
-
                 if (currentworldName != world)
                 {
                     if (lifestreamEnabled)
@@ -83,14 +83,15 @@ public class NotifyWindow : Window
                             // Code to execute when the button is pressed
                             PluginLog.Verbose($"Attempting to use lifestream to travel to {world}");
                             //Svc.Commands.ProcessCommand($"/li {world}");
-                            ExecuteCommandWithLoop(world, startlocation, teleporterEnabled, lifestreamEnabled);
+                            ExecuteCommandWithLoop(world, startLocation, startZone, teleporterEnabled, lifestreamEnabled);
                         }
                     }
-                }else
+                }
+                else
                 {
                     if (teleporterEnabled)
                     {
-                        if (startlocation != null && startlocation != "invalid")
+                        if (startLocation != null && (startLocation != "invalid" || startZone != "invalid"))
                         {
                             float textWidth = ImGui.CalcTextSize(headerText).X;
                             float windowWidth = ImGui.GetWindowWidth();
@@ -109,8 +110,19 @@ public class NotifyWindow : Window
                             if (ImGui.Button($"Teleport to Hunt"))
                             {
                                 // Code to execute when the button is pressed
-                                PluginLog.Verbose($"Attempting to use teleporter to travel to {startlocation}");
-                                Svc.Commands.ProcessCommand($"/tp {startlocation}");
+                                if (startLocation != "invalid")
+                                {
+                                    PluginLog.Verbose($"Attempting to use teleporter to travel to {startLocation}");
+                                    Svc.Commands.ProcessCommand($"/tp {startLocation}");
+                                }else if(startZone != "invalid")
+                                {
+                                    PluginLog.Verbose($"Attempting to use teleporter to travel to {startZone}");
+                                    Svc.Commands.ProcessCommand($"/tpm {startZone}");
+                                }
+                                else
+                                {
+                                    PluginLog.Verbose("IDK WHAT THE FUCK");
+                                }
                             }
                         }
                     }
@@ -133,7 +145,7 @@ public class NotifyWindow : Window
 
     private CancellationTokenSource _cancellationTokenSource;
     private bool _isTaskRunning = false;
-    private async void ExecuteCommandWithLoop(string world, string startlocation, bool teleporterEnabled, bool lifestreamEnabled)
+    private async void ExecuteCommandWithLoop(string world, string startLocation, string startZone, bool teleporterEnabled, bool lifestreamEnabled)
     {
         if (_isTaskRunning)
         {
@@ -191,9 +203,20 @@ public class NotifyWindow : Window
                                 if (Svc.ClientState.LocalPlayer?.IsTargetable == true)
                                 {
                                     // Player is targetable, execute the command
-                                    PluginLog.Verbose($"Player is on hunt world, starting teleport to hunt location. Currentworld: " + currentworldName);
-                                    Svc.Commands.ProcessCommand($"/tp {startlocation}");
-                                    return;
+                                    // Code to execute when the button is pressed
+                                    if (startLocation != "invalid")
+                                    {
+                                        PluginLog.Verbose($"Player is on hunt world, starting teleport to hunt location. Currentworld: " + currentworldName + "StartLocation: " + startLocation);
+                                        Svc.Commands.ProcessCommand($"/tp {startLocation}");
+                                        return;
+                                    }
+                                    else if (startZone != "invalid")
+                                    {
+                                        PluginLog.Verbose($"Player is on hunt world, starting teleport to hunt location. Currentworld: " + currentworldName + "StartZone: "+ startZone);
+                                        Svc.Commands.ProcessCommand($"/tpm {startZone}");
+                                        return;
+                                    }
+                                    
                                 }
 
                                 // Wait a bit before checking again
@@ -211,10 +234,6 @@ public class NotifyWindow : Window
 
                     await Task.Delay(5000, token); // Wait for 5 seconds
                 }
-            }else
-            {
-                Svc.Chat.Print("Can't teleport to hunt train without the Teleporter plugin being enabled.");
-                return;
             }
         }
         catch (TaskCanceledException)

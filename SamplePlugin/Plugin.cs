@@ -526,11 +526,13 @@ namespace HuntAlerts
                         string huntregionName = this.Configuration.DatacenterRegionMap[this.Configuration.WorldDatacenterMap[huntMessage.World]];
                         bool teleporterEnabled = this.Configuration.TeleporterIntegration;
                         bool lifestreamEnabled = this.Configuration.LifestreamIntegration;
+                        string startLocation = ParseForStartLocation(messageContent);
+                        string startZone = ParseForStartZone(messageContent);
 
                         Svc.Chat.Print(new() { Message = message });
                         var msg = RemoveSymbolsRegex().Replace(message.ToString(), "");
                         PluginLog.Debug($"Adding cache entry {msg}");
-                        NotifyWindow.Cache[msg] = (messageContent,huntMessage.Kind, huntMessage.World,currentworldName,currentregionName, huntregionName, ConvertTime(huntMessage.Posted_Epoch), teleporterEnabled,lifestreamEnabled);
+                        NotifyWindow.Cache[msg] = (messageContent,huntMessage.Kind, huntMessage.World,currentworldName,currentregionName, huntregionName, ConvertTime(huntMessage.Posted_Epoch),startLocation,startZone, teleporterEnabled,lifestreamEnabled);
 
                         // Play sound effect if one is set
                         if (this.Configuration.SoundEffect != 0)
@@ -701,7 +703,7 @@ namespace HuntAlerts
             Svc.Chat.Print(new() { Message = message });
             var msg = RemoveSymbolsRegex().Replace(message.ToString(), "");
             PluginLog.Debug($"Adding cache entry {msg}");
-            NotifyWindow.Cache[msg] = ($"Great Work","Endwalker","Sargatanas","Sargatanas","NA","NA","12:00 pm",true,true);
+            NotifyWindow.Cache[msg] = ($"Train starting in Azim Steppe (23.1,23.5)","Endwalker","Sargatanas","Sargatanas","NA","NA","12:00 pm","yedli","invalid",true,true);
         }
 
         public async void Dispose()
