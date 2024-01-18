@@ -13,7 +13,7 @@ using System.Text;
 using System.Collections.Generic;
 using static HuntAlerts.Plugin;
 using FFXIVClientStructs.FFXIV.Client.System;
-using Dalamud.Logging;
+using ECommons.Logging;
 using System.Threading.Tasks;
 using Dalamud.Game.Text.SeStringHandling.Payloads;
 using Dalamud.Game.Text.SeStringHandling;
@@ -35,17 +35,11 @@ namespace HuntAlerts
         public string Name => "Hunt Alerts";
         private const string CommandName = "/huntalerts";
         private ClientWebSocket _webSocket;
-        private IChatGui _chatGui;
         private CancellationTokenSource _cancellationTokenSource;
 
         public string serverURI = "ws://huntrelay.eastus.cloudapp.azure.com:6789";
         //public string serverURI = "ws://localhost:6789";
 
-
-        private DalamudPluginInterface PluginInterface { get; init; }
-        private ICommandManager CommandManager { get; init; }
-        private IDataManager Data { get; init; }
-        private IClientState ClientState { get; set; }
 
         public Configuration Configuration { get; init; }
         public WindowSystem WindowSystem = new("HuntAlerts");
@@ -57,36 +51,30 @@ namespace HuntAlerts
 
         public Plugin(
             DalamudPluginInterface pluginInterface
-        ){
-
-            
-            this.PluginInterface = pluginInterface;
-            this.CommandManager = commandManager;
-            this.Data = data;
-            this.ClientState = clientState;
-
-            this.Configuration = this.PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
-            this.Configuration.Initialize(this.PluginInterface);
+        )
+        {
             ECommonsMain.Init(pluginInterface, this);
+            this.Configuration = Svc.PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
+            this.Configuration.Initialize(Svc.PluginInterface);
 
 
             ConfigWindow = new ConfigWindow(this);
-            
+
             WindowSystem.AddWindow(ConfigWindow);
             NotifyWindow = new();
             WindowSystem.AddWindow(NotifyWindow);
 
-            this.CommandManager.AddHandler(CommandName, new CommandInfo(OnCommand)
+            Svc.Commands.AddHandler(CommandName, new CommandInfo(OnCommand)
             {
                 HelpMessage = "Opens the HuntAlerts options"
             });
 
-            this.PluginInterface.UiBuilder.Draw += DrawUI;
-            this.PluginInterface.UiBuilder.OpenConfigUi += DrawConfigUI;
+            Svc.PluginInterface.UiBuilder.Draw += DrawUI;
+            Svc.PluginInterface.UiBuilder.OpenConfigUi += DrawConfigUI;
 
             InitializeWebSocket();
 
-            LinkPayload = PluginInterface.AddChatLinkHandler(0, (id, s) =>
+            LinkPayload = Svc.PluginInterface.AddChatLinkHandler(0, (id, s) =>
             {
                 var msg = RemoveSymbolsRegex().Replace(s.ToString(), "");
                 NotifyWindow.IsOpen = true;
@@ -121,7 +109,7 @@ namespace HuntAlerts
 
             return result.ToString();
         }
-        
+
 
         private async void InitializeWebSocket()
         {
@@ -155,7 +143,7 @@ namespace HuntAlerts
                 try
                 {
                     PluginLog.Information("Attempting to reconnect WebSocket...");
-                    await Task.Delay(retryInterval,_cancellationTokenSource.Token); // Wait before reconnecting
+                    await Task.Delay(retryInterval, _cancellationTokenSource.Token); // Wait before reconnecting
                     _webSocket.Dispose(); // Dispose the old instance
                     _webSocket = new ClientWebSocket(); // Create a new instance
                     await _webSocket.ConnectAsync(new Uri(serverURI), _cancellationTokenSource.Token);
@@ -167,7 +155,7 @@ namespace HuntAlerts
                     PluginLog.Warning($"Websocket reconnection error");
                     PluginLog.Verbose($"WebSocket reconnection error: {ex}");
                     // Loop will continue until connection is re-established
-                    
+
                 }
             }
         }
@@ -351,7 +339,7 @@ namespace HuntAlerts
         private async void StartReceiving(CancellationToken cancellationToken)
         {
 
-            
+
 
 
             try
@@ -386,7 +374,7 @@ namespace HuntAlerts
 
                     try
                     {
-                        
+
                         var huntMessage = JsonConvert.DeserializeObject<HuntMessage>(messageString);
 
                         PluginLog.Verbose($"New train data received: Kind:" + huntMessage.Kind + " | World:" + huntMessage.World);
@@ -427,12 +415,13 @@ namespace HuntAlerts
                         string currentworldName = "";
 
 
-                        if(this.ClientState.IsLoggedIn && this.ClientState.LocalPlayer != null)
+                        if (Svc.ClientState.IsLoggedIn && Svc.ClientState.LocalPlayer != null)
                         {
-                            homeworldName = ClientState.LocalPlayer.HomeWorld.GameData.Name;
-                            currentworldName = ClientState.LocalPlayer.CurrentWorld.GameData.Name;
+                            homeworldName = Svc.ClientState.LocalPlayer.HomeWorld.GameData.Name;
+                            currentworldName = Svc.ClientState.LocalPlayer.CurrentWorld.GameData.Name;
                             PluginLog.Verbose($"Player is logged in. Homeworld: " + currentworldName + " | Currentworld: " + currentworldName);
-                        }else
+                        }
+                        else
                         {
                             PluginLog.Verbose($"Player is not logged in");
                         }
@@ -442,7 +431,7 @@ namespace HuntAlerts
 
                         // Checks against Current world only option
                         if (currentworldOnly && huntMessage.World != currentworldName)
-                        {        
+                        {
                             PluginLog.Verbose("Current World Only option is enabled and player is not on the hunt world currently, suppressing notification");
                             continue;
                         }
@@ -480,7 +469,7 @@ namespace HuntAlerts
                         }
 
 
-                        
+
                         PluginLog.Debug($"EndwalkerHunts setting: {this.Configuration.EndwalkerHunts}");
                         PluginLog.Debug($"ShadowbringersHunts setting: {this.Configuration.ShadowbringersHunts}");
                         PluginLog.Debug($"CenturioHunts setting: {this.Configuration.CenturioHunts}");
@@ -519,7 +508,7 @@ namespace HuntAlerts
                         {
                             currentworldName = Svc.ClientState.LocalPlayer.CurrentWorld.GameData.Name;
                             currentregionName = this.Configuration.DatacenterRegionMap[this.Configuration.WorldDatacenterMap[currentworldName]];
-                            PluginLog.Verbose($"Player is logged in. Homeworld: " + currentworldName + " | Currentworld: " + currentworldName + " | Currentregion: "+ currentregionName);
+                            PluginLog.Verbose($"Player is logged in. Homeworld: " + currentworldName + " | Currentworld: " + currentworldName + " | Currentregion: " + currentregionName);
                         }
                         else
                         {
@@ -536,7 +525,7 @@ namespace HuntAlerts
                         Svc.Chat.Print(new() { Message = message });
                         var msg = RemoveSymbolsRegex().Replace(message.ToString(), "");
                         PluginLog.Debug($"Adding cache entry {msg}");
-                        NotifyWindow.Cache[msg] = (messageContent,huntMessage.Kind, huntMessage.World,currentworldName,currentregionName, huntregionName, ConvertTime(huntMessage.Posted_Epoch),startLocation,startZone, teleporterEnabled,lifestreamEnabled);
+                        NotifyWindow.Cache[msg] = (messageContent, huntMessage.Kind, huntMessage.World, currentworldName, currentregionName, huntregionName, ConvertTime(huntMessage.Posted_Epoch), startLocation, startZone, teleporterEnabled, lifestreamEnabled);
 
                         // Play sound effect if one is set
                         if (this.Configuration.SoundEffect != 0)
@@ -707,16 +696,16 @@ namespace HuntAlerts
             Svc.Chat.Print(new() { Message = message });
             var msg = RemoveSymbolsRegex().Replace(message.ToString(), "");
             PluginLog.Debug($"Adding cache entry {msg}");
-            NotifyWindow.Cache[msg] = ($"Train starting in Azim Steppe (23.1,23.5)","Endwalker","Sargatanas","Sargatanas","NA","NA","12:00 pm","yedli","invalid",true,true);
+            NotifyWindow.Cache[msg] = ($"Train starting in Azim Steppe (23.1,23.5)", "Endwalker", "Sargatanas", "Sargatanas", "NA", "NA", "12:00 pm", "yedli", "invalid", true, true);
         }
 
         public async void Dispose()
         {
             this.WindowSystem.RemoveAllWindows();
-            
+
             ConfigWindow.Dispose();
 
-            PluginInterface.RemoveChatLinkHandler();
+            Svc.PluginInterface.RemoveChatLinkHandler();
 
             // Dispose of websocket
             try
@@ -743,8 +732,9 @@ namespace HuntAlerts
             {
                 PluginLog.Error($"{ex}");
             }
-            
-            this.CommandManager.RemoveHandler(CommandName);
+
+            Svc.Commands.RemoveHandler(CommandName);
+            ECommonsMain.Dispose();
         }
 
         private void OnCommand(string command, string args)

@@ -1,5 +1,5 @@
 using Dalamud.Interface.Windowing;
-using Dalamud.Logging;
+using ECommons.Logging;
 using ImGuiNET;
 using Microsoft.VisualBasic;
 using System;
@@ -14,6 +14,7 @@ using System.Numerics;
 using System.Threading;
 using FFXIVClientStructs.FFXIV.Client.Game.UI;
 using Dalamud.Interface.Utility;
+using ECommons.ImGuiMethods;
 
 namespace HuntAlerts.Windows;
 public class NotifyWindow : Window
@@ -45,16 +46,6 @@ public class NotifyWindow : Window
 
             string headerText = $"Hunt: {huntType}{Environment.NewLine}World: {world}{Environment.NewLine}Posted: {postedTime}{Environment.NewLine}{Environment.NewLine}";
             
-
-
-
-            // If you don't set a wrap position, text wraps at the window edge
-            ImGui.PushTextWrapPos();
-            ImGui.TextUnformatted(headerText);
-            // Pop the text wrap position so it doesn't affect other elements
-            ImGui.PopTextWrapPos();
-
-
             if (currentregionName == huntregionname)
             {
 
@@ -62,7 +53,7 @@ public class NotifyWindow : Window
                 {
                     if (lifestreamEnabled)
                     {
-                        float textWidth = ImGui.CalcTextSize(headerText).X;
+                        /*float textWidth = ImGui.CalcTextSize(headerText).X;
                         float windowWidth = ImGui.GetWindowWidth();
                         //float buttonWidth = ImGui.CalcTextSize($"Teleport to hunt").X + ImGui.GetStyle().FramePadding.X * 2;
                         float buttonWidth = ImGuiHelpers.GetButtonSize("Teleport to hunt").X;
@@ -74,14 +65,17 @@ public class NotifyWindow : Window
                         space = space > 0 ? space : 0;
 
                         // Place button on the same line as text and align it to the right
-                        ImGui.SameLine(space);
-                        if (ImGui.Button($"Teleport to Hunt"))
+                        ImGui.SameLine(space);*/
+                        ImGuiEx.RightFloat(() =>
                         {
-                            // Code to execute when the button is pressed
-                            PluginLog.Verbose($"Attempting to use lifestream to travel to {world}");
-                            //Svc.Commands.ProcessCommand($"/li {world}");
-                            ExecuteCommandWithLoop(world, startLocation, startZone, teleporterEnabled, lifestreamEnabled);
-                        }
+                            if (ImGui.Button($"Teleport to Hunt"))
+                            {
+                                // Code to execute when the button is pressed
+                                PluginLog.Verbose($"Attempting to use lifestream to travel to {world}");
+                                //Svc.Commands.ProcessCommand($"/li {world}");
+                                ExecuteCommandWithLoop(world, startLocation, startZone, teleporterEnabled, lifestreamEnabled);
+                            }
+                        });
                     }
                 }
                 else
@@ -90,7 +84,7 @@ public class NotifyWindow : Window
                     {
                         if (startLocation != null && (startLocation != "invalid" || startZone != "invalid"))
                         {
-                            float textWidth = ImGui.CalcTextSize(headerText).X;
+                            /*float textWidth = ImGui.CalcTextSize(headerText).X;
                             float windowWidth = ImGui.GetWindowWidth();
                             //float buttonWidth = ImGui.CalcTextSize($"Teleport to Hunt").X + ImGui.GetStyle().FramePadding.X * 2;
                             float buttonWidth = ImGuiHelpers.GetButtonSize("Teleport to Hunt").X;
@@ -102,21 +96,24 @@ public class NotifyWindow : Window
                             space = space > 0 ? space : 0;
 
                             // Place button on the same line as text and align it to the right
-                            ImGui.SameLine(space);
-
-                            if (ImGui.Button($"Teleport to Hunt"))
+                            ImGui.SameLine(space);*/
+                            ImGuiEx.RightFloat(() =>
                             {
-                                // Code to execute when the button is pressed
-                                if (startLocation != "invalid")
+                                if (ImGui.Button($"Teleport to Hunt"))
                                 {
-                                    PluginLog.Verbose($"Attempting to use teleporter to travel to {startLocation}");
-                                    Svc.Commands.ProcessCommand($"/tp {startLocation}");
-                                }else if(startZone != "invalid")
-                                {
-                                    PluginLog.Verbose($"Attempting to use teleporter to travel to {startZone}");
-                                    Svc.Commands.ProcessCommand($"/tpm {startZone}");
+                                    // Code to execute when the button is pressed
+                                    if (startLocation != "invalid")
+                                    {
+                                        PluginLog.Verbose($"Attempting to use teleporter to travel to {startLocation}");
+                                        Svc.Commands.ProcessCommand($"/tp {startLocation}");
+                                    }
+                                    else if (startZone != "invalid")
+                                    {
+                                        PluginLog.Verbose($"Attempting to use teleporter to travel to {startZone}");
+                                        Svc.Commands.ProcessCommand($"/tpm {startZone}");
+                                    }
                                 }
-                            }
+                            });
                         }
                     }
                 }
@@ -124,6 +121,7 @@ public class NotifyWindow : Window
 
             // If you don't set a wrap position, text wraps at the window edge
             ImGui.PushTextWrapPos();
+            ImGui.TextUnformatted(headerText);
             ImGui.TextUnformatted(message);
             // Pop the text wrap position so it doesn't affect other elements
             ImGui.PopTextWrapPos();
@@ -186,7 +184,7 @@ public class NotifyWindow : Window
                     {
                         currentworldName = Svc.ClientState.LocalPlayer.CurrentWorld.GameData.Name;
                         PluginLog.Verbose($"Player is logged in. Currentworld: " + currentworldName);
-
+                        
                         if (currentworldName == world)
                         {
                             var targetableStartTime = DateTime.Now;
