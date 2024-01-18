@@ -40,8 +40,6 @@ namespace HuntAlerts
         //public string serverURI = "ws://localhost:6789";
 
 
-        [PluginService] private static IChatGui ChatGui { get; set; }  // Use Dalamud's IoC container to get the IChatGui service
-
         private DalamudPluginInterface PluginInterface { get; init; }
         private ICommandManager CommandManager { get; init; }
         private IDataManager Data { get; init; }
@@ -336,7 +334,7 @@ namespace HuntAlerts
             string messageText = $"New {huntMessage.Kind} train starting soon on {huntMessage.World}!!";
             string coloredMessage = $"[3C][{hexColor}]{messageText}[/COLOR][/3C]";
 
-            ChatGui.Print(new XivChatEntry
+            Svc.Chat.Print(new XivChatEntry
             {
                 Message = new SeString(new Payload[] { new TextPayload(coloredMessage) })
             });
@@ -525,7 +523,7 @@ namespace HuntAlerts
                         string huntregionName = this.Configuration.DatacenterRegionMap[this.Configuration.WorldDatacenterMap[huntMessage.World]];
 
 
-                        ChatGui.Print(new() { Message = message });
+                        Svc.Chat.Print(new() { Message = message });
                         var msg = RemoveSymbolsRegex().Replace(message.ToString(), "");
                         PluginLog.Debug($"Adding cache entry {msg}");
                         NotifyWindow.Cache[msg] = (messageContent,huntMessage.World,currentworldName,currentregionName, huntregionName);
