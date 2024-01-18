@@ -43,10 +43,7 @@ public class NotifyWindow : Window
             bool teleporterEnabled = entry.teleporterEnabled;
             bool lifestreamEnabled = entry.lifestreamEnabled;
 
-            string headerText = "";
-
-
-            headerText = $"Hunt: {huntType}{Environment.NewLine}World: {world}{Environment.NewLine}Posted: {postedTime}{Environment.NewLine}{Environment.NewLine}";
+            string headerText = $"Hunt: {huntType}{Environment.NewLine}World: {world}{Environment.NewLine}Posted: {postedTime}{Environment.NewLine}{Environment.NewLine}";
             
 
 
@@ -118,10 +115,6 @@ public class NotifyWindow : Window
                                 {
                                     PluginLog.Verbose($"Attempting to use teleporter to travel to {startZone}");
                                     Svc.Commands.ProcessCommand($"/tpm {startZone}");
-                                }
-                                else
-                                {
-                                    PluginLog.Verbose("IDK WHAT THE FUCK");
                                 }
                             }
                         }
