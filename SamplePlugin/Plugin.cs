@@ -25,11 +25,13 @@ using System.Linq;
 using Dalamud.Game.Text;
 using System.Drawing;
 using ECommons.DalamudServices;
+using ECommons;
 
 namespace HuntAlerts
 {
     public sealed partial class Plugin : IDalamudPlugin
     {
+
         public string Name => "Hunt Alerts";
         private const string CommandName = "/huntalerts";
         private ClientWebSocket _webSocket;
@@ -44,6 +46,7 @@ namespace HuntAlerts
         private ICommandManager CommandManager { get; init; }
         private IDataManager Data { get; init; }
         private IClientState ClientState { get; set; }
+
         public Configuration Configuration { get; init; }
         public WindowSystem WindowSystem = new("HuntAlerts");
 
@@ -53,9 +56,10 @@ namespace HuntAlerts
         NotifyWindow NotifyWindow;
 
         public Plugin(
-            DalamudPluginInterface pluginInterface,
-            ICommandManager commandManager, IDataManager data, IClientState clientState)
-        {
+            DalamudPluginInterface pluginInterface
+        ){
+
+            
             this.PluginInterface = pluginInterface;
             this.CommandManager = commandManager;
             this.Data = data;
@@ -63,7 +67,7 @@ namespace HuntAlerts
 
             this.Configuration = this.PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
             this.Configuration.Initialize(this.PluginInterface);
-            Svc.Init(pluginInterface);
+            ECommonsMain.Init(pluginInterface, this);
 
 
             ConfigWindow = new ConfigWindow(this);
