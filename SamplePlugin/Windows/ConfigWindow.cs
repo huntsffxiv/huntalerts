@@ -6,6 +6,9 @@ using FFXIVClientStructs.FFXIV.Client.UI;
 using System.Collections.Generic;
 using FFXIVClientStructs.Havok;
 using System.Linq;
+using ECommons.DalamudServices;
+using System.Threading.Tasks;
+using System.Threading;
 
 namespace HuntAlerts.Windows;
 
@@ -20,7 +23,7 @@ public class ConfigWindow : Window, IDisposable
        ImGuiWindowFlags.NoResize)
     {
         this.Plugin = plugin;
-        this.Size = new Vector2(400, 800);
+        this.Size = new Vector2(400, 870);
         this.SizeCondition = ImGuiCond.Always;
 
         this.Configuration = plugin.Configuration;
@@ -45,7 +48,6 @@ public class ConfigWindow : Window, IDisposable
         }
 
 
-
         // Local variable for color options
         Dictionary<string, int> _colorOptions = new Dictionary<string, int>
     {
@@ -64,6 +66,32 @@ public class ConfigWindow : Window, IDisposable
             // Update the configuration when the selection changes
             this.Configuration.TextColor = _colorOptions[items[textColor]];
             this.Configuration.Save(); // Method to save your configuration
+        }
+
+
+        // Add blank line
+        ImGui.NewLine();
+
+        // Create a simple header
+        ImGui.Text("Integrations (Changes take effect next hunt message)");
+
+        // Optional: Draw a separator line
+        ImGui.Separator();
+
+        var teleporterIntegration = this.Configuration.TeleporterIntegration;
+        if (ImGui.Checkbox("Enable Teleporter Integration", ref teleporterIntegration))
+        {
+            this.Configuration.TeleporterIntegration = teleporterIntegration;
+            // can save immediately on change, if you don't want to provide a "Save and Close" button
+            this.Configuration.Save();
+        }
+
+        var lifestreamIntegration = this.Configuration.LifestreamIntegration;
+        if (ImGui.Checkbox("Enable Lifestream Integration", ref lifestreamIntegration))
+        {
+            this.Configuration.LifestreamIntegration = lifestreamIntegration;
+            // can save immediately on change, if you don't want to provide a "Save and Close" button
+            this.Configuration.Save();
         }
 
 
@@ -654,4 +682,7 @@ public class ConfigWindow : Window, IDisposable
 
         //if (ImGui.Button("Test")) Plugin.Test();
     }
+
+
+    
 }

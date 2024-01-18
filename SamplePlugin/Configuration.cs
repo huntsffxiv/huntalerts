@@ -15,7 +15,8 @@ namespace HuntAlerts
         public bool SuppressDuplicates { get; set; } = true;
         public int TextColor { get; set; } = 0;
         public int SoundEffect { get; set; } = 0;
-        public Vector2 WindowSize { get; set; } = new Vector2(400, 300);
+        public bool TeleporterIntegration { get; set; } = false;
+        public bool LifestreamIntegration { get; set; } = false;
 
         public bool EndwalkerHunts { get; set; } = false;
         public bool ShadowbringersHunts { get; set; } = false;

@@ -11,11 +11,14 @@ using Dalamud.Game.Command;
 using Dalamud.Plugin.Services;
 using ECommons.DalamudServices;
 using System.Numerics;
+using System.Threading;
+using FFXIVClientStructs.FFXIV.Client.Game.UI;
+using Dalamud.Interface.Utility;
 
 namespace HuntAlerts.Windows;
 public class NotifyWindow : Window
 {
-    public Dictionary<string, (string Message, string World, string currentworldName, string currentregionName, string huntregionName)> Cache = new Dictionary<string, (string, string, string, string, string)>();
+    public Dictionary<string, (string Message, string huntKind, string huntWorld, string currentworldName, string currentregionName, string huntregionName, string Posted_Time, bool teleporterEnabled,bool lifestreamEnabled)> Cache = new Dictionary<string, (string, string, string, string, string, string, string, bool, bool)>();
     public string CurrentPayload = "";
 
 
@@ -29,62 +32,96 @@ public class NotifyWindow : Window
         if(Cache.TryGetValue(CurrentPayload, out var entry))
         {
             string message = entry.Message;
-            string world = entry.World;
+            string world = entry.huntWorld;
             string currentworldName = entry.currentworldName;
             string currentregionName = entry.currentregionName;
             string huntregionname = entry.huntregionName;
+            string huntType = entry.huntKind;
+            string postedTime = entry.Posted_Time;
+            bool teleporterEnabled = entry.teleporterEnabled;
+            bool lifestreamEnabled = entry.lifestreamEnabled;
+
+            string headerText = "";
 
 
-            if(currentregionName == huntregionname)
+            headerText = $"Hunt: {huntType}{Environment.NewLine}World: {world}{Environment.NewLine}Posted: {postedTime}{Environment.NewLine}{Environment.NewLine}";
+            
+
+
+
+            // If you don't set a wrap position, text wraps at the window edge
+            ImGui.PushTextWrapPos();
+            ImGui.TextUnformatted(headerText);
+            // Pop the text wrap position so it doesn't affect other elements
+            ImGui.PopTextWrapPos();
+
+
+            if (currentregionName == huntregionname)
             {
+
+                string startlocation = Plugin.ParseForStartLocation(message);
+
                 if (currentworldName != world)
                 {
-                    // Calculate the total available width in the window
-                    float windowWidth = ImGui.GetWindowWidth();
-                    float buttonWidth = ImGui.CalcTextSize($"Teleport to {world}").X + ImGui.GetStyle().FramePadding.X * 2;
-
-                    // Calculate the required cursor position to align the button to the right
-                    float cursorPosX = windowWidth - buttonWidth - ImGui.GetStyle().WindowPadding.X; // Subtracting WindowPadding for proper alignment
-
-                    // Set the cursor position
-                    ImGui.SetCursorPosX(cursorPosX > 0 ? cursorPosX : 0); // Ensure the position is not negative
-
-                    if (ImGui.Button($"Teleport to {world}"))
+                    if (lifestreamEnabled)
                     {
-                        // Code to execute when the button is pressed
-                        PluginLog.Verbose($"Attempting to use lifestream to travel to {world}");
-                        Svc.Commands.ProcessCommand($"/li {world}");
+                        float textWidth = ImGui.CalcTextSize(headerText).X;
+                        float windowWidth = ImGui.GetWindowWidth();
+                        //float buttonWidth = ImGui.CalcTextSize($"Teleport to hunt").X + ImGui.GetStyle().FramePadding.X * 2;
+                        float buttonWidth = ImGuiHelpers.GetButtonSize("Teleport to hunt").X;
+
+                        // Calculate space needed to align the button to the right, then subtract 250 pixels to move it to the left
+                        float space = windowWidth - textWidth - buttonWidth - ImGui.GetStyle().WindowPadding.X * 2 + 100;
+
+                        // Ensure that the space value does not go negative
+                        space = space > 0 ? space : 0;
+
+                        // Place button on the same line as text and align it to the right
+                        ImGui.SameLine(space);
+                        if (ImGui.Button($"Teleport to Hunt"))
+                        {
+                            // Code to execute when the button is pressed
+                            PluginLog.Verbose($"Attempting to use lifestream to travel to {world}");
+                            //Svc.Commands.ProcessCommand($"/li {world}");
+                            ExecuteCommandWithLoop(world, startlocation, teleporterEnabled, lifestreamEnabled);
+                        }
                     }
                 }else
                 {
-                    string startlocation = ParseForStartLocation(message);
-                    if (startlocation != null && startlocation != "invalid")
+                    if (teleporterEnabled)
                     {
-                        // Calculate the total available width in the window
-                        float windowWidth = ImGui.GetWindowWidth();
-                        float buttonWidth = ImGui.CalcTextSize($"Teleport to {world}").X + ImGui.GetStyle().FramePadding.X * 2;
-
-                        // Calculate the required cursor position to align the button to the right
-                        float cursorPosX = windowWidth - buttonWidth - ImGui.GetStyle().WindowPadding.X; // Subtracting WindowPadding for proper alignment
-
-                        // Set the cursor position
-                        ImGui.SetCursorPosX(cursorPosX > 0 ? cursorPosX : 0); // Ensure the position is not negative
-
-                        if (ImGui.Button($"Teleport to start location"))
+                        if (startlocation != null && startlocation != "invalid")
                         {
-                            // Code to execute when the button is pressed
-                            PluginLog.Verbose($"Attempting to use teleporter to travel to {startlocation}");
-                            Svc.Commands.ProcessCommand($"/tp {startlocation}");
+                            float textWidth = ImGui.CalcTextSize(headerText).X;
+                            float windowWidth = ImGui.GetWindowWidth();
+                            //float buttonWidth = ImGui.CalcTextSize($"Teleport to Hunt").X + ImGui.GetStyle().FramePadding.X * 2;
+                            float buttonWidth = ImGuiHelpers.GetButtonSize("Teleport to Hunt").X;
+
+                            // Calculate space needed to align the button to the right, then subtract 250 pixels to move it to the left
+                            float space = windowWidth - textWidth - buttonWidth - ImGui.GetStyle().WindowPadding.X * 2 + 120;
+
+                            // Ensure that the space value does not go negative
+                            space = space > 0 ? space : 0;
+
+                            // Place button on the same line as text and align it to the right
+                            ImGui.SameLine(space);
+
+                            if (ImGui.Button($"Teleport to Hunt"))
+                            {
+                                // Code to execute when the button is pressed
+                                PluginLog.Verbose($"Attempting to use teleporter to travel to {startlocation}");
+                                Svc.Commands.ProcessCommand($"/tp {startlocation}");
+                            }
                         }
                     }
                 }
             }
+
             // If you don't set a wrap position, text wraps at the window edge
             ImGui.PushTextWrapPos();
             ImGui.TextUnformatted(message);
             // Pop the text wrap position so it doesn't affect other elements
             ImGui.PopTextWrapPos();
-
 
         }
         else
@@ -92,27 +129,104 @@ public class NotifyWindow : Window
             ImGui.Text($"Could not find requested entry");
         }
     }
-    public static string ParseForStartLocation(string message)
+
+
+    private CancellationTokenSource _cancellationTokenSource;
+    private bool _isTaskRunning = false;
+    private async void ExecuteCommandWithLoop(string world, string startlocation, bool teleporterEnabled, bool lifestreamEnabled)
     {
-        // Define a list of keywords, including multi-word keywords
-        var keywords = new List<string> { "fort", "ostall", "great work", "palaka", "yedli", "castrum", "camp broken" };
-
-        // Find which keywords are in the input string
-        var foundKeywords = keywords.Where(keyword => message.ToLower().Contains(keyword)).ToList();
-
-        // Prepare the result string
-        string result;
-
-        if (foundKeywords.Count == 1)
+        if (_isTaskRunning)
         {
-            result = foundKeywords.First();
-        }
-        else
-        {
-            result = "invalid";
+            _cancellationTokenSource.Cancel(); // Cancel the current task if running
+            _isTaskRunning = false;
+            return;
         }
 
-        return result;
+        _cancellationTokenSource = new CancellationTokenSource();
+        var token = _cancellationTokenSource.Token;
+        _isTaskRunning = true;
+
+        try
+        {
+            
+            string currentworldName = "";
+            currentworldName = Svc.ClientState.LocalPlayer.CurrentWorld.GameData.Name;
+
+            if (lifestreamEnabled && currentworldName != world)
+            {
+                if (currentworldName != world)
+                {
+                    // Execute initial command
+                    Svc.Commands.ProcessCommand($"/li {world}");
+                }
+            }else
+            {
+                if (currentworldName != world)
+                {
+                    Svc.Chat.Print("Can't teleport to hunt world without the Lifestream plugin being enabled as you are off world.");
+                    return;
+                }
+            }
+
+            if (teleporterEnabled)
+            {
+                // Start loop
+                var startTime = DateTime.Now;
+                while (!token.IsCancellationRequested && (DateTime.Now - startTime).TotalSeconds <= 240)
+                {
+
+                    // Check character's current world and logged in status here
+                    // if condition met, break loop and run another command
+                    if (Svc.ClientState.IsLoggedIn && Svc.ClientState.LocalPlayer != null)
+                    {
+                        currentworldName = Svc.ClientState.LocalPlayer.CurrentWorld.GameData.Name;
+                        PluginLog.Verbose($"Player is logged in. Currentworld: " + currentworldName);
+
+                        if (currentworldName == world)
+                        {
+                            var targetableStartTime = DateTime.Now;
+                            // Loop until the player is targetable or until canceled
+                            while (!token.IsCancellationRequested && (DateTime.Now - targetableStartTime).TotalSeconds <= 60) // Inner loop timeout (e.g., 60 seconds)
+                            {
+                                if (Svc.ClientState.LocalPlayer?.IsTargetable == true)
+                                {
+                                    // Player is targetable, execute the command
+                                    PluginLog.Verbose($"Player is on hunt world, starting teleport to hunt location. Currentworld: " + currentworldName);
+                                    Svc.Commands.ProcessCommand($"/tp {startlocation}");
+                                    return;
+                                }
+
+                                // Wait a bit before checking again
+                                await Task.Delay(1000, token); // Check every second, for example
+                            }  
+                        }
+
+                    }
+                    else
+                    {
+                        PluginLog.Verbose($"Player is still transfering");
+                    }
+
+
+
+                    await Task.Delay(5000, token); // Wait for 5 seconds
+                }
+            }else
+            {
+                Svc.Chat.Print("Can't teleport to hunt train without the Teleporter plugin being enabled.");
+                return;
+            }
+        }
+        catch (TaskCanceledException)
+        {
+            // Handle cancellation
+        }
+        finally
+        {
+            _isTaskRunning = false;
+        }
+
+        // Additional code to execute after loop ends
     }
 
 

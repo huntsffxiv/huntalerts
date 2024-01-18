@@ -296,11 +296,14 @@ namespace HuntAlerts
                 // Extract the Unix timestamp from the match
                 long unixTimestamp = long.Parse(match.Groups[1].Value);
 
+                string time = ConvertTime(unixTimestamp);
+
                 // Convert Unix timestamp to DateTime
-                DateTime dateTime = DateTimeOffset.FromUnixTimeSeconds(unixTimestamp).ToLocalTime().DateTime;
+                //DateTime dateTime = DateTimeOffset.FromUnixTimeSeconds(unixTimestamp).ToLocalTime().DateTime;
 
                 // Format the DateTime as needed, e.g., "MM/dd/yyyy HH:mm:ss"
-                return dateTime.ToString("g"); // or any other format
+                //return dateTime.ToString("g"); // or any other format
+                return time;
             });
         }
 
@@ -313,7 +316,7 @@ namespace HuntAlerts
             return Regex.Replace(input, emojiPattern, "");
         }
 
-        private static string convertTime(long epochTime)
+        private static string ConvertTime(long epochTime)
         {
 
             // Convert Unix timestamp to DateTime
@@ -488,7 +491,7 @@ namespace HuntAlerts
                         messageContent = RemoveDiscordEmojis(messageContent);
 
                         // Adds header to the message
-                        messageContent = "Hunt: " + huntMessage.Kind + Environment.NewLine + "World: " + huntMessage.World + Environment.NewLine + "Posted: "+ convertTime(huntMessage.Posted_Epoch) + Environment.NewLine + Environment.NewLine + messageContent;
+                        //messageContent = "Hunt: " + huntMessage.Kind + Environment.NewLine + "World: " + huntMessage.World + Environment.NewLine + "Posted: "+ ConvertTime(huntMessage.Posted_Epoch) + Environment.NewLine + Environment.NewLine + messageContent;
 
 
                         // Code to handle the hunt
@@ -521,12 +524,13 @@ namespace HuntAlerts
 
                         // Get hunt region
                         string huntregionName = this.Configuration.DatacenterRegionMap[this.Configuration.WorldDatacenterMap[huntMessage.World]];
-
+                        bool teleporterEnabled = this.Configuration.TeleporterIntegration;
+                        bool lifestreamEnabled = this.Configuration.LifestreamIntegration;
 
                         Svc.Chat.Print(new() { Message = message });
                         var msg = RemoveSymbolsRegex().Replace(message.ToString(), "");
                         PluginLog.Debug($"Adding cache entry {msg}");
-                        NotifyWindow.Cache[msg] = (messageContent,huntMessage.World,currentworldName,currentregionName, huntregionName);
+                        NotifyWindow.Cache[msg] = (messageContent,huntMessage.Kind, huntMessage.World,currentworldName,currentregionName, huntregionName, ConvertTime(huntMessage.Posted_Epoch), teleporterEnabled,lifestreamEnabled);
 
                         // Play sound effect if one is set
                         if (this.Configuration.SoundEffect != 0)
@@ -561,16 +565,144 @@ namespace HuntAlerts
                 }
             }
         }
+        public static string ParseForStartZone(string message)
+        {
+            // Define a dictionary mapping keywords to corresponding values
+            var keywordMap = new Dictionary<string, string>
+            {
+                // EW
+                { "mare", "Mare Lamentorum" },
+                { "thule", "Ultima Thule" },
+                { "thav", "Thavnair" },
+                { "elpis", "Elpis" },
+                { "garlemald", "Garlemald" },
+                { "laby", "Labyrinthos" },
 
-        /*public void Test()
+                // SHB
+                
+                { "lakeland", "Lakeland" },
+                { "kholusia", "Kholusia" },
+                { "araeng", "Amh Araeng" },
+                { "mheg", "Il Mheg" },
+                { "greatwood", "The Rak'tika Greatwood" },
+                { "tempest", "The Tempest" },
+                
+
+                // SB
+                { "fringes", "The Fringes" },
+                { "ruby sea", "The Ruby Sea" },
+                { "azim", "The Azim Steppe" },
+                { "lochs", "The Lochs" },
+                { "peaks", "The Peaks" },
+
+
+                // HW
+                { "sea of clouds", "The Sea of Clouds" },
+                { "azys", "Azys Lla" },
+                { "forelands", "The Dravanian Forelands" },
+                { "mists", "The Churning Mists" },
+            };
+
+            // Convert message to lower case for case-insensitive comparison
+            string lowerMessage = message.ToLower();
+
+            // Find which keywords are in the input string
+            var foundKeywords = keywordMap.Keys.Where(keyword => lowerMessage.Contains(keyword)).ToList();
+
+            // Prepare the result string
+            string result;
+
+            if (foundKeywords.Count > 1)
+            {
+                // Get the corresponding value from the dictionary
+                result = keywordMap[foundKeywords.First()];
+            }
+            else
+            {
+                result = "invalid";
+            }
+
+            return result;
+        }
+
+        public static string ParseForStartLocation(string message)
+        {
+            // Define a dictionary mapping keywords to corresponding values
+            var keywordMap = new Dictionary<string, string>
+            {
+                { "fort", "Fort Jobb" },
+                { "foot", "Fort Jobb" },
+                { "ostall", "The Ostall Imperative" },
+                { "great work", "The Great Work" },
+                { "palaka", "Palaka's Stand" },
+                { "yedli", "Yedlihmad" },
+                { "castrum", "Castrum Oriens" },
+                { "camp broken", "Camp Broken Glass" },
+                { "sinus", "Sinus Lacrimarum" },
+                { "tertium", "Tertium" },
+                { "anag", "Anagnorisis" },
+                { "wonder", "The Twelve Wonders" },
+                { "poie", "Poieten Oikos" },
+                { "apor", "Aporia" },
+                { "arche", "The Archeion" },
+                { "haml", "Sharlayan Hamlet" },
+                { "ondo", "The Ondo Cups" },
+                { "lydha", "Lydha Lran" },
+                { "slither", "Slitherbough" },
+                { "fanow", "Fanow" },
+                { "twine", "Twine" },
+                { "mord", "Mord Souq" },
+                { "inn", "The Inn at Journey's Head" },
+                { "tomra", "Tomra" },
+                { "wrig", "Wright" },
+                { "stilltide", "Stilltide" },
+                { "wole", "Wolekdorf" },
+                { "peer", "The Peering Stones" },
+                { "gannh", "Ala Gannha" },
+                { "ghiri", "Ala Ghiri" },
+                { "porta", "Porta Praetoria" },
+                { "quart", "The Ala Mhigan Quarter" },
+                { "ono", "Onokoro" },
+                { "tama", "Tamamizu" },
+                { "house", "The House of the Fierce" },
+                { "dhor", "Dhoro Iloh" },
+                { "reun", "Reunion" },
+                { "throne", "The Dawn Throne" },
+
+            };
+
+            // Convert message to lower case for case-insensitive comparison
+            string lowerMessage = message.ToLower();
+
+            // Find which keywords are in the input string
+            var foundKeywords = keywordMap.Keys.Where(keyword => lowerMessage.Contains(keyword)).ToList();
+
+            // Prepare the result string
+            string result;
+
+            if (foundKeywords.Count > 0)
+            {
+                // Get the corresponding value from the dictionary
+                result = keywordMap[foundKeywords.First()];
+            }
+            else
+            {
+                result = "invalid";
+            }
+
+            return result;
+        }
+
+
+        public void Test()
         {
 
             var message = new SeStringBuilder().Add(LinkPayload).AddText($"New test train starting soon on test !! {Environment.TickCount64}").Add(RawPayload.LinkTerminator).Build();
-            ChatGui.Print(new() { Message = message });
+            Svc.Chat.Print(new() { Message = message });
             var msg = RemoveSymbolsRegex().Replace(message.ToString(), "");
             PluginLog.Debug($"Adding cache entry {msg}");
-            NotifyWindow.Cache[msg] = $"Content {Environment.TickCount64}";
-        }*/
+            NotifyWindow.Cache[msg] = ($"Great Work","Endwalker","Sargatanas","Sargatanas","NA","NA","12:00 pm",true,true);
+        }
 
         public async void Dispose()
         {
