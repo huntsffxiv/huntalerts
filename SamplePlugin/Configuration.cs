@@ -2,6 +2,7 @@ using Dalamud.Configuration;
 using Dalamud.Plugin;
 using System;
 using System.Collections.Generic;
+using System.Numerics;
 
 namespace HuntAlerts
 {
@@ -13,6 +14,8 @@ namespace HuntAlerts
         // General Settings
         public bool SuppressDuplicates { get; set; } = true;
         public int TextColor { get; set; } = 0;
+        public int SoundEffect { get; set; } = 0;
+        public Vector2 WindowSize { get; set; } = new Vector2(400, 300);
 
         public bool EndwalkerHunts { get; set; } = false;
         public bool ShadowbringersHunts { get; set; } = false;
@@ -25,8 +28,6 @@ namespace HuntAlerts
         public bool Dynamis { get; set; } = false;
         public bool Light { get; set; } = false;
         public bool Chaos { get; set; } = false;
-        public int soundEffect { get; set; } = 0;
-        public int MaxLineLength { get; set; } = 200;
 
         // Aether World Options
         public bool MidgardsormrWorld { get; set; } = true;

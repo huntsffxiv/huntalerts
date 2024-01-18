@@ -67,21 +67,6 @@ public class ConfigWindow : Window, IDisposable
         }
 
 
-        var maxlineLength = this.Configuration.MaxLineLength;
-        if(ImGui.InputInt("Max Line Length",ref maxlineLength))
-        {
-            if (maxlineLength > 999)
-            {
-                maxlineLength = 999;
-            }else if (maxlineLength <= 50)
-            {
-                maxlineLength = 50;
-            }
-
-            this.Configuration.MaxLineLength = maxlineLength;
-            this.Configuration.Save();
-        }
-
         // Add blank line
         ImGui.NewLine();
 
@@ -653,11 +638,11 @@ public class ConfigWindow : Window, IDisposable
         }
 
         // Assuming soundEffect in Configuration is an index of the selected sound effect.
-        var soundEffectIndex = this.Configuration.soundEffect;
+        var soundEffectIndex = this.Configuration.SoundEffect;
         if (ImGui.Combo("", ref soundEffectIndex, soundEffects, soundEffects.Length))
         {
             // soundEffectIndex is the index of the selected item, which corresponds to the sound number.
-            this.Configuration.soundEffect = soundEffectIndex; // Update the configuration
+            this.Configuration.SoundEffect = soundEffectIndex; // Update the configuration
 
             if (soundEffectIndex != 0)
             {

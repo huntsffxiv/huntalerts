@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using Dalamud.Game.Command;
 using Dalamud.Plugin.Services;
 using ECommons.DalamudServices;
+using System.Numerics;
 
 namespace HuntAlerts.Windows;
 public class NotifyWindow : Window
@@ -18,8 +19,9 @@ public class NotifyWindow : Window
     public string CurrentPayload = "";
 
 
-    public NotifyWindow() : base("HuntAlerts notification", ImGuiWindowFlags.AlwaysAutoResize)
+    public NotifyWindow() : base("HuntAlerts notification", ImGuiWindowFlags.None)
     {
+        ImGui.SetNextWindowSize(new Vector2(400, 300)); // Set your desired initial width and height here
     }
 
     public override void Draw()
@@ -57,8 +59,11 @@ public class NotifyWindow : Window
                     }
                 }
             }
-
+            // If you don't set a wrap position, text wraps at the window edge
+            ImGui.PushTextWrapPos();
             ImGui.TextUnformatted(message);
+            // Pop the text wrap position so it doesn't affect other elements
+            ImGui.PopTextWrapPos();
 
 
         }

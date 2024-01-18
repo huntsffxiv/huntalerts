@@ -492,10 +492,6 @@ namespace HuntAlerts
                         // Adds header to the message
                         messageContent = "Hunt: " + huntMessage.Kind + Environment.NewLine + "World: " + huntMessage.World + Environment.NewLine + "Posted: "+ convertTime(huntMessage.Posted_Epoch) + Environment.NewLine + Environment.NewLine + messageContent;
 
-                        // Wordwrap really long lines
-                        int maxlineLength = this.Configuration.MaxLineLength;
-                        PluginLog.Verbose($"maxlinelength = {maxlineLength}");
-                        messageContent = WordWrap(messageContent,maxlineLength);
 
                         // Code to handle the hunt
                         // Since the handling code is the same for all hunts, place it here
@@ -535,9 +531,9 @@ namespace HuntAlerts
                         NotifyWindow.Cache[msg] = (messageContent,huntMessage.World,currentworldName,currentregionName, huntregionName);
 
                         // Play sound effect if one is set
-                        if (this.Configuration.soundEffect != 0)
+                        if (this.Configuration.SoundEffect != 0)
                         {
-                            UIModule.PlayChatSoundEffect((uint)this.Configuration.soundEffect); // Play the selected sound effect
+                            UIModule.PlayChatSoundEffect((uint)this.Configuration.SoundEffect); // Play the selected sound effect
                         }
 
 
