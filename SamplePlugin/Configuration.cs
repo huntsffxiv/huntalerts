@@ -94,6 +94,10 @@ namespace HuntAlerts
         [NonSerialized]
         public Dictionary<string, string> WorldDatacenterMap;
 
+        // Add a dictionary to map Datacenters to their Region
+        [NonSerialized]
+        public Dictionary<string, string> DatacenterRegionMap;
+
         public void Initialize(DalamudPluginInterface pluginInterface)
         {
             this.PluginInterface = pluginInterface;
@@ -160,7 +164,24 @@ namespace HuntAlerts
 
                 // Add mappings for all worlds in their respective data centers
             };
+
+            DatacenterRegionMap = new Dictionary<string, string>
+            {
+                // NA
+                { "Aether", "NA" },
+                { "Crystal", "NA" },
+                { "Primal", "NA" },
+                { "Dynamis", "NA" },
+                
+                // EU
+                { "Light", "EU" },
+                { "Chaos", "EU" },
+
+                // Add mappings for all Datacenters in their respective Regions
+            };
         }
+
+
 
         public void Save()
         {

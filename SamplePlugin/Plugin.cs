@@ -24,6 +24,7 @@ using System.Runtime.InteropServices;
 using System.Linq;
 using Dalamud.Game.Text;
 using System.Drawing;
+using ECommons.DalamudServices;
 
 namespace HuntAlerts
 {
@@ -64,7 +65,7 @@ namespace HuntAlerts
 
             this.Configuration = this.PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
             this.Configuration.Initialize(this.PluginInterface);
-
+            Svc.Init(pluginInterface);
 
 
             ConfigWindow = new ConfigWindow(this);
@@ -164,6 +165,7 @@ namespace HuntAlerts
                     PluginLog.Warning($"Websocket reconnection error");
                     PluginLog.Verbose($"WebSocket reconnection error: {ex}");
                     // Loop will continue until connection is re-established
+                    
                 }
             }
         }
@@ -510,10 +512,27 @@ namespace HuntAlerts
                         }
 
 
+                        // Get current region
+                        string currentregionName = "";
+                        if (Svc.ClientState.IsLoggedIn && Svc.ClientState.LocalPlayer != null)
+                        {
+                            currentworldName = Svc.ClientState.LocalPlayer.CurrentWorld.GameData.Name;
+                            currentregionName = this.Configuration.DatacenterRegionMap[this.Configuration.WorldDatacenterMap[currentworldName]];
+                            PluginLog.Verbose($"Player is logged in. Homeworld: " + currentworldName + " | Currentworld: " + currentworldName + " | Currentregion: "+ currentregionName);
+                        }
+                        else
+                        {
+                            PluginLog.Verbose($"Player is not logged in");
+                        }
+
+                        // Get hunt region
+                        string huntregionName = this.Configuration.DatacenterRegionMap[this.Configuration.WorldDatacenterMap[huntMessage.World]];
+
+
                         ChatGui.Print(new() { Message = message });
                         var msg = RemoveSymbolsRegex().Replace(message.ToString(), "");
                         PluginLog.Debug($"Adding cache entry {msg}");
-                        NotifyWindow.Cache[msg] = messageContent;
+                        NotifyWindow.Cache[msg] = (messageContent,huntMessage.World,currentworldName,currentregionName, huntregionName);
 
                         // Play sound effect if one is set
                         if (this.Configuration.soundEffect != 0)
@@ -549,7 +568,7 @@ namespace HuntAlerts
             }
         }
 
-        public void Test()
+        /*public void Test()
         {
 
             var message = new SeStringBuilder().Add(LinkPayload).AddText($"New test train starting soon on test !! {Environment.TickCount64}").Add(RawPayload.LinkTerminator).Build();
@@ -557,7 +576,7 @@ namespace HuntAlerts
             var msg = RemoveSymbolsRegex().Replace(message.ToString(), "");
             PluginLog.Debug($"Adding cache entry {msg}");
             NotifyWindow.Cache[msg] = $"Content {Environment.TickCount64}";
-        }
+        }*/
 
         public async void Dispose()
         {
