@@ -39,6 +39,16 @@ public class NotifyWindow : Window
             {
                 if (currentworldName != world)
                 {
+                    // Calculate the total available width in the window
+                    float windowWidth = ImGui.GetWindowWidth();
+                    float buttonWidth = ImGui.CalcTextSize($"Teleport to {world}").X + ImGui.GetStyle().FramePadding.X * 2;
+
+                    // Calculate the required cursor position to align the button to the right
+                    float cursorPosX = windowWidth - buttonWidth - ImGui.GetStyle().WindowPadding.X; // Subtracting WindowPadding for proper alignment
+
+                    // Set the cursor position
+                    ImGui.SetCursorPosX(cursorPosX > 0 ? cursorPosX : 0); // Ensure the position is not negative
+
                     if (ImGui.Button($"Teleport to {world}"))
                     {
                         // Code to execute when the button is pressed
@@ -50,6 +60,16 @@ public class NotifyWindow : Window
                     string startlocation = ParseForStartLocation(message);
                     if (startlocation != null && startlocation != "invalid")
                     {
+                        // Calculate the total available width in the window
+                        float windowWidth = ImGui.GetWindowWidth();
+                        float buttonWidth = ImGui.CalcTextSize($"Teleport to {world}").X + ImGui.GetStyle().FramePadding.X * 2;
+
+                        // Calculate the required cursor position to align the button to the right
+                        float cursorPosX = windowWidth - buttonWidth - ImGui.GetStyle().WindowPadding.X; // Subtracting WindowPadding for proper alignment
+
+                        // Set the cursor position
+                        ImGui.SetCursorPosX(cursorPosX > 0 ? cursorPosX : 0); // Ensure the position is not negative
+
                         if (ImGui.Button($"Teleport to start location"))
                         {
                             // Code to execute when the button is pressed
