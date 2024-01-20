@@ -774,9 +774,21 @@ public class ConfigWindow : Window, IDisposable
             ImGui.EndDisabled();
         }
 
+        /*if (ImGui.CollapsingHeader("Debug"))
+        {
+            ImGui.InputFloat("x", ref x);
+            ImGui.InputFloat("y", ref y);
+            ImGui.InputInt("tt", ref tt);
+            if (ImGui.Button("Test map link"))
+            {
+                MapManager.OpenMapWithMarker((uint)tt, x, y);
+            }
+        }*/
+
         //if (ImGui.Button("Test")) Plugin.Test();
     }
 
+    float x, y;
+    int tt;
 
-    
 }
