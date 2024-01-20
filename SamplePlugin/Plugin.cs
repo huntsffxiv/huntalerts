@@ -26,6 +26,8 @@ using Dalamud.Game.Text;
 using System.Drawing;
 using ECommons.DalamudServices;
 using ECommons;
+using System.Windows.Forms;
+using System.Security.Cryptography.X509Certificates;
 
 namespace HuntAlerts
 {
@@ -167,6 +169,12 @@ namespace HuntAlerts
             public string World { get; set; }
             public string Kind { get; set; }
             public long Posted_Epoch { get; set; }
+            public string CreatureName { get; set; }
+            public string LocationName { get; set; }
+            public string LocationCoords { get; set; }
+            public string AetheriteName { get; set; }
+            public long DeathTime { get; set; }
+
             public Dictionary<string, object> AdditionalData { get; set; }
         }
 
@@ -377,160 +385,276 @@ namespace HuntAlerts
 
                         var huntMessage = JsonConvert.DeserializeObject<HuntMessage>(messageString);
 
-                        PluginLog.Verbose($"New train data received: Kind:" + huntMessage.Kind + " | World:" + huntMessage.World);
-
-                        var key = (huntMessage.Kind, huntMessage.World);
-                        if (recentMessagesCache.TryGetValue(key, out var lastTimestamp))
-                        {
-                            if (DateTime.Now - lastTimestamp < TimeSpan.FromMinutes(2))
-                            {
-                                // Message with same Kind and World received within last 2 minutes
-                                PluginLog.Verbose("Similar message received recently, suppressing notification");
-                                continue;
-                            }
-                        }
-
-                        // Check if suppress duplicate message is enabled and record if true
-                        if (this.Configuration.SuppressDuplicates)
-                        {
-                            // Update the cache with the new timestamp
-                            recentMessagesCache[key] = DateTime.Now;
-                        }
-
-
-                        // Check if datacenter is enabled
-                        bool isDataCenterEnabled = this.Configuration.WorldDatacenterMap.TryGetValue(huntMessage.World, out var dataCenter) && IsDataCenterEnabled(dataCenter);
-
-                        // Check if the world is enabled
-                        bool isWorldEnabled = IsWorldEnabled(huntMessage.World);
-
-
-                        // Check if the hunt type is enabled
-                        bool isHuntEnabled = IsHuntEnabled(huntMessage.Kind);
-
-
-
-
+                        string currentdatacentername = "";
                         string homeworldName = "";
                         string currentworldName = "";
 
-
-                        if (Svc.ClientState.IsLoggedIn && Svc.ClientState.LocalPlayer != null)
+                        if (huntMessage.Type == "new_hunt")
                         {
-                            homeworldName = Svc.ClientState.LocalPlayer.HomeWorld.GameData.Name;
-                            currentworldName = Svc.ClientState.LocalPlayer.CurrentWorld.GameData.Name;
-                            PluginLog.Verbose($"Player is logged in. Homeworld: " + currentworldName + " | Currentworld: " + currentworldName);
-                        }
-                        else
+
+                            PluginLog.Verbose($"New train data received: Kind:" + huntMessage.Kind + " | World:" + huntMessage.World);
+
+                            var key = (huntMessage.Kind, huntMessage.World);
+                            if (recentMessagesCache.TryGetValue(key, out var lastTimestamp))
+                            {
+                                if (DateTime.Now - lastTimestamp < TimeSpan.FromMinutes(2))
+                                {
+                                    // Message with same Kind and World received within last 2 minutes
+                                    PluginLog.Verbose("Similar message received recently, suppressing notification");
+                                    continue;
+                                }
+                            }
+
+                            // Check if suppress duplicate message is enabled and record if true
+                            if (this.Configuration.SuppressDuplicates)
+                            {
+                                // Update the cache with the new timestamp
+                                recentMessagesCache[key] = DateTime.Now;
+                            }
+
+
+                            // Check if datacenter is enabled
+                            bool isDataCenterEnabled = this.Configuration.WorldDatacenterMap.TryGetValue(huntMessage.World, out var dataCenter) && IsDataCenterEnabled(dataCenter);
+
+                            // Check if the world is enabled
+                            bool isWorldEnabled = IsWorldEnabled(huntMessage.World);
+
+
+                            // Check if the hunt type is enabled
+                            bool isHuntEnabled = IsHuntEnabled(huntMessage.Kind);
+
+
+
+
+                  
+
+                            
+
+
+                            if (Svc.ClientState.IsLoggedIn && Svc.ClientState.LocalPlayer != null)
+                            {
+                                homeworldName = Svc.ClientState.LocalPlayer.HomeWorld.GameData.Name;
+                                currentworldName = Svc.ClientState.LocalPlayer.CurrentWorld.GameData.Name;
+                                PluginLog.Verbose($"Player is logged in. Homeworld: " + homeworldName + " | Currentworld: " + currentworldName);
+                            }
+                            else
+                            {
+                                PluginLog.Verbose($"Player is not logged in");
+                            }
+
+                            bool currentworldOnly = this.Configuration.CurrentWorldOnly;
+                            bool homeworldOnly = this.Configuration.HomeWorldOnly;
+
+                            // Checks against Current world only option
+                            if (currentworldOnly && huntMessage.World != currentworldName)
+                            {
+                                PluginLog.Verbose("Current World Only option is enabled and player is not on the hunt world currently, suppressing notification");
+                                continue;
+                            }
+
+                            // Checks against Homeworld Only option
+                            if (homeworldOnly && huntMessage.World != homeworldName)
+                            {
+                                PluginLog.Verbose("Home World Only option is enabled and hunt is not for player's home world, suppressing notification");
+                                continue;
+                            }
+
+
+                            // Check if the data center is enabled
+                            if (!isDataCenterEnabled)
+                            {
+                                // Data center is not enabled or unknown world
+                                PluginLog.Verbose("Datacenter is not enabled, suppressing notification");
+                                continue;
+                            }
+
+                            // Check if the world is enabled
+                            if (!isWorldEnabled)
+                            {
+                                // World is not enabled
+                                PluginLog.Verbose("World is not enabled, suppressing notification");
+                                continue;
+                            }
+
+                            // Check if the hunt type is enabled
+                            if (!isHuntEnabled)
+                            {
+                                // Hunt type is not enabled
+                                PluginLog.Verbose("Hunt type is not enabled, suppressing notification");
+                                continue;
+                            }
+
+
+
+                            PluginLog.Debug($"EndwalkerHunts setting: {this.Configuration.EndwalkerHunts}");
+                            PluginLog.Debug($"ShadowbringersHunts setting: {this.Configuration.ShadowbringersHunts}");
+                            PluginLog.Debug($"CenturioHunts setting: {this.Configuration.CenturioHunts}");
+
+                            // Format the main hunt message
+                            string messageContent = huntMessage.Content;
+
+                            // Fix timestamps from unix time to local time
+                            messageContent = ReplaceTimestampsWithLocalTime(messageContent);
+
+                            // Remove emojis from the message
+                            messageContent = RemoveDiscordEmojis(messageContent);
+
+                            // Adds header to the message
+                            //messageContent = "Hunt: " + huntMessage.Kind + Environment.NewLine + "World: " + huntMessage.World + Environment.NewLine + "Posted: "+ ConvertTime(huntMessage.Posted_Epoch) + Environment.NewLine + Environment.NewLine + messageContent;
+
+
+                            // Code to handle the hunt
+                            // Since the handling code is the same for all hunts, place it here
+
+                            int textColor = this.Configuration.TextColor;
+                            SeString message;
+                            if (textColor != 0)
+                            {
+                                message = new SeStringBuilder().AddUiForeground((ushort)textColor).Add(LinkPayload).AddText("New " + huntMessage.Kind + " train starting soon on " + huntMessage.World + "!!").Add(RawPayload.LinkTerminator).AddUiForegroundOff().Build();
+                            }
+                            else
+                            {
+                                message = new SeStringBuilder().Add(LinkPayload).AddText("New " + huntMessage.Kind + " train starting soon on " + huntMessage.World + "!!").Add(RawPayload.LinkTerminator).Build();
+                            }
+
+
+                            // Get current region
+                            string currentregionName = "";
+                            if (Svc.ClientState.IsLoggedIn && Svc.ClientState.LocalPlayer != null)
+                            {
+                                currentworldName = Svc.ClientState.LocalPlayer.CurrentWorld.GameData.Name;
+                                currentregionName = this.Configuration.DatacenterRegionMap[this.Configuration.WorldDatacenterMap[currentworldName]];
+                                currentdatacentername = this.Configuration.WorldDatacenterMap[currentworldName];
+
+                                PluginLog.Verbose($"Player is logged in. Homeworld: " + homeworldName + " | Currentworld: " + currentworldName + " | Currentregion: " + currentregionName);
+                            }
+                            else
+                            {
+                                PluginLog.Verbose($"Player is not logged in");
+                            }
+
+                            // Get hunt region
+                            string huntregionName = this.Configuration.DatacenterRegionMap[this.Configuration.WorldDatacenterMap[huntMessage.World]];
+                            bool teleporterEnabled = this.Configuration.TeleporterIntegration;
+                            bool lifestreamEnabled = this.Configuration.LifestreamIntegration;
+                            string startLocation = ParseForStartLocation(messageContent);
+                            string startZone = ParseForStartZone(messageContent);
+                            string formatted_message = $"Kind: Hunt Train{Environment.NewLine}Hunt: {huntMessage.Kind}{Environment.NewLine}World: {huntMessage.World}{Environment.NewLine}Posted: {ConvertTime(huntMessage.Posted_Epoch)}{Environment.NewLine}{Environment.NewLine}" + messageContent;
+
+                            Svc.Chat.Print(new() { Message = message });
+                            var msg = RemoveSymbolsRegex().Replace(message.ToString(), "");
+                            PluginLog.Debug($"Adding cache entry {msg}");
+                            PluginLog.Verbose($"Teleporter: {teleporterEnabled} | Lifestream: {lifestreamEnabled} | startLocation: {startLocation} | startZone: {startZone}");
+                            NotifyWindow.Cache[msg] = (formatted_message, huntMessage.Kind, huntMessage.World, currentworldName, currentregionName, huntregionName, ConvertTime(huntMessage.Posted_Epoch), startLocation, startZone, teleporterEnabled, lifestreamEnabled);
+
+                            // Play sound effect if one is set
+                            if (this.Configuration.SoundEffect != 0)
+                            {
+                                UIModule.PlayChatSoundEffect((uint)this.Configuration.SoundEffect); // Play the selected sound effect
+                            }
+                        }else if (huntMessage.Type == "srank")
                         {
-                            PluginLog.Verbose($"Player is not logged in");
-                        }
+                            bool isSRankEnabled = this.Configuration.SRankEnabled;
+                            bool srankcurrentworldOnly = this.Configuration.SRankCurrentWorld;
+                            string world = huntMessage.World;
+                            string kind = huntMessage.Kind;
+                            string creatureName = huntMessage.CreatureName;
+                            string srankExpansion = FindExpansion(creatureName);
+                            string locationName = huntMessage.LocationName;
+                            string locationCoords = huntMessage.LocationCoords;
+                            string aetheriteName = huntMessage.AetheriteName;
+                            long deathTime = huntMessage.DeathTime;
+                            long postedTime = huntMessage.Posted_Epoch;
+                            string huntdatacenterName = this.Configuration.WorldDatacenterMap[huntMessage.World];
+                            SeString message = "";
+                            string messageContent = "";
 
-                        bool currentworldOnly = this.Configuration.CurrentWorldOnly;
-                        bool homeworldOnly = this.Configuration.HomeWorldOnly;
+                            if (isSRankEnabled)
+                            {
+                                // Get Notification settings
+                                bool srankEndwalker = this.Configuration.EndwalkerSRank;
+                                bool srankShadowbringers = this.Configuration.ShadowbringersSRank;
+                                bool srankCenturio = this.Configuration.CenturioSRank;
 
-                        // Checks against Current world only option
-                        if (currentworldOnly && huntMessage.World != currentworldName)
-                        {
-                            PluginLog.Verbose("Current World Only option is enabled and player is not on the hunt world currently, suppressing notification");
-                            continue;
-                        }
+                                if ((srankEndwalker && FindExpansion(creatureName) == "EW") || (srankShadowbringers && FindExpansion(creatureName) == "SHB") || (srankCenturio && (FindExpansion(creatureName) == "ARR" || FindExpansion(creatureName) == "HW" || FindExpansion(creatureName) == "SB")))
+                                {
+                                    // Get current region
+                                    string currentregionName = "";
+                                    if (Svc.ClientState.IsLoggedIn && Svc.ClientState.LocalPlayer != null)
+                                    {
+                                        currentworldName = Svc.ClientState.LocalPlayer.CurrentWorld.GameData.Name;
+                                        currentdatacentername = this.Configuration.WorldDatacenterMap[currentworldName];
+                                        currentregionName = this.Configuration.DatacenterRegionMap[this.Configuration.WorldDatacenterMap[currentworldName]];
+                                        homeworldName = Svc.ClientState.LocalPlayer.HomeWorld.GameData.Name;
+                                        PluginLog.Verbose($"Player is logged in. Homeworld: " + homeworldName + " | Currentworld: " + currentworldName + " | Currentregion: " + currentregionName);
+                                    }
+                                    else
+                                    {
+                                        PluginLog.Verbose($"Player is not logged in");
+                                    }
+                                    if (((srankcurrentworldOnly && (currentworldName == world)) || srankcurrentworldOnly == false) && (currentdatacentername == huntdatacenterName))
+                                    {
+                                        // Get hunt region
+                                        string huntregionName = this.Configuration.DatacenterRegionMap[this.Configuration.WorldDatacenterMap[huntMessage.World]];
+                                        bool teleporterEnabled = this.Configuration.TeleporterIntegration;
+                                        bool lifestreamEnabled = this.Configuration.LifestreamIntegration;
+                                        string startLocation = aetheriteName;
+                                        string startZone = locationName;
 
-                        // Checks against Homeworld Only option
-                        if (homeworldOnly && huntMessage.World != homeworldName)
-                        {
-                            PluginLog.Verbose("Home World Only option is enabled and hunt is not for player's home world, suppressing notification");
-                            continue;
-                        }
+                                        if (deathTime == 0)
+                                        {
+                                            int sranktextColor = this.Configuration.SRankTextColor;
+                                            //string headerText = $"Hunt: {huntType}{Environment.NewLine}World: {world}{Environment.NewLine}Posted: {postedTime}{Environment.NewLine}{Environment.NewLine}";
+                                            messageContent = $"Type: S Rank{Environment.NewLine}Hunt:{srankExpansion}{Environment.NewLine}Posted: {ConvertTime(postedTime)}{Environment.NewLine}Creature: {creatureName}{Environment.NewLine}{Environment.NewLine}Location: {locationName} ({locationCoords}){Environment.NewLine}Aetherite: {aetheriteName}";
+
+                                            if (sranktextColor != 0)
+                                            {
+                                                message = new SeStringBuilder().AddUiForeground((ushort)sranktextColor).Add(LinkPayload).AddText("New S Rank spawned on " + world + "!!").Add(RawPayload.LinkTerminator).AddUiForegroundOff().Build();
+                                            }
+                                            else
+                                            {
+                                                message = new SeStringBuilder().Add(LinkPayload).AddText("New " + srankExpansion + " S Rank spawned on " + world + "!!").Add(RawPayload.LinkTerminator).Build();
+                                            }
+
+                                            PluginLog.Verbose($"deathTime = {deathTime}");
+                                            Svc.Chat.Print(new() { Message = message });
+                                            var msg = RemoveSymbolsRegex().Replace(message.ToString(), "");
+                                            PluginLog.Verbose($"currentWorld: {currentworldName}  |  currentRegion: {currentregionName}  |  huntWorld: {huntMessage.World}  |  huntRegion: {huntregionName}");
+                                            NotifyWindow.Cache[msg] = (messageContent, huntMessage.Kind, huntMessage.World, currentworldName, currentregionName, huntregionName, ConvertTime(huntMessage.Posted_Epoch), startLocation, startZone, teleporterEnabled, lifestreamEnabled);
+
+                                            // Play sound effect if one is set
+                                            if (this.Configuration.SoundEffect != 0)
+                                            {
+                                                UIModule.PlayChatSoundEffect((uint)this.Configuration.SoundEffect); // Play the selected sound effect
+                                            }
+                                        }
+                                        else
+                                        {
+
+                                            int sranktextColor = this.Configuration.SRankTextColor;
+                                            if (sranktextColor != 0)
+                                            {
+                                                message = new SeStringBuilder().AddUiForeground((ushort)sranktextColor).AddText($"S Rank {creatureName} on {world} was killed at {ConvertTime(deathTime)}.").AddUiForegroundOff().Build();
+                                            }
+                                            else
+                                            {
+                                                message = new SeStringBuilder().AddText($"{srankExpansion} S Rank {creatureName} on {world} was killed at {ConvertTime(deathTime)}.").Build();
+                                            }
+                                            Svc.Chat.Print(new() { Message = message });
+                                        }
+                                    }
+                                    else
+                                    {
+                                        PluginLog.Verbose($"{srankExpansion} S Rank {creatureName} spawned on {world} but skipping due to settings or not on same datacenter");
+                                    }
+                                }else
+                                {
+                                    PluginLog.Verbose($"Skipping S Rank because of notification settings");
+                                }
 
 
-                        // Check if the data center is enabled
-                        if (!isDataCenterEnabled)
-                        {
-                            // Data center is not enabled or unknown world
-                            PluginLog.Verbose("Datacenter is not enabled, suppressing notification");
-                            continue;
-                        }
 
-                        // Check if the world is enabled
-                        if (!isWorldEnabled)
-                        {
-                            // World is not enabled
-                            PluginLog.Verbose("World is not enabled, suppressing notification");
-                            continue;
-                        }
-
-                        // Check if the hunt type is enabled
-                        if (!isHuntEnabled)
-                        {
-                            // Hunt type is not enabled
-                            PluginLog.Verbose("Hunt type is not enabled, suppressing notification");
-                            continue;
-                        }
-
-
-
-                        PluginLog.Debug($"EndwalkerHunts setting: {this.Configuration.EndwalkerHunts}");
-                        PluginLog.Debug($"ShadowbringersHunts setting: {this.Configuration.ShadowbringersHunts}");
-                        PluginLog.Debug($"CenturioHunts setting: {this.Configuration.CenturioHunts}");
-
-                        // Format the main hunt message
-                        string messageContent = huntMessage.Content;
-
-                        // Fix timestamps from unix time to local time
-                        messageContent = ReplaceTimestampsWithLocalTime(messageContent);
-
-                        // Remove emojis from the message
-                        messageContent = RemoveDiscordEmojis(messageContent);
-
-                        // Adds header to the message
-                        //messageContent = "Hunt: " + huntMessage.Kind + Environment.NewLine + "World: " + huntMessage.World + Environment.NewLine + "Posted: "+ ConvertTime(huntMessage.Posted_Epoch) + Environment.NewLine + Environment.NewLine + messageContent;
-
-
-                        // Code to handle the hunt
-                        // Since the handling code is the same for all hunts, place it here
-
-                        int textColor = this.Configuration.TextColor;
-                        SeString message;
-                        if (textColor != 0)
-                        {
-                            message = new SeStringBuilder().AddUiForeground((ushort)textColor).Add(LinkPayload).AddText("New " + huntMessage.Kind + " train starting soon on " + huntMessage.World + "!!").Add(RawPayload.LinkTerminator).AddUiForegroundOff().Build();
-                        }
-                        else
-                        {
-                            message = new SeStringBuilder().Add(LinkPayload).AddText("New " + huntMessage.Kind + " train starting soon on " + huntMessage.World + "!!").Add(RawPayload.LinkTerminator).Build();
-                        }
-
-
-                        // Get current region
-                        string currentregionName = "";
-                        if (Svc.ClientState.IsLoggedIn && Svc.ClientState.LocalPlayer != null)
-                        {
-                            currentworldName = Svc.ClientState.LocalPlayer.CurrentWorld.GameData.Name;
-                            currentregionName = this.Configuration.DatacenterRegionMap[this.Configuration.WorldDatacenterMap[currentworldName]];
-                            PluginLog.Verbose($"Player is logged in. Homeworld: " + currentworldName + " | Currentworld: " + currentworldName + " | Currentregion: " + currentregionName);
-                        }
-                        else
-                        {
-                            PluginLog.Verbose($"Player is not logged in");
-                        }
-
-                        // Get hunt region
-                        string huntregionName = this.Configuration.DatacenterRegionMap[this.Configuration.WorldDatacenterMap[huntMessage.World]];
-                        bool teleporterEnabled = this.Configuration.TeleporterIntegration;
-                        bool lifestreamEnabled = this.Configuration.LifestreamIntegration;
-                        string startLocation = ParseForStartLocation(messageContent);
-                        string startZone = ParseForStartZone(messageContent);
-
-                        Svc.Chat.Print(new() { Message = message });
-                        var msg = RemoveSymbolsRegex().Replace(message.ToString(), "");
-                        PluginLog.Debug($"Adding cache entry {msg}");
-                        NotifyWindow.Cache[msg] = (messageContent, huntMessage.Kind, huntMessage.World, currentworldName, currentregionName, huntregionName, ConvertTime(huntMessage.Posted_Epoch), startLocation, startZone, teleporterEnabled, lifestreamEnabled);
-
-                        // Play sound effect if one is set
-                        if (this.Configuration.SoundEffect != 0)
-                        {
-                            UIModule.PlayChatSoundEffect((uint)this.Configuration.SoundEffect); // Play the selected sound effect
+                            }
                         }
 
 
@@ -560,6 +684,30 @@ namespace HuntAlerts
                 }
             }
         }
+
+        static string FindExpansion(string creatureName)
+        {
+            var ffxivSRanks = new Dictionary<string, List<string>>
+            {
+                { "ARR", new List<string> { "Croque-Mitaine", "Croakadile", "Bonnacon", "The Garlok", "Nandi", "Chernobog", "Brontes", "Zona Seeker", "Lampalagua", "Nunyunuwi", "Minhocao", "Laideronnette", "Mindflayer", "Wulgaru", "Thousand-cast Theda", "Safat", "Agrippa The Mighty" } },
+                { "HW", new List<string> { "Kaiser Behemoth", "Senmurv", "Gandarewa", "Bird of Paradise", "The Pale Rider", "Leucrotta" } },
+                { "SB", new List<string> { "Udumbara", "Gamma", "Okina", "Bone Crawler", "Orghana", "Salt and Light" } },
+                { "SHB", new List<string> { "Tyger", "Aglaope", "Forgiven Pedantry", "Tarchia", "Ixtab", "Gunitt", "Forgiven Rebellion" } },
+                { "EW", new List<string> { "Burfurlur the Canny", "Sphatika", "Armstrong", "Ruminator", "Ophioneus", "Narrow-rift", "Ker" } }
+            };
+            var creatureNameLower = creatureName.ToLower();
+
+            foreach (var entry in ffxivSRanks)
+            {
+                // Convert each creature name to lower case before comparison
+                if (entry.Value.Exists(c => c.ToLower() == creatureNameLower))
+                {
+                    return entry.Key;
+                }
+            }
+            return "Unknown";
+        }
+
         public static string ParseForStartZone(string message)
         {
             // Define a dictionary mapping keywords to corresponding values
@@ -607,7 +755,7 @@ namespace HuntAlerts
             // Prepare the result string
             string result;
 
-            if (foundKeywords.Count > 1)
+            if (foundKeywords.Count > 0)
             {
                 // Get the corresponding value from the dictionary
                 result = keywordMap[foundKeywords.First()];

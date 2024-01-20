@@ -15,6 +15,7 @@ using System.Threading;
 using FFXIVClientStructs.FFXIV.Client.Game.UI;
 using Dalamud.Interface.Utility;
 using ECommons.ImGuiMethods;
+using ECommons.Automation;
 
 namespace HuntAlerts.Windows;
 public class NotifyWindow : Window
@@ -44,7 +45,7 @@ public class NotifyWindow : Window
             bool teleporterEnabled = entry.teleporterEnabled;
             bool lifestreamEnabled = entry.lifestreamEnabled;
 
-            string headerText = $"Hunt: {huntType}{Environment.NewLine}World: {world}{Environment.NewLine}Posted: {postedTime}{Environment.NewLine}{Environment.NewLine}";
+            
             
             if (currentregionName == huntregionname)
             {
@@ -53,19 +54,7 @@ public class NotifyWindow : Window
                 {
                     if (lifestreamEnabled)
                     {
-                        /*float textWidth = ImGui.CalcTextSize(headerText).X;
-                        float windowWidth = ImGui.GetWindowWidth();
-                        //float buttonWidth = ImGui.CalcTextSize($"Teleport to hunt").X + ImGui.GetStyle().FramePadding.X * 2;
-                        float buttonWidth = ImGuiHelpers.GetButtonSize("Teleport to hunt").X;
-
-                        // Calculate space needed to align the button to the right, then subtract 250 pixels to move it to the left
-                        float space = windowWidth - textWidth - buttonWidth - ImGui.GetStyle().WindowPadding.X * 2 + 100;
-
-                        // Ensure that the space value does not go negative
-                        space = space > 0 ? space : 0;
-
-                        // Place button on the same line as text and align it to the right
-                        ImGui.SameLine(space);*/
+                        
                         ImGuiEx.RightFloat(() =>
                         {
                             if (ImGui.Button($"Teleport to Hunt"))
@@ -82,21 +71,8 @@ public class NotifyWindow : Window
                 {
                     if (teleporterEnabled)
                     {
-                        if (startLocation != null && (startLocation != "invalid" || startZone != "invalid"))
+                        if ((startLocation != null && startLocation != "invalid") || (startZone != null && startZone != "invalid"))
                         {
-                            /*float textWidth = ImGui.CalcTextSize(headerText).X;
-                            float windowWidth = ImGui.GetWindowWidth();
-                            //float buttonWidth = ImGui.CalcTextSize($"Teleport to Hunt").X + ImGui.GetStyle().FramePadding.X * 2;
-                            float buttonWidth = ImGuiHelpers.GetButtonSize("Teleport to Hunt").X;
-
-                            // Calculate space needed to align the button to the right, then subtract 250 pixels to move it to the left
-                            float space = windowWidth - textWidth - buttonWidth - ImGui.GetStyle().WindowPadding.X * 2 + 120;
-
-                            // Ensure that the space value does not go negative
-                            space = space > 0 ? space : 0;
-
-                            // Place button on the same line as text and align it to the right
-                            ImGui.SameLine(space);*/
                             ImGuiEx.RightFloat(() =>
                             {
                                 if (ImGui.Button($"Teleport to Hunt"))
@@ -111,6 +87,7 @@ public class NotifyWindow : Window
                                     {
                                         PluginLog.Verbose($"Attempting to use teleporter to travel to {startZone}");
                                         Svc.Commands.ProcessCommand($"/tpm {startZone}");
+                                        Svc.Chat.Print("Couldn't determine exact starting point so taking you to the zone instead");
                                     }
                                 }
                             });
@@ -121,7 +98,6 @@ public class NotifyWindow : Window
 
             // If you don't set a wrap position, text wraps at the window edge
             ImGui.PushTextWrapPos();
-            ImGui.TextUnformatted(headerText);
             ImGui.TextUnformatted(message);
             // Pop the text wrap position so it doesn't affect other elements
             ImGui.PopTextWrapPos();

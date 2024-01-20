@@ -19,11 +19,11 @@ public class ConfigWindow : Window, IDisposable
 
 
     public ConfigWindow(Plugin plugin) : base(
-       "HuntAlerts v0.2.1",
+       "HuntAlerts v1.1.4",
        ImGuiWindowFlags.NoResize)
     {
         this.Plugin = plugin;
-        this.Size = new Vector2(400, 870);
+        this.Size = new Vector2(400, 940);
         this.SizeCondition = ImGuiCond.Always;
 
         this.Configuration = plugin.Configuration;
@@ -61,11 +61,60 @@ public class ConfigWindow : Window, IDisposable
 
         string[] items = _colorOptions.Keys.ToArray();
         var textColor = Array.IndexOf(items, _colorOptions.FirstOrDefault(x => x.Value == this.Configuration.TextColor).Key);
-        if (ImGui.Combo("Text Color", ref textColor, items, items.Length))
+        if (ImGui.Combo("Train Text Color", ref textColor, items, items.Length))
         {
             // Update the configuration when the selection changes
             this.Configuration.TextColor = _colorOptions[items[textColor]];
             this.Configuration.Save(); // Method to save your configuration
+        }
+
+        var sranktextColor = Array.IndexOf(items, _colorOptions.FirstOrDefault(x => x.Value == this.Configuration.SRankTextColor).Key);
+        if (ImGui.Combo("S Rank Text Color", ref sranktextColor, items, items.Length))
+        {
+            // Update the configuration when the selection changes
+            this.Configuration.SRankTextColor = _colorOptions[items[sranktextColor]];
+            this.Configuration.Save(); // Method to save your configuration
+        }
+        string[] soundEffects = new string[]
+        {
+            "None",
+            "Sound 1",
+            "Sound 2",
+            "Sound 3",
+            "Sound 4",
+            "Sound 5",
+            "Sound 6",
+            "Sound 7",
+            "Sound 8",
+            "Sound 9",
+            "Sound 10",
+            "Sound 11",
+            "Sound 12",
+            "Sound 13",
+            "Sound 14",
+            "Sound 15",
+            "Sound 16"
+        };
+
+        Dictionary<string, int> soundEffectsDict = new Dictionary<string, int>();
+        for (int i = 0; i < soundEffects.Length; i++)
+        {
+            soundEffectsDict[soundEffects[i]] = i;
+        }
+
+        // Assuming soundEffect in Configuration is an index of the selected sound effect.
+        var soundEffectIndex = this.Configuration.SoundEffect;
+        if (ImGui.Combo("Sound Effect", ref soundEffectIndex, soundEffects, soundEffects.Length))
+        {
+            // soundEffectIndex is the index of the selected item, which corresponds to the sound number.
+            this.Configuration.SoundEffect = soundEffectIndex; // Update the configuration
+
+            if (soundEffectIndex != 0)
+            {
+                UIModule.PlayChatSoundEffect((uint)soundEffectIndex); // Play the selected sound effect
+            }
+
+            this.Configuration.Save(); // Save the configuration
         }
 
 
@@ -94,19 +143,89 @@ public class ConfigWindow : Window, IDisposable
             this.Configuration.Save();
         }
 
+        ImGui.NewLine();
+        ImGui.Text("S Rank Options");
+
+        // Optional: Draw a separator line
+        ImGui.Separator();
+
+        ImGui.Columns(2, "", false); // 2 columns, no border
+
+        var srankEnabledValue = this.Configuration.SRankEnabled;
+        if (ImGui.Checkbox("S Ranks Enabled", ref srankEnabledValue))
+        {
+            this.Configuration.SRankEnabled = srankEnabledValue;
+            // can save immediately on change, if you don't want to provide a "Save and Close" button
+            this.Configuration.Save();
+        }
+
+        ImGui.NextColumn();
+
+        if (!srankEnabledValue)
+        {
+            ImGui.BeginDisabled();
+        }
+        var srankcurrentWorld = this.Configuration.SRankCurrentWorld;
+        if (ImGui.Checkbox("Current World Only##SRank", ref srankcurrentWorld))
+        {
+            this.Configuration.SRankCurrentWorld = srankcurrentWorld;
+            // can save immediately on change, if you don't want to provide a "Save and Close" button
+            this.Configuration.Save();
+        }
+       
+
+        ImGui.Columns(1);
 
         // Add blank line
         ImGui.NewLine();
 
         // Create a simple header
-        ImGui.Text("Hunt Notifications");
+        ImGui.Text("S Rank Notifications");
+
+        // Optional: Draw a separator line
+        ImGui.Separator();
+
+        // can't ref a property, so use a local copy
+        var endwalkerSRankValue = this.Configuration.EndwalkerSRank;
+        if (ImGui.Checkbox("Endwalker##SRank", ref endwalkerSRankValue))
+        {
+            this.Configuration.EndwalkerSRank = endwalkerSRankValue;
+            // can save immediately on change, if you don't want to provide a "Save and Close" button
+            this.Configuration.Save();
+        }
+
+        var shadowbringersSRankValue = this.Configuration.ShadowbringersSRank;
+        if (ImGui.Checkbox("Shadowbringers##SRank", ref shadowbringersSRankValue))
+        {
+            this.Configuration.ShadowbringersSRank = shadowbringersSRankValue;
+            // can save immediately on change, if you don't want to provide a "Save and Close" button
+            this.Configuration.Save();
+        }
+        var centurioSRankValue = this.Configuration.CenturioSRank;
+        if (ImGui.Checkbox("Centurio##SRank", ref centurioSRankValue))
+        {
+            this.Configuration.CenturioSRank = centurioSRankValue;
+            // can save immediately on change, if you don't want to provide a "Save and Close" button
+            this.Configuration.Save();
+        }
+
+        if (!srankEnabledValue)
+        {
+            ImGui.EndDisabled();
+        }
+
+        // Add blank line
+        ImGui.NewLine();
+
+        // Create a simple header
+        ImGui.Text("Hunt Train Notifications");
 
         // Optional: Draw a separator line
         ImGui.Separator();
 
         // can't ref a property, so use a local copy
         var endwalkerValue = this.Configuration.EndwalkerHunts;
-        if (ImGui.Checkbox("Endwalker", ref endwalkerValue))
+        if (ImGui.Checkbox("Endwalker##HuntTrains", ref endwalkerValue))
         {
             this.Configuration.EndwalkerHunts = endwalkerValue;
             // can save immediately on change, if you don't want to provide a "Save and Close" button
@@ -114,26 +233,29 @@ public class ConfigWindow : Window, IDisposable
         }
 
         var shadowbringersValue = this.Configuration.ShadowbringersHunts;
-        if (ImGui.Checkbox("Shadowbringers", ref shadowbringersValue))
+        if (ImGui.Checkbox("Shadowbringers##HuntTrains", ref shadowbringersValue))
         {
             this.Configuration.ShadowbringersHunts = shadowbringersValue;
             // can save immediately on change, if you don't want to provide a "Save and Close" button
             this.Configuration.Save();
         }
         var centurioValue = this.Configuration.CenturioHunts;
-        if (ImGui.Checkbox("Centurio", ref centurioValue))
+        if (ImGui.Checkbox("Centurio##HuntTrains", ref centurioValue))
         {
             this.Configuration.CenturioHunts = centurioValue;
             // can save immediately on change, if you don't want to provide a "Save and Close" button
             this.Configuration.Save();
         }
+        
 
         // Create a simple header
         ImGui.NewLine();
-        ImGui.Text("World Options");
+        ImGui.Text("Hunt Train Options");
 
         // Optional: Draw a separator line
         ImGui.Separator();
+
+        ImGui.Columns(2, "", false); // 2 columns, no border
 
         var homeworldonlyValue = this.Configuration.HomeWorldOnly;
         if (ImGui.Checkbox("Homeworld Only", ref homeworldonlyValue))
@@ -148,8 +270,10 @@ public class ConfigWindow : Window, IDisposable
             this.Configuration.Save();
         }
 
+        ImGui.NextColumn();
+
         var currentworldonlyValue = this.Configuration.CurrentWorldOnly;
-        if (ImGui.Checkbox("Current World Only", ref currentworldonlyValue))
+        if (ImGui.Checkbox("Current World Only##HuntTrains", ref currentworldonlyValue))
         {
             this.Configuration.CurrentWorldOnly = currentworldonlyValue;
             if(currentworldonlyValue)
@@ -161,9 +285,11 @@ public class ConfigWindow : Window, IDisposable
             this.Configuration.Save();
         }
 
+        ImGui.Columns(1);
+
         // Create a simple header
         ImGui.NewLine();
-        ImGui.Text("Datacenter");
+        ImGui.Text("Hunt Train Datacenter");
 
         // Optional: Draw a separator line
         ImGui.Separator();
@@ -173,6 +299,9 @@ public class ConfigWindow : Window, IDisposable
             ImGui.BeginDisabled();
         }
 
+        // Start the columns
+        ImGui.Columns(3, "", false); // 2 columns, no border
+
         var aetherValue = this.Configuration.Aether;
         if (ImGui.Checkbox("Aether", ref aetherValue))
         {
@@ -181,6 +310,7 @@ public class ConfigWindow : Window, IDisposable
             this.Configuration.Save();
         }
 
+        ImGui.NextColumn();
 
         var crystalValue = this.Configuration.Crystal;
         if (ImGui.Checkbox("Crystal", ref crystalValue))
@@ -190,6 +320,8 @@ public class ConfigWindow : Window, IDisposable
             this.Configuration.Save();
         }
 
+        ImGui.NextColumn();
+
         var primalValue = this.Configuration.Primal;
         if (ImGui.Checkbox("Primal", ref primalValue))
         {
@@ -197,6 +329,8 @@ public class ConfigWindow : Window, IDisposable
             // can save immediately on change, if you don't want to provide a "Save and Close" button
             this.Configuration.Save();
         }
+
+        ImGui.NextColumn();
 
         var dynamisValue = this.Configuration.Dynamis;
         if (ImGui.Checkbox("Dynamis", ref dynamisValue))
@@ -206,6 +340,8 @@ public class ConfigWindow : Window, IDisposable
             this.Configuration.Save();
         }
 
+        ImGui.NextColumn();
+
         var lightValue = this.Configuration.Light;
         if (ImGui.Checkbox("Light", ref lightValue))
         {
@@ -213,6 +349,9 @@ public class ConfigWindow : Window, IDisposable
             // can save immediately on change, if you don't want to provide a "Save and Close" button
             this.Configuration.Save();
         }
+
+        ImGui.NextColumn();
+
 
         var chaosValue = this.Configuration.Chaos;
         if (ImGui.Checkbox("Chaos", ref chaosValue))
@@ -222,13 +361,16 @@ public class ConfigWindow : Window, IDisposable
             this.Configuration.Save();
         }
 
+        ImGui.Columns(1);
+
+
         if (currentworldonlyValue || homeworldonlyValue)
         {
             ImGui.EndDisabled();
         }
 
         ImGui.NewLine();
-        ImGui.Text("World Selection");
+        ImGui.Text("Hunt Train World Selection");
         ImGui.Separator();
 
 
@@ -630,54 +772,6 @@ public class ConfigWindow : Window, IDisposable
         if (currentworldonlyValue || homeworldonlyValue)
         {
             ImGui.EndDisabled();
-        }
-        // Create a simple header
-        ImGui.NewLine();
-        ImGui.Text("Notification Sound Effect");
-
-        // Optional: Draw a separator line
-        ImGui.Separator();
-
-        string[] soundEffects = new string[]
-        {
-            "None",
-            "Sound 1",
-            "Sound 2",
-            "Sound 3",
-            "Sound 4",
-            "Sound 5",
-            "Sound 6",
-            "Sound 7",
-            "Sound 8",
-            "Sound 9",
-            "Sound 10",
-            "Sound 11",
-            "Sound 12",
-            "Sound 13",
-            "Sound 14",
-            "Sound 15",
-            "Sound 16"
-        };
-
-        Dictionary<string, int> soundEffectsDict = new Dictionary<string, int>();
-        for (int i = 0; i < soundEffects.Length; i++)
-        {
-            soundEffectsDict[soundEffects[i]] = i;
-        }
-
-        // Assuming soundEffect in Configuration is an index of the selected sound effect.
-        var soundEffectIndex = this.Configuration.SoundEffect;
-        if (ImGui.Combo("", ref soundEffectIndex, soundEffects, soundEffects.Length))
-        {
-            // soundEffectIndex is the index of the selected item, which corresponds to the sound number.
-            this.Configuration.SoundEffect = soundEffectIndex; // Update the configuration
-
-            if (soundEffectIndex != 0)
-            {
-                UIModule.PlayChatSoundEffect((uint)soundEffectIndex); // Play the selected sound effect
-            }
-
-            this.Configuration.Save(); // Save the configuration
         }
 
         //if (ImGui.Button("Test")) Plugin.Test();

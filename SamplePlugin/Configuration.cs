@@ -14,10 +14,15 @@ namespace HuntAlerts
         // General Settings
         public bool SuppressDuplicates { get; set; } = true;
         public int TextColor { get; set; } = 0;
+        public int SRankTextColor { get; set; } = 0;
+        public bool EndwalkerSRank { get; set; } = false;
+        public bool ShadowbringersSRank { get; set; } = false;
+        public bool CenturioSRank { get; set; } = false;
         public int SoundEffect { get; set; } = 0;
         public bool TeleporterIntegration { get; set; } = false;
         public bool LifestreamIntegration { get; set; } = false;
-
+        public bool SRankEnabled { get; set; } = false;
+        public bool SRankCurrentWorld { get; set; } = true;
         public bool EndwalkerHunts { get; set; } = false;
         public bool ShadowbringersHunts { get; set; } = false;
         public bool CenturioHunts { get; set; } = false;
