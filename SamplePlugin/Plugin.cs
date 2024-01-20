@@ -28,6 +28,7 @@ using ECommons.DalamudServices;
 using ECommons;
 using System.Windows.Forms;
 using System.Security.Cryptography.X509Certificates;
+using System.Net.Http;
 
 namespace HuntAlerts
 {
@@ -85,32 +86,7 @@ namespace HuntAlerts
             });
         }
 
-        public static string WordWrap(string text, int maxLineLength)
-        {
-            var words = text.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-            var currentLineLength = 0;
-            var result = new StringBuilder();
 
-            foreach (var word in words)
-            {
-                if (currentLineLength + word.Length + 1 > maxLineLength)
-                {
-                    result.AppendLine();
-                    currentLineLength = 0;
-                }
-
-                if (currentLineLength > 0)
-                {
-                    result.Append(' ');
-                    currentLineLength++;
-                }
-
-                result.Append(word);
-                currentLineLength += word.Length;
-            }
-
-            return result.ToString();
-        }
 
 
         private async void InitializeWebSocket()
@@ -559,7 +535,6 @@ namespace HuntAlerts
                             string world = huntMessage.World;
                             string kind = huntMessage.Kind;
                             string creatureName = huntMessage.CreatureName;
-                            string srankExpansion = FindExpansion(creatureName);
                             string locationName = huntMessage.LocationName;
                             string locationCoords = huntMessage.LocationCoords;
                             string aetheriteName = huntMessage.AetheriteName;
@@ -576,7 +551,7 @@ namespace HuntAlerts
                                 bool srankShadowbringers = this.Configuration.ShadowbringersSRank;
                                 bool srankCenturio = this.Configuration.CenturioSRank;
 
-                                if ((srankEndwalker && FindExpansion(creatureName) == "EW") || (srankShadowbringers && FindExpansion(creatureName) == "SHB") || (srankCenturio && (FindExpansion(creatureName) == "ARR" || FindExpansion(creatureName) == "HW" || FindExpansion(creatureName) == "SB")))
+                                if ((srankEndwalker && kind == "EW") || (srankShadowbringers && kind == "SHB") || (srankCenturio && (kind == "ARR" || kind == "HW" || kind == "SB")))
                                 {
                                     // Get current region
                                     string currentregionName = "";
@@ -605,7 +580,7 @@ namespace HuntAlerts
                                         {
                                             int sranktextColor = this.Configuration.SRankTextColor;
                                             //string headerText = $"Hunt: {huntType}{Environment.NewLine}World: {world}{Environment.NewLine}Posted: {postedTime}{Environment.NewLine}{Environment.NewLine}";
-                                            messageContent = $"Type: S Rank{Environment.NewLine}Hunt:{srankExpansion}{Environment.NewLine}Posted: {ConvertTime(postedTime)}{Environment.NewLine}Creature: {creatureName}{Environment.NewLine}{Environment.NewLine}Location: {locationName} ({locationCoords}){Environment.NewLine}Aetherite: {aetheriteName}";
+                                            messageContent = $"Type: S Rank{Environment.NewLine}Hunt:{kind}{Environment.NewLine}Posted: {ConvertTime(postedTime)}{Environment.NewLine}Creature: {creatureName}{Environment.NewLine}{Environment.NewLine}Location: {locationName} ({locationCoords}){Environment.NewLine}Aetherite: {aetheriteName}";
 
                                             if (sranktextColor != 0)
                                             {
@@ -613,7 +588,7 @@ namespace HuntAlerts
                                             }
                                             else
                                             {
-                                                message = new SeStringBuilder().Add(LinkPayload).AddText("New " + srankExpansion + " S Rank spawned on " + world + "!!").Add(RawPayload.LinkTerminator).Build();
+                                                message = new SeStringBuilder().Add(LinkPayload).AddText("New " + kind + " S Rank spawned on " + world + "!!").Add(RawPayload.LinkTerminator).Build();
                                             }
 
                                             PluginLog.Verbose($"deathTime = {deathTime}");
@@ -638,14 +613,14 @@ namespace HuntAlerts
                                             }
                                             else
                                             {
-                                                message = new SeStringBuilder().AddText($"{srankExpansion} S Rank {creatureName} on {world} was killed at {ConvertTime(deathTime)}.").Build();
+                                                message = new SeStringBuilder().AddText($"{kind} S Rank {creatureName} on {world} was killed at {ConvertTime(deathTime)}.").Build();
                                             }
                                             Svc.Chat.Print(new() { Message = message });
                                         }
                                     }
                                     else
                                     {
-                                        PluginLog.Verbose($"{srankExpansion} S Rank {creatureName} spawned on {world} but skipping due to settings or not on same datacenter");
+                                        PluginLog.Verbose($"{kind} S Rank {creatureName} spawned on {world} but skipping due to settings or not on same datacenter");
                                     }
                                 }else
                                 {
@@ -685,28 +660,6 @@ namespace HuntAlerts
             }
         }
 
-        static string FindExpansion(string creatureName)
-        {
-            var ffxivSRanks = new Dictionary<string, List<string>>
-            {
-                { "ARR", new List<string> { "Croque-Mitaine", "Croakadile", "Bonnacon", "The Garlok", "Nandi", "Chernobog", "Brontes", "Zona Seeker", "Lampalagua", "Nunyunuwi", "Minhocao", "Laideronnette", "Mindflayer", "Wulgaru", "Thousand-cast Theda", "Safat", "Agrippa The Mighty" } },
-                { "HW", new List<string> { "Kaiser Behemoth", "Senmurv", "Gandarewa", "Bird of Paradise", "The Pale Rider", "Leucrotta" } },
-                { "SB", new List<string> { "Udumbara", "Gamma", "Okina", "Bone Crawler", "Orghana", "Salt and Light" } },
-                { "SHB", new List<string> { "Tyger", "Aglaope", "Forgiven Pedantry", "Tarchia", "Ixtab", "Gunitt", "Forgiven Rebellion" } },
-                { "EW", new List<string> { "Burfurlur the Canny", "Sphatika", "Armstrong", "Ruminator", "Ophioneus", "Narrow-rift", "Ker" } }
-            };
-            var creatureNameLower = creatureName.ToLower();
-
-            foreach (var entry in ffxivSRanks)
-            {
-                // Convert each creature name to lower case before comparison
-                if (entry.Value.Exists(c => c.ToLower() == creatureNameLower))
-                {
-                    return entry.Key;
-                }
-            }
-            return "Unknown";
-        }
 
         public static string ParseForStartZone(string message)
         {
