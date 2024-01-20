@@ -285,11 +285,13 @@ namespace HuntAlerts
 
         private static string RemoveDiscordEmojis(string input)
         {
-            // Regex pattern to find Discord emojis
-            string emojiPattern = @"<a?:(\w+):\d+>";
+            // Regex pattern to find Discord custom emojis
+            string customEmojiPattern = @"<a?:(\w+):\d+>";
+            input = Regex.Replace(input, customEmojiPattern, "");
 
-            // Replace each match (Discord emoji) with an empty string
-            return Regex.Replace(input, emojiPattern, "");
+            // Regex pattern to find standard emojis (word within colons)
+            string standardEmojiPattern = @":\w+:";
+            return Regex.Replace(input, standardEmojiPattern, "");
         }
 
         private static string ConvertTime(long epochTime)
@@ -748,7 +750,7 @@ namespace HuntAlerts
                 { "fanow", "Fanow" },
                 { "twine", "Twine" },
                 { "mord", "Mord Souq" },
-                { "inn", "The Inn at Journey's Head" },
+                { "inn at journey", "The Inn at Journey's Head" },
                 { "tomra", "Tomra" },
                 { "wrig", "Wright" },
                 { "stilltide", "Stilltide" },
@@ -780,6 +782,7 @@ namespace HuntAlerts
             {
                 // Get the corresponding value from the dictionary
                 result = keywordMap[foundKeywords.First()];
+                PluginLog.Verbose($"StartLocation Matched Keyword: {foundKeywords.First()}");
             }
             else
             {
