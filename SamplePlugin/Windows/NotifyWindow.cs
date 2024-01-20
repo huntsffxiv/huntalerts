@@ -99,14 +99,7 @@ public class NotifyWindow : Window
                     }
                 }
             }
-            if (locationCoords != "")
-            {
-                    if (ImGui.Button($"Flag on Map"))
-                    {
-                        // Code to execute when the button is pressed
-                        FlagOnMap(locationCoords, startZone);
-                    }
-            }
+
 
 
             // If you don't set a wrap position, text wraps at the window edge
@@ -114,6 +107,15 @@ public class NotifyWindow : Window
             ImGui.TextUnformatted(message);
             // Pop the text wrap position so it doesn't affect other elements
             ImGui.PopTextWrapPos();
+
+            if (locationCoords != "")
+            {
+                if (ImGui.Button($"Flag on Map"))
+                {
+                    // Code to execute when the button is pressed
+                    FlagOnMap(locationCoords, startZone);
+                }
+            }
 
         }
         else
