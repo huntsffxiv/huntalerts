@@ -16,11 +16,14 @@ using FFXIVClientStructs.FFXIV.Client.Game.UI;
 using Dalamud.Interface.Utility;
 using ECommons.ImGuiMethods;
 using ECommons.Automation;
+using ECommons;
+using Lumina.Excel.GeneratedSheets;
+using ECommons.ExcelServices;
 
 namespace HuntAlerts.Windows;
 public class NotifyWindow : Window
 {
-    public Dictionary<string, (string Message, string huntKind, string huntWorld, string currentworldName, string currentregionName, string huntregionName, string Posted_Time,string startLocation, string startZone, bool teleporterEnabled,bool lifestreamEnabled)> Cache = new Dictionary<string, (string, string, string, string, string, string, string, string, string, bool, bool)>();
+    public Dictionary<string, (string Message, string huntKind, string huntWorld, string currentworldName, string currentregionName, string huntregionName, string Posted_Time,string startLocation, string startZone,string locationCoords, bool teleporterEnabled,bool lifestreamEnabled)> Cache = new Dictionary<string, (string, string, string, string, string, string, string, string, string, string, bool, bool)>();
     public string CurrentPayload = "";
 
 
@@ -44,6 +47,7 @@ public class NotifyWindow : Window
             string postedTime = entry.Posted_Time;
             bool teleporterEnabled = entry.teleporterEnabled;
             bool lifestreamEnabled = entry.lifestreamEnabled;
+            string locationCoords = entry.locationCoords;
 
             
             
@@ -95,6 +99,15 @@ public class NotifyWindow : Window
                     }
                 }
             }
+            if (locationCoords != "")
+            {
+                    if (ImGui.Button($"Flag on Map"))
+                    {
+                        // Code to execute when the button is pressed
+                        FlagOnMap(locationCoords, startZone);
+                    }
+            }
+
 
             // If you don't set a wrap position, text wraps at the window edge
             ImGui.PushTextWrapPos();
@@ -213,6 +226,20 @@ public class NotifyWindow : Window
         }
 
         // Additional code to execute after loop ends
+    }
+
+    private void FlagOnMap(string locationCoords,string startZone)
+    {
+        // Code to execute when the button is pressed
+        PluginLog.Verbose($"Attempting to flag coords {startZone} {locationCoords} on Map");
+        uint tt;
+        var (x, y) = (locationCoords.Split(',').Select(s => float.Parse(s.Trim())).ToArray() is float[] coords) ? (coords[0], coords[1]) : (0f, 0f);
+
+        if (Svc.Data.GetExcelSheet<TerritoryType>().TryGetFirst(x => x.TerritoryIntendedUse == (uint)TerritoryIntendedUseEnum.Open_World && (x.PlaceName.Value?.Name.ExtractText() ?? "").EqualsIgnoreCase(startZone), out var value))
+        {
+            tt = value.RowId; //is territory id
+            MapManager.OpenMapWithMarker(tt, x, y);
+        }
     }
 
 

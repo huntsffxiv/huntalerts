@@ -9,6 +9,10 @@ using System.Linq;
 using ECommons.DalamudServices;
 using System.Threading.Tasks;
 using System.Threading;
+using Dalamud.Logging;
+using ECommons;
+using Lumina.Excel.GeneratedSheets;
+using ECommons.ExcelServices;
 
 namespace HuntAlerts.Windows;
 
@@ -29,6 +33,7 @@ public class ConfigWindow : Window, IDisposable
         this.Configuration = plugin.Configuration;
     }
 
+    private byte[] ttBuffer = new byte[256];
     public void Dispose() { }
 
     public override void Draw()
@@ -773,17 +778,27 @@ public class ConfigWindow : Window, IDisposable
         {
             ImGui.EndDisabled();
         }
-
-        /*if (ImGui.CollapsingHeader("Debug"))
+        
+        if (ImGui.CollapsingHeader("Debug"))
         {
+            
             ImGui.InputFloat("x", ref x);
             ImGui.InputFloat("y", ref y);
-            ImGui.InputInt("tt", ref tt);
-            if (ImGui.Button("Test map link"))
+            ImGui.InputText("tt", ttBuffer, 256);
+            // ImGui.InputInt("tt", ref tt);
+            if (ImGui.Button("Test link"))
             {
-                MapManager.OpenMapWithMarker((uint)tt, x, y);
+                uint tt;
+                PluginLog.Verbose($"Zone buffer: {ttBuffer}");
+                string ttString = System.Text.Encoding.UTF8.GetString(ttBuffer).TrimEnd('\0');
+                PluginLog.Verbose($"Zone string: {ttString}");
+                if (Svc.Data.GetExcelSheet<TerritoryType>().TryGetFirst(x => x.TerritoryIntendedUse == (uint)TerritoryIntendedUseEnum.Open_World && (x.PlaceName.Value?.Name.ExtractText() ?? "").EqualsIgnoreCase(ttString), out var value))
+                {
+                    tt = value.RowId; //is territory id
+                    MapManager.OpenMapWithMarker(tt, x, y);
+                }
             }
-        }*/
+        }
 
         //if (ImGui.Button("Test")) Plugin.Test();
     }

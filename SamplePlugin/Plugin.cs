@@ -330,7 +330,8 @@ namespace HuntAlerts
 
             try
             {
-                // Create a dictionary mapping hunt types to their corresponding configuration flags
+                // Create a dictionary
+                // ping hunt types to their corresponding configuration flags
                 var HuntTypeEnabledMap = new Dictionary<string, bool>
                 {
                     { "Shadowbringers", this.Configuration.ShadowbringersHunts },
@@ -523,7 +524,7 @@ namespace HuntAlerts
                             var msg = RemoveSymbolsRegex().Replace(message.ToString(), "");
                             PluginLog.Debug($"Adding cache entry {msg}");
                             PluginLog.Verbose($"Teleporter: {teleporterEnabled} | Lifestream: {lifestreamEnabled} | startLocation: {startLocation} | startZone: {startZone}");
-                            NotifyWindow.Cache[msg] = (formatted_message, huntMessage.Kind, huntMessage.World, currentworldName, currentregionName, huntregionName, ConvertTime(huntMessage.Posted_Epoch), startLocation, startZone, teleporterEnabled, lifestreamEnabled);
+                            NotifyWindow.Cache[msg] = (formatted_message, huntMessage.Kind, huntMessage.World, currentworldName, currentregionName, huntregionName, ConvertTime(huntMessage.Posted_Epoch), startLocation, startZone, "", teleporterEnabled, lifestreamEnabled);
 
                             // Play sound effect if one is set
                             if (this.Configuration.SoundEffect != 0)
@@ -597,7 +598,7 @@ namespace HuntAlerts
                                             Svc.Chat.Print(new() { Message = message });
                                             var msg = RemoveSymbolsRegex().Replace(message.ToString(), "");
                                             PluginLog.Verbose($"currentWorld: {currentworldName}  |  currentRegion: {currentregionName}  |  huntWorld: {huntMessage.World}  |  huntRegion: {huntregionName}");
-                                            NotifyWindow.Cache[msg] = (messageContent, huntMessage.Kind, huntMessage.World, currentworldName, currentregionName, huntregionName, ConvertTime(huntMessage.Posted_Epoch), startLocation, startZone, teleporterEnabled, lifestreamEnabled);
+                                            NotifyWindow.Cache[msg] = (messageContent, huntMessage.Kind, huntMessage.World, currentworldName, currentregionName, huntregionName, ConvertTime(huntMessage.Posted_Epoch), startLocation, startZone, locationCoords, teleporterEnabled, lifestreamEnabled);
 
                                             // Play sound effect if one is set
                                             if (this.Configuration.SoundEffect != 0)
@@ -800,7 +801,7 @@ namespace HuntAlerts
             Svc.Chat.Print(new() { Message = message });
             var msg = RemoveSymbolsRegex().Replace(message.ToString(), "");
             PluginLog.Debug($"Adding cache entry {msg}");
-            NotifyWindow.Cache[msg] = ($"Train starting in Azim Steppe (23.1,23.5)", "Endwalker", "Sargatanas", "Sargatanas", "NA", "NA", "12:00 pm", "yedli", "invalid", true, true);
+            NotifyWindow.Cache[msg] = ($"Train starting in Azim Steppe (23.1,23.5)", "Endwalker", "Sargatanas", "Sargatanas", "NA", "NA", "12:00 pm", "yedli", "invalid","23.1, 23.5", true, true);
         }
 
         public async void Dispose()
