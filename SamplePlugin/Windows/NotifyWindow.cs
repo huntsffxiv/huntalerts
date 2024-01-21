@@ -166,7 +166,7 @@ public class NotifyWindow : Window
             {
                 // Start loop
                 var startTime = DateTime.Now;
-                while (!token.IsCancellationRequested && (DateTime.Now - startTime).TotalSeconds <= 240)
+                while (!token.IsCancellationRequested && (DateTime.Now - startTime).TotalSeconds <= 720)
                 {
 
                     // Check character's current world and logged in status here
@@ -189,6 +189,7 @@ public class NotifyWindow : Window
                                     if (startLocation != "invalid")
                                     {
                                         PluginLog.Verbose($"Player is on hunt world, starting teleport to hunt location. Currentworld: " + currentworldName + "StartLocation: " + startLocation);
+                                        await Task.Delay(2000, token); // wait 2 seconds to start teleport
                                         Svc.Commands.ProcessCommand($"/tp {startLocation}");
                                         return;
                                     }

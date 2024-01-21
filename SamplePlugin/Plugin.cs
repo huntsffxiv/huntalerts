@@ -29,6 +29,9 @@ using ECommons;
 using System.Windows.Forms;
 using System.Security.Cryptography.X509Certificates;
 using System.Net.Http;
+using ECommons.ExcelServices;
+using Lumina.Excel.GeneratedSheets;
+using System.Security.Policy;
 
 namespace HuntAlerts
 {
@@ -367,12 +370,13 @@ namespace HuntAlerts
                         string currentdatacentername = "";
                         string homeworldName = "";
                         string currentworldName = "";
+                        
 
                         if (huntMessage.Type == "new_hunt")
                         {
 
                             PluginLog.Verbose($"New train data received: Kind:" + huntMessage.Kind + " | World:" + huntMessage.World);
-
+                            string locationCoords = "";
                             var key = (huntMessage.Kind, huntMessage.World);
                             if (recentMessagesCache.TryGetValue(key, out var lastTimestamp))
                             {
@@ -402,12 +406,6 @@ namespace HuntAlerts
                             // Check if the hunt type is enabled
                             bool isHuntEnabled = IsHuntEnabled(huntMessage.Kind);
 
-
-
-
-                  
-
-                            
 
 
                             if (Svc.ClientState.IsLoggedIn && Svc.ClientState.LocalPlayer != null)
@@ -520,11 +518,47 @@ namespace HuntAlerts
                             string startZone = ParseForStartZone(messageContent);
                             string formatted_message = $"Kind: Hunt Train{Environment.NewLine}Hunt: {huntMessage.Kind}{Environment.NewLine}World: {huntMessage.World}{Environment.NewLine}Posted: {ConvertTime(huntMessage.Posted_Epoch)}{Environment.NewLine}{Environment.NewLine}" + messageContent;
 
+
+
+                            try
+                            {
+                                // Try extracting coordinates from message for start location
+                                var (coord_x, coord_y) = ExtractCoordinates(messageContent);
+                                PluginLog.Verbose($"Extracted Coordinates {coord_x}, {coord_y} from message");
+
+                                // Get ZoneID
+                                uint tt;
+                                if (Svc.Data.GetExcelSheet<TerritoryType>().TryGetFirst(x => x.TerritoryIntendedUse == (uint)TerritoryIntendedUseEnum.Open_World && (x.PlaceName.Value?.Name.ExtractText() ?? "").EqualsIgnoreCase(startZone), out var value))
+                                {
+                                    tt = value.RowId; //is territory id
+                                                      // Get Nearest Aetherite from coords
+                                    if (coord_x is not null && coord_y is not null)
+                                    {
+                                        if (startLocation == "invalid")
+                                        {
+                                            startLocation = MapManager.GetNearestAetheryte(tt, (float)coord_x, (float)coord_y);
+                                            PluginLog.Verbose($"Found nearest aetheryte on map id {tt} at {startLocation}");
+
+                                        }
+                                        locationCoords = $"{(float)coord_x}, {(float)coord_y}";
+                                    } 
+                                }
+
+
+                            } catch (Exception ex)
+                            {
+                                PluginLog.Error("Error parsing start location aetherite.");
+                                PluginLog.Error(ex.ToString());
+                            }
+                        
+
+
+
                             Svc.Chat.Print(new() { Message = message });
                             var msg = RemoveSymbolsRegex().Replace(message.ToString(), "");
                             PluginLog.Debug($"Adding cache entry {msg}");
                             PluginLog.Verbose($"Teleporter: {teleporterEnabled} | Lifestream: {lifestreamEnabled} | startLocation: {startLocation} | startZone: {startZone}");
-                            NotifyWindow.Cache[msg] = (formatted_message, huntMessage.Kind, huntMessage.World, currentworldName, currentregionName, huntregionName, ConvertTime(huntMessage.Posted_Epoch), startLocation, startZone, "", teleporterEnabled, lifestreamEnabled);
+                            NotifyWindow.Cache[msg] = (formatted_message, huntMessage.Kind, huntMessage.World, currentworldName, currentregionName, huntregionName, ConvertTime(huntMessage.Posted_Epoch), startLocation, startZone, locationCoords, teleporterEnabled, lifestreamEnabled);
 
                             // Play sound effect if one is set
                             if (this.Configuration.SoundEffect != 0)
@@ -724,6 +758,22 @@ namespace HuntAlerts
             return result;
         }
 
+
+        public static (float?, float?) ExtractCoordinates(string message)
+        {
+            var regex = new Regex(@"(-?\d+(\.\d+)?\s*)\s*,\s*\s*(-?\d+(\.\d+)?)");
+            var match = regex.Match(message);
+
+            if (match.Success && match.Groups.Count >= 4)
+            {
+                float.TryParse(match.Groups[1].Value.Trim(), out float x);
+                float.TryParse(match.Groups[3].Value.Trim(), out float y);
+                return (x, y);
+            }
+
+            return (null, null);
+        }
+
         public static string ParseForStartLocation(string message)
         {
             // Define a dictionary mapping keywords to corresponding values
@@ -753,19 +803,19 @@ namespace HuntAlerts
                 { "mord", "Mord Souq" },
                 { "inn at journey", "The Inn at Journey's Head" },
                 { "tomra", "Tomra" },
-                { "wrig", "Wright" },
+                { "wright", "Wright" },
                 { "stilltide", "Stilltide" },
                 { "wole", "Wolekdorf" },
-                { "peer", "The Peering Stones" },
+                { "peering", "The Peering Stones" },
                 { "gannh", "Ala Gannha" },
                 { "ghiri", "Ala Ghiri" },
                 { "porta", "Porta Praetoria" },
-                { "quart", "The Ala Mhigan Quarter" },
-                { "ono", "Onokoro" },
+                { "quarter", "The Ala Mhigan Quarter" },
+                { "onokoro", "Onokoro" },
                 { "tama", "Tamamizu" },
                 { "house", "The House of the Fierce" },
-                { "dhor", "Dhoro Iloh" },
-                { "reun", "Reunion" },
+                { "dhoro", "Dhoro Iloh" },
+                { "reunion", "Reunion" },
                 { "throne", "The Dawn Throne" },
 
             };
