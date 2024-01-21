@@ -778,6 +778,7 @@ namespace HuntAlerts
             {
                 { "fort", "Fort Jobb" },
                 { "foot", "Fort Jobb" },
+                { "jobb", "Fort Jobb" },
                 { "ostall", "The Ostall Imperative" },
                 { "great work", "The Great Work" },
                 { "palaka", "Palaka's Stand" },
