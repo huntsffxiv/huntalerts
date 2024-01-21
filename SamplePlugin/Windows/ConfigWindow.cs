@@ -20,7 +20,7 @@ public class ConfigWindow : Window, IDisposable
 
 
     public ConfigWindow(Plugin plugin) : base(
-       "HuntAlerts v1.1.5",
+       "HuntAlerts v1.1.7",
        ImGuiWindowFlags.NoResize)
     {
         this.Plugin = plugin;
@@ -34,7 +34,7 @@ public class ConfigWindow : Window, IDisposable
     public void Dispose() { }
 
     public override void Draw()
-    {
+    { 
         // Create a simple header
         ImGui.Text("General Options");
 
@@ -45,6 +45,14 @@ public class ConfigWindow : Window, IDisposable
         if(ImGui.Checkbox("Suppress Duplicate Messages", ref suppressDuplicates))
         {
             this.Configuration.SuppressDuplicates = suppressDuplicates;
+            // can save immediately on change, if you don't want to provide a "Save and Close" button
+            this.Configuration.Save();
+        }
+
+        var openmaponArrival = this.Configuration.OpenMapOnArrival;
+        if (ImGui.Checkbox("Flag Map automatically if possible", ref openmaponArrival))
+        {
+            this.Configuration.OpenMapOnArrival = openmaponArrival;
             // can save immediately on change, if you don't want to provide a "Save and Close" button
             this.Configuration.Save();
         }
@@ -129,12 +137,30 @@ public class ConfigWindow : Window, IDisposable
         // Optional: Draw a separator line
         ImGui.Separator();
 
+        bool? teleporterInstalled = Svc.PluginInterface.InstalledPlugins.FirstOrDefault(x => x.InternalName == "TeleporterPlugin")?.IsLoaded;
+        bool? lifestreamInstalled = Svc.PluginInterface.InstalledPlugins.FirstOrDefault(x => x.InternalName == "Lifestream")?.IsLoaded;
+
+        if (teleporterInstalled != true)
+        {
+            ImGui.BeginDisabled();
+        }
+
         var teleporterIntegration = this.Configuration.TeleporterIntegration;
         if (ImGui.Checkbox("Enable Teleporter Integration", ref teleporterIntegration))
         {
             this.Configuration.TeleporterIntegration = teleporterIntegration;
             // can save immediately on change, if you don't want to provide a "Save and Close" button
             this.Configuration.Save();
+        }
+        if (teleporterInstalled != true)
+        {
+            ImGui.EndDisabled();
+        }
+
+
+        if (lifestreamInstalled != true)
+        {
+            ImGui.BeginDisabled();
         }
 
         var lifestreamIntegration = this.Configuration.LifestreamIntegration;
@@ -143,6 +169,11 @@ public class ConfigWindow : Window, IDisposable
             this.Configuration.LifestreamIntegration = lifestreamIntegration;
             // can save immediately on change, if you don't want to provide a "Save and Close" button
             this.Configuration.Save();
+        }
+
+        if (lifestreamInstalled != true)
+        {
+            ImGui.EndDisabled();
         }
 
         ImGui.NewLine();
@@ -776,7 +807,7 @@ public class ConfigWindow : Window, IDisposable
             ImGui.EndDisabled();
         }
         
-        if (ImGui.CollapsingHeader("Debug"))
+        /*if (ImGui.CollapsingHeader("Debug"))
         {
             ImGui.InputFloat("x", ref x);
             ImGui.InputFloat("y", ref y);
@@ -794,7 +825,7 @@ public class ConfigWindow : Window, IDisposable
                     MapManager.OpenMapWithMarker(tt, x, y);
                 }
             }
-        }
+        }*/
 
         //if (ImGui.Button("Test")) Plugin.Test();
     }

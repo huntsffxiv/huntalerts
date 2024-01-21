@@ -355,6 +355,8 @@ namespace HuntAlerts
 
                     try
                     {
+                        bool? teleporterInstalled = Svc.PluginInterface.InstalledPlugins.FirstOrDefault(x => x.InternalName == "TeleporterPlugin")?.IsLoaded;
+                        bool? lifestreamInstalled = Svc.PluginInterface.InstalledPlugins.FirstOrDefault(x => x.InternalName == "Lifestream")?.IsLoaded;
 
                         var huntMessage = JsonConvert.DeserializeObject<HuntMessage>(messageString);
 
@@ -500,11 +502,14 @@ namespace HuntAlerts
                             {
                                 PluginLog.Verbose($"Player is not logged in");
                             }
+                            
+
 
                             // Get hunt region
                             string huntregionName = this.Configuration.DatacenterRegionMap[this.Configuration.WorldDatacenterMap[huntMessage.World]];
-                            bool teleporterEnabled = this.Configuration.TeleporterIntegration;
-                            bool lifestreamEnabled = this.Configuration.LifestreamIntegration;
+                            bool teleporterEnabled = this.Configuration.TeleporterIntegration && (teleporterInstalled == true);
+                            bool lifestreamEnabled = this.Configuration.LifestreamIntegration && (lifestreamInstalled == true);
+                            bool openmaponArrival = this.Configuration.OpenMapOnArrival;
                             string startLocation = ParseForStartLocation(messageContent);
                             string startZone = ParseForStartZone(messageContent);
                             string formatted_message = $"Kind: Hunt Train{Environment.NewLine}Hunt: {huntMessage.Kind}{Environment.NewLine}World: {huntMessage.World}{Environment.NewLine}Posted: {ConvertTime(huntMessage.Posted_Epoch)}{Environment.NewLine}{Environment.NewLine}" + messageContent;
@@ -549,7 +554,7 @@ namespace HuntAlerts
                             var msg = RemoveSymbolsRegex().Replace(message.ToString(), "");
                             PluginLog.Debug($"Adding cache entry {msg}");
                             PluginLog.Verbose($"Teleporter: {teleporterEnabled} | Lifestream: {lifestreamEnabled} | startLocation: {startLocation} | startZone: {startZone}");
-                            NotifyWindow.Cache[msg] = (formatted_message, huntMessage.Kind, huntMessage.World, currentworldName, currentregionName, huntregionName, ConvertTime(huntMessage.Posted_Epoch), startLocation, startZone, locationCoords, teleporterEnabled, lifestreamEnabled);
+                            NotifyWindow.Cache[msg] = (formatted_message, huntMessage.Kind, huntMessage.World, currentworldName, currentregionName, huntregionName, ConvertTime(huntMessage.Posted_Epoch), startLocation, startZone, locationCoords, openmaponArrival, teleporterEnabled, lifestreamEnabled);
 
                             // Play sound effect if one is set
                             if (this.Configuration.SoundEffect != 0)
@@ -599,8 +604,9 @@ namespace HuntAlerts
                                     {
                                         // Get hunt region
                                         string huntregionName = this.Configuration.DatacenterRegionMap[this.Configuration.WorldDatacenterMap[huntMessage.World]];
-                                        bool teleporterEnabled = this.Configuration.TeleporterIntegration;
-                                        bool lifestreamEnabled = this.Configuration.LifestreamIntegration;
+                                        bool teleporterEnabled = this.Configuration.TeleporterIntegration && (teleporterInstalled == true);
+                                        bool lifestreamEnabled = this.Configuration.LifestreamIntegration && (lifestreamInstalled == true);
+                                        bool openmaponArrival = this.Configuration.OpenMapOnArrival;
                                         string startLocation = aetheriteName;
                                         string startZone = locationName;
 
@@ -623,7 +629,7 @@ namespace HuntAlerts
                                             Svc.Chat.Print(new() { Message = message });
                                             var msg = RemoveSymbolsRegex().Replace(message.ToString(), "");
                                             PluginLog.Verbose($"currentWorld: {currentworldName}  |  currentRegion: {currentregionName}  |  huntWorld: {huntMessage.World}  |  huntRegion: {huntregionName}");
-                                            NotifyWindow.Cache[msg] = (messageContent, huntMessage.Kind, huntMessage.World, currentworldName, currentregionName, huntregionName, ConvertTime(huntMessage.Posted_Epoch), startLocation, startZone, locationCoords, teleporterEnabled, lifestreamEnabled);
+                                            NotifyWindow.Cache[msg] = (messageContent, huntMessage.Kind, huntMessage.World, currentworldName, currentregionName, huntregionName, ConvertTime(huntMessage.Posted_Epoch), startLocation, startZone, locationCoords, openmaponArrival, teleporterEnabled, lifestreamEnabled);
 
                                             // Play sound effect if one is set
                                             if (this.Configuration.SoundEffect != 0)
@@ -842,7 +848,7 @@ namespace HuntAlerts
             Svc.Chat.Print(new() { Message = message });
             var msg = RemoveSymbolsRegex().Replace(message.ToString(), "");
             PluginLog.Debug($"Adding cache entry {msg}");
-            NotifyWindow.Cache[msg] = ($"Train starting in Azim Steppe (23.1,23.5)", "Endwalker", "Sargatanas", "Sargatanas", "NA", "NA", "12:00 pm", "yedli", "invalid","23.1, 23.5", true, true);
+            NotifyWindow.Cache[msg] = ($"Train starting in Azim Steppe (23.1,23.5)", "Endwalker", "Sargatanas", "Sargatanas", "NA", "NA", "12:00 pm", "yedli", "invalid","23.1, 23.5",true, true, true);
         }
 
         public async void Dispose()

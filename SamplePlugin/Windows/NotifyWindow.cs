@@ -16,7 +16,7 @@ using ECommons.ExcelServices;
 namespace HuntAlerts.Windows;
 public class NotifyWindow : Window
 {
-    public Dictionary<string, (string Message, string huntKind, string huntWorld, string currentworldName, string currentregionName, string huntregionName, string Posted_Time,string startLocation, string startZone,string locationCoords, bool teleporterEnabled,bool lifestreamEnabled)> Cache = new Dictionary<string, (string, string, string, string, string, string, string, string, string, string, bool, bool)>();
+    public Dictionary<string, (string Message, string huntKind, string huntWorld, string currentworldName, string currentregionName, string huntregionName, string Posted_Time,string startLocation, string startZone,string locationCoords,bool openmaponArrival ,bool teleporterEnabled,bool lifestreamEnabled)> Cache = new Dictionary<string, (string, string, string, string, string, string, string, string, string, string, bool, bool, bool)>();
     public string CurrentPayload = "";
 
 
@@ -41,55 +41,26 @@ public class NotifyWindow : Window
             bool teleporterEnabled = entry.teleporterEnabled;
             bool lifestreamEnabled = entry.lifestreamEnabled;
             string locationCoords = entry.locationCoords;
+            bool openmaponArrival = entry.openmaponArrival;
 
             
             
             if (currentregionName == huntregionname)
             {
 
-                if (currentworldName != world)
+                if ((lifestreamEnabled && (currentworldName != world)) || (teleporterEnabled && (currentworldName == world)))
                 {
-                    if (lifestreamEnabled)
-                    {
                         
-                        ImGuiEx.RightFloat(() =>
-                        {
-                            if (ImGui.Button($"Teleport to Hunt"))
-                            {
-                                // Code to execute when the button is pressed
-                                PluginLog.Verbose($"Attempting to use lifestream to travel to {world}");
-                                //Svc.Commands.ProcessCommand($"/li {world}");
-                                ExecuteCommandWithLoop(world, startLocation, startZone, teleporterEnabled, lifestreamEnabled);
-                            }
-                        });
-                    }
-                }
-                else
-                {
-                    if (teleporterEnabled)
+                    ImGuiEx.RightFloat(() =>
                     {
-                        if ((startLocation != null && startLocation != "invalid") || (startZone != null && startZone != "invalid"))
+                        if (ImGui.Button($"Teleport to Hunt"))
                         {
-                            ImGuiEx.RightFloat(() =>
-                            {
-                                if (ImGui.Button($"Teleport to Hunt"))
-                                {
-                                    // Code to execute when the button is pressed
-                                    if (startLocation != "invalid")
-                                    {
-                                        PluginLog.Verbose($"Attempting to use teleporter to travel to {startLocation}");
-                                        Svc.Commands.ProcessCommand($"/tp {startLocation}");
-                                    }
-                                    else if (startZone != "invalid")
-                                    {
-                                        PluginLog.Verbose($"Attempting to use teleporter to travel to {startZone}");
-                                        Svc.Commands.ProcessCommand($"/tpm {startZone}");
-                                        Svc.Chat.Print("Couldn't determine exact starting point so taking you to the zone instead");
-                                    }
-                                }
-                            });
+                            // Code to execute when the button is pressed
+                            PluginLog.Verbose($"Attempting to use teleport/lifestream");
+                            //Svc.Commands.ProcessCommand($"/li {world}");
+                            ExecuteCommandWithLoop(world, startLocation, startZone, locationCoords, openmaponArrival, teleporterEnabled, lifestreamEnabled);
                         }
-                    }
+                    });
                 }
             }
 
@@ -120,7 +91,7 @@ public class NotifyWindow : Window
 
     private CancellationTokenSource _cancellationTokenSource;
     private bool _isTaskRunning = false;
-    private async void ExecuteCommandWithLoop(string world, string startLocation, string startZone, bool teleporterEnabled, bool lifestreamEnabled)
+    private async void ExecuteCommandWithLoop(string world, string startLocation, string startZone, string locationCoords, bool openmaponArrival, bool teleporterEnabled, bool lifestreamEnabled)
     {
         if (_isTaskRunning)
         {
@@ -135,14 +106,16 @@ public class NotifyWindow : Window
 
         try
         {
-            
+            bool hastoserverTransfer = false;
             string currentworldName = "";
             currentworldName = Svc.ClientState.LocalPlayer.CurrentWorld.GameData.Name;
+
 
             if (lifestreamEnabled && currentworldName != world)
             {
                 if (currentworldName != world)
                 {
+                    hastoserverTransfer = true;
                     // Execute initial command
                     Svc.Commands.ProcessCommand($"/li {world}");
                 }
@@ -172,6 +145,7 @@ public class NotifyWindow : Window
                         if (currentworldName == world)
                         {
                             var targetableStartTime = DateTime.Now;
+                            
                             // Loop until the player is targetable or until canceled
                             while (!token.IsCancellationRequested && (DateTime.Now - targetableStartTime).TotalSeconds <= 60) // Inner loop timeout (e.g., 60 seconds)
                             {
@@ -182,9 +156,39 @@ public class NotifyWindow : Window
                                     if (startLocation != "invalid")
                                     {
                                         PluginLog.Verbose($"Player is on hunt world, starting teleport to hunt location. Currentworld: " + currentworldName + "StartLocation: " + startLocation);
-                                        await Task.Delay(2000, token); // wait 2 seconds to start teleport
+                                        if (hastoserverTransfer == true)
+                                        {
+                                            await Task.Delay(2000, token); // wait 2 seconds to start teleport
+                                        }
+
                                         Svc.Commands.ProcessCommand($"/tp {startLocation}");
-                                        return;
+
+                                        if (openmaponArrival == true && locationCoords != "")
+                                        {
+                                            PluginLog.Verbose("Open map on arrival is enabled and coords exist");
+                                            var flagtargetableStartTime = DateTime.Now;
+                                            while (!token.IsCancellationRequested && (DateTime.Now - flagtargetableStartTime).TotalSeconds <= 60) // Inner loop timeout (e.g., 60 seconds)
+                                            {
+
+                                                var territoryType = Svc.ClientState.TerritoryType;
+                                                var territoryName = Svc.Data.GetExcelSheet<TerritoryType>()
+                                                                     .GetRow(territoryType)?.PlaceName.Value?.Name.ToString();
+
+                                                PluginLog.Verbose($"In Loop waiting on targetable and location match. Current Zone: {territoryName} | Destination Zone: {startZone}");
+
+                                                if ((Svc.ClientState.LocalPlayer?.IsTargetable == true) && (territoryName == startZone))
+                                                {
+                                                    await Task.Delay(500, token);
+                                                    PluginLog.Verbose($"Opening map and flagging coordinates");
+                                                    FlagOnMap(locationCoords, startZone);
+                                                    return;
+                                                }
+                                                await Task.Delay(1000, token); // wait 2 seconds to start teleport
+                                            }
+                                        }else
+                                        {
+                                            return;
+                                        }
                                     }
                                     else if (startZone != "invalid")
                                     {

@@ -14,6 +14,7 @@ namespace HuntAlerts
         public bool SuppressDuplicates { get; set; } = true;
         public int TextColor { get; set; } = 0;
         public int SRankTextColor { get; set; } = 0;
+        public bool OpenMapOnArrival { get; set; } = true;
         public bool EndwalkerSRank { get; set; } = false;
         public bool ShadowbringersSRank { get; set; } = false;
         public bool CenturioSRank { get; set; } = false;
