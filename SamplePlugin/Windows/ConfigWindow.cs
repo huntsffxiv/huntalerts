@@ -4,11 +4,8 @@ using Dalamud.Interface.Windowing;
 using ImGuiNET;
 using FFXIVClientStructs.FFXIV.Client.UI;
 using System.Collections.Generic;
-using FFXIVClientStructs.Havok;
 using System.Linq;
 using ECommons.DalamudServices;
-using System.Threading.Tasks;
-using System.Threading;
 using Dalamud.Logging;
 using ECommons;
 using Lumina.Excel.GeneratedSheets;
@@ -23,7 +20,7 @@ public class ConfigWindow : Window, IDisposable
 
 
     public ConfigWindow(Plugin plugin) : base(
-       "HuntAlerts v1.1.4",
+       "HuntAlerts v1.1.5",
        ImGuiWindowFlags.NoResize)
     {
         this.Plugin = plugin;
@@ -33,7 +30,7 @@ public class ConfigWindow : Window, IDisposable
         this.Configuration = plugin.Configuration;
     }
 
-    private byte[] ttBuffer = new byte[256];
+    string ttString = "";
     public void Dispose() { }
 
     public override void Draw()
@@ -781,19 +778,18 @@ public class ConfigWindow : Window, IDisposable
         
         if (ImGui.CollapsingHeader("Debug"))
         {
-            
             ImGui.InputFloat("x", ref x);
             ImGui.InputFloat("y", ref y);
-            ImGui.InputText("tt", ttBuffer, 256);
-            // ImGui.InputInt("tt", ref tt);
+            ImGui.InputText("tt", ref ttString, 20);
             if (ImGui.Button("Test link"))
             {
                 uint tt;
-                PluginLog.Verbose($"Zone buffer: {ttBuffer}");
-                string ttString = System.Text.Encoding.UTF8.GetString(ttBuffer).TrimEnd('\0');
-                PluginLog.Verbose($"Zone string: {ttString}");
+                PluginLog.Verbose($"Zone: {ttString}");
+                
                 if (Svc.Data.GetExcelSheet<TerritoryType>().TryGetFirst(x => x.TerritoryIntendedUse == (uint)TerritoryIntendedUseEnum.Open_World && (x.PlaceName.Value?.Name.ExtractText() ?? "").EqualsIgnoreCase(ttString), out var value))
                 {
+                    //string ttString = System.Text.Encoding.UTF8.GetString(ttBuffer).TrimEnd('\0');
+                    PluginLog.Verbose($"Zone string: {ttString}");
                     tt = value.RowId; //is territory id
                     MapManager.OpenMapWithMarker(tt, x, y);
                 }

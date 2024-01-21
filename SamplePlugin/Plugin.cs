@@ -11,27 +11,18 @@ using System;
 using Newtonsoft.Json;
 using System.Text;
 using System.Collections.Generic;
-using static HuntAlerts.Plugin;
-using FFXIVClientStructs.FFXIV.Client.System;
 using ECommons.Logging;
 using System.Threading.Tasks;
 using Dalamud.Game.Text.SeStringHandling.Payloads;
 using Dalamud.Game.Text.SeStringHandling;
-using Dalamud.Plugin.Ipc.Exceptions;
 using System.Text.RegularExpressions;
 using FFXIVClientStructs.FFXIV.Client.UI;
-using System.Runtime.InteropServices;
 using System.Linq;
 using Dalamud.Game.Text;
-using System.Drawing;
 using ECommons.DalamudServices;
 using ECommons;
-using System.Windows.Forms;
-using System.Security.Cryptography.X509Certificates;
-using System.Net.Http;
 using ECommons.ExcelServices;
 using Lumina.Excel.GeneratedSheets;
-using System.Security.Policy;
 
 namespace HuntAlerts
 {
