@@ -1,17 +1,18 @@
 using Dalamud.Interface.Windowing;
+using ECommons;
+using ECommons.DalamudServices;
+using ECommons.ExcelServices;
+using ECommons.ImGuiMethods;
 using ECommons.Logging;
+using HuntAlerts.Helpers;
 using ImGuiNET;
+using Lumina.Excel.GeneratedSheets;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
-using ECommons.DalamudServices;
 using System.Numerics;
 using System.Threading;
-using ECommons.ImGuiMethods;
-using ECommons;
-using Lumina.Excel.GeneratedSheets;
-using ECommons.ExcelServices;
+using System.Threading.Tasks;
 
 namespace HuntAlerts.Windows;
 public class NotifyWindow : Window

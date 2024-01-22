@@ -1,8 +1,8 @@
 {
     "Author": "FFXIV Hunts",
     "Name": "HuntAlerts",
-    "Punchline": "Notifys you when hunt trains are starting soon",
-    "Description": "Notifys you when hunt trains are starting soon",
+    "Punchline": "Notifies you when hunt trains are starting soon",
+    "Description": "Notifies you when hunt trains are starting soon",
     "ApplicableVersion": "any",
     "Tags": [
         "hunt",

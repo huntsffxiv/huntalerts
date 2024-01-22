@@ -1,25 +1,21 @@
-using System;
-using System.Numerics;
 using Dalamud.Interface.Windowing;
-using ImGuiNET;
+using ECommons.DalamudServices;
 using FFXIVClientStructs.FFXIV.Client.UI;
+using ImGuiNET;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using ECommons.DalamudServices;
-using Dalamud.Logging;
-using ECommons;
-using Lumina.Excel.GeneratedSheets;
-using ECommons.ExcelServices;
+using System.Numerics;
 
 namespace HuntAlerts.Windows;
 
 public class ConfigWindow : Window, IDisposable
 {
     private Configuration Configuration;
-    Plugin Plugin;
+    HuntAlerts Plugin;
 
 
-    public ConfigWindow(Plugin plugin) : base(
+    public ConfigWindow(HuntAlerts plugin) : base(
        "HuntAlerts v1.1.7",
        ImGuiWindowFlags.NoResize)
     {

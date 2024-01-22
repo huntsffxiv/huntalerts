@@ -9,7 +9,7 @@ namespace HuntAlerts
     public class Configuration : IPluginConfiguration
     {
         public int Version { get; set; } = 0;
-        
+
         // General Settings
         public bool SuppressDuplicates { get; set; } = true;
         public int TextColor { get; set; } = 0;
@@ -109,7 +109,7 @@ namespace HuntAlerts
         {
             this.PluginInterface = pluginInterface;
 
-            
+
 
             WorldDatacenterMap = new Dictionary<string, string>
             {
@@ -188,11 +188,15 @@ namespace HuntAlerts
             };
         }
 
-
-
         public void Save()
         {
             this.PluginInterface!.SavePluginConfig(this);
         }
+    }
+
+    public sealed partial class HuntAlerts
+    {
+        public string serverURI = "ws://huntrelay.eastus.cloudapp.azure.com:6789";
+        //public string serverURI = "ws://localhost:6789";
     }
 }
