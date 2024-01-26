@@ -3,6 +3,7 @@ using Dalamud.Game.Text.SeStringHandling.Payloads;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
 using ECommons;
+using ECommons.Automation;
 using ECommons.DalamudServices;
 using ECommons.Logging;
 using HuntAlerts.Windows;
@@ -21,6 +22,7 @@ namespace HuntAlerts
         public WindowSystem WindowSystem = new("HuntAlerts");
 
         private ConfigWindow ConfigWindow { get; init; }
+        
 
         DalamudLinkPayload LinkPayload;
         NotifyWindow NotifyWindow;

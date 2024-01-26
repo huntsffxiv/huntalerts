@@ -1,9 +1,11 @@
 using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Game.Text.SeStringHandling.Payloads;
+using Dalamud.Plugin.Services;
 using ECommons.DalamudServices;
 using ECommons.Logging;
 using HuntAlerts.Windows;
 using System;
+using System.Drawing.Text;
 
 namespace HuntAlerts
 {

@@ -1,4 +1,5 @@
 using ECommons.Logging;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -83,18 +84,28 @@ namespace HuntAlerts
         }
         public static (float?, float?) ExtractCoordinates(string message)
         {
-            var regex = new Regex(@"(-?\d+(\.\d+)?\s*)\s*,\s*\s*(-?\d+(\.\d+)?)");
-            var match = regex.Match(message);
+            try {
+                // Regex adjusted to include hyphen as a delimiter
+                var regex = new Regex(@"\b(-?\d+(\.\d+)?)(\s*,\s*|\s+|\s*-\s*)(-?\d+(\.\d+)?)\b");
+                var match = regex.Match(message);
 
-            if (match.Success && match.Groups.Count >= 4)
-            {
-                float.TryParse(match.Groups[1].Value.Trim(), out float x);
-                float.TryParse(match.Groups[3].Value.Trim(), out float y);
-                return (x, y);
+                if (match.Success)
+                {
+                    // Only processing the first match found
+                    float.TryParse(match.Groups[1].Value, out float x);
+                    float.TryParse(match.Groups[4].Value, out float y);
+                    return (x, y);
+                }
+
+                return (null, null);
             }
-
-            return (null, null);
+            catch(Exception ex)
+            {
+                return (0, 0);
+            }
         }
+
+
         public static string ParseForStartLocation(string message)
         {
             // Define a dictionary mapping keywords to corresponding values

@@ -1,9 +1,12 @@
 using Dalamud.Interface.Windowing;
 using ECommons;
+using ECommons.Automation;
 using ECommons.DalamudServices;
 using ECommons.ExcelServices;
 using ECommons.ImGuiMethods;
 using ECommons.Logging;
+using ECommons.Throttlers;
+using FFXIVClientStructs.FFXIV.Component.GUI;
 using HuntAlerts.Helpers;
 using ImGuiNET;
 using Lumina.Excel.GeneratedSheets;
@@ -14,21 +17,26 @@ using System.Numerics;
 using System.Threading;
 using System.Threading.Tasks;
 
+
+
 namespace HuntAlerts.Windows;
 public class NotifyWindow : Window
 {
     public Dictionary<string, (string Message, string huntKind, string huntWorld, string currentworldName, string currentregionName, string huntregionName, string Posted_Time,string startLocation, string startZone,string locationCoords,bool openmaponArrival ,bool teleporterEnabled,bool lifestreamEnabled)> Cache = new Dictionary<string, (string, string, string, string, string, string, string, string, string, string, bool, bool, bool)>();
     public string CurrentPayload = "";
+    internal TaskManager TaskManager;
+    // ...
 
 
-    public NotifyWindow() : base("HuntAlerts notification", ImGuiWindowFlags.None)
+
+    public NotifyWindow() : base("HuntAlerts Notification", ImGuiWindowFlags.None)
     {
         ImGui.SetNextWindowSize(new Vector2(400, 300)); // Set your desired initial width and height here
     }
 
     public override void Draw()
     {
-        if(Cache.TryGetValue(CurrentPayload, out var entry))
+        if (Cache.TryGetValue(CurrentPayload, out var entry))
         {
             string message = entry.Message;
             string world = entry.huntWorld;
@@ -80,6 +88,11 @@ public class NotifyWindow : Window
                     // Code to execute when the button is pressed
                     FlagOnMap(locationCoords, startZone);
                 }
+            }
+
+            if (ImGui.Button("Open PartyFinder"))
+            {
+                OpenPartyFinder();
             }
 
         }
@@ -154,7 +167,7 @@ public class NotifyWindow : Window
                                 {
                                     // Player is targetable, execute the command
                                     // Code to execute when the button is pressed
-                                    if (startLocation != "invalid")
+                                    if (startLocation != "invalid" && startLocation != "")
                                     {
                                         PluginLog.Verbose($"Player is on hunt world, starting teleport to hunt location. Currentworld: " + currentworldName + "StartLocation: " + startLocation);
                                         if (hastoserverTransfer == true)
@@ -231,15 +244,63 @@ public class NotifyWindow : Window
 
     private void FlagOnMap(string locationCoords,string startZone)
     {
-        // Code to execute when the button is pressed
-        PluginLog.Verbose($"Attempting to flag coords {startZone} {locationCoords} on Map");
-        uint tt;
-        var (x, y) = (locationCoords.Split(',').Select(s => float.Parse(s.Trim())).ToArray() is float[] coords) ? (coords[0], coords[1]) : (0f, 0f);
-
-        if (Svc.Data.GetExcelSheet<TerritoryType>().TryGetFirst(x => x.TerritoryIntendedUse == (uint)TerritoryIntendedUseEnum.Open_World && (x.PlaceName.Value?.Name.ExtractText() ?? "").EqualsIgnoreCase(startZone), out var value))
+        try
         {
-            tt = value.RowId; //is territory id
-            MapManager.OpenMapWithMarker(tt, x, y);
+            // Code to execute when the button is pressed
+            PluginLog.Verbose($"Attempting to flag coords {startZone} {locationCoords} on Map");
+            uint tt;
+            var (x, y) = (locationCoords.Split(',').Select(s => float.Parse(s.Trim())).ToArray() is float[] coords) ? (coords[0], coords[1]) : (0f, 0f);
+
+            if (Svc.Data.GetExcelSheet<TerritoryType>().TryGetFirst(x => x.TerritoryIntendedUse == (uint)TerritoryIntendedUseEnum.Open_World && (x.PlaceName.Value?.Name.ExtractText() ?? "").EqualsIgnoreCase(startZone), out var value))
+            {
+                tt = value.RowId; //is territory id
+                MapManager.OpenMapWithMarker(tt, x, y);
+            }
+        }catch(Exception ex)
+        {
+            PluginLog.Error("Error placing flag on map.");
+            PluginLog.Error(ex.ToString());
+        }
+    }
+
+    private unsafe void  OpenPartyFinder()
+    {
+
+        try
+        {
+            if (EzThrottler.Throttle("OpenHuntPF", 1000))
+            {
+                TaskManager = new() { AbortOnTimeout = true, TimeLimitMS = 5000 };
+
+                if (!GenericHelpers.TryGetAddonByName<AtkUnitBase>("LookingForGroup", out var _))
+                {
+                    this.TaskManager.Enqueue(() => Chat.Instance.SendMessage("/partyfinder"));
+                    this.TaskManager.DelayNext(500);
+                }
+                this.TaskManager.Enqueue(() =>
+                {
+                    if (GenericHelpers.TryGetAddonByName<AtkUnitBase>("LookingForGroup", out var addon))
+                    {
+                        var btn = addon->UldManager.NodeList[35];
+                        var enabled = btn->GetAsAtkComponentNode()->Component->UldManager.NodeList[2]->Alpha_2 == 255;
+                        var selected = btn->GetAsAtkComponentNode()->Component->UldManager.NodeList[4]->GetAsAtkImageNode()->PartId == 0;
+                        if (enabled)
+                        {
+                            if (!selected)
+                            {
+                                PluginLog.Debug($"Selecting hunts");
+                                Callback.Fire(addon, true, 21, 11, Callback.ZeroAtkValue);
+                            }
+                            return true;
+                        }
+                    }
+                    return false;
+                });
+            }
+        }
+        catch(Exception ex)
+        { 
+            PluginLog.Error(ex.ToString());
         }
     }
 

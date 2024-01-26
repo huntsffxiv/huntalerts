@@ -196,7 +196,7 @@ namespace HuntAlerts
 
     public sealed partial class HuntAlerts
     {
-        public string serverURI = "ws://huntrelay.eastus.cloudapp.azure.com:6789";
+        public string serverURI = "wss://huntrelay.eastus.cloudapp.azure.com";
         //public string serverURI = "ws://localhost:6789";
     }
 }
