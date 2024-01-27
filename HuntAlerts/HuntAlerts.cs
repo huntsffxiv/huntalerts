@@ -26,6 +26,8 @@ namespace HuntAlerts
         
         public NotifyWindow NotifyWindow;
 
+        public HuntListWindow HuntListWindow;
+
         public static HuntAlerts P; //have a static instance accessible from anywhere
         public MessageCacheManager MessageCacheManager;
 
@@ -43,6 +45,8 @@ namespace HuntAlerts
             WindowSystem.AddWindow(ConfigWindow);
             NotifyWindow = new();
             WindowSystem.AddWindow(NotifyWindow);
+            HuntListWindow = new();
+            WindowSystem.AddWindow(HuntListWindow);
 
             Svc.Commands.AddHandler(CommandName, new CommandInfo(OnCommand)
             {
@@ -96,8 +100,17 @@ namespace HuntAlerts
         }
         private void OnCommand(string command, string args)
         {
+            if(args.EqualsIgnoreCaseAny("settings", "s"))
+            {
+                ConfigWindow.IsOpen = true;
+            }
+            else
+            {
+                HuntListWindow.IsOpen = true;
+                //DisplayMessagesNewestToOldest();
+            }
             // in response to the slash command, just display our main ui
-            ConfigWindow.IsOpen = true;
+            
         }
         private void DrawUI()
         {
@@ -107,5 +120,27 @@ namespace HuntAlerts
         {
             ConfigWindow.IsOpen = true;
         }
+
+        public void DisplayMessagesNewestToOldest()
+        {
+            // Get the ordered messages (oldest to newest)
+            HuntTrainMessage[] orderedMessages = MessageCacheManager.GetOrderedMessages();
+
+            // Reverse the array to get the newest to oldest
+            Array.Reverse(orderedMessages);
+
+            // Loop through the array and process each message
+            foreach (var message in orderedMessages)
+            {
+                if (message != null) // Check if the message is not null
+                {
+                    // Process the message here
+                    // For example, you could display it or log it
+                    //Console.WriteLine(message.ToString()); // Assuming HuntTrainMessage has a meaningful ToString implementation
+                    Svc.Chat.Print(message.Message);
+                }
+            }
+        }
+
     }
 }

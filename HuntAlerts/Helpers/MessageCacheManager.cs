@@ -41,6 +41,21 @@ public class MessageCacheManager : IDisposable //IDisposable because we will nee
         }
     }
 
+    public HuntTrainMessage[] GetOrderedMessages()
+    {
+        HuntTrainMessage[] orderedMessages = new HuntTrainMessage[20];
+        int oldestIndex = CommandCount % 20; // Index of the oldest message
+
+        // Iterate over the Messages array starting from the oldest message
+        for (int i = 0; i < 20; i++)
+        {
+            int currentIndex = (oldestIndex + i) % 20; // Calculate the current index based on the oldest index
+            orderedMessages[i] = Messages[currentIndex];
+        }
+
+        return orderedMessages;
+    }
+
     public void Dispose() 
     {
         Svc.PluginInterface.RemoveChatLinkHandler(); //We need to remove our registered links. Dalamud provides a method to unregister all at once, so we don't need to go through each one. 
