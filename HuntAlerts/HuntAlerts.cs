@@ -6,6 +6,7 @@ using ECommons;
 using ECommons.Automation;
 using ECommons.DalamudServices;
 using ECommons.Logging;
+using HuntAlerts.Helpers;
 using HuntAlerts.Windows;
 using System;
 using System.Net.WebSockets;
@@ -23,14 +24,16 @@ namespace HuntAlerts
 
         private ConfigWindow ConfigWindow { get; init; }
         
+        public NotifyWindow NotifyWindow;
 
-        DalamudLinkPayload LinkPayload;
-        NotifyWindow NotifyWindow;
+        public static HuntAlerts P; //have a static instance accessible from anywhere
+        public MessageCacheManager MessageCacheManager;
 
         public HuntAlerts(
             DalamudPluginInterface pluginInterface
         )
         {
+            P = this;
             ECommonsMain.Init(pluginInterface, this);
             this.Configuration = Svc.PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
             this.Configuration.Initialize(Svc.PluginInterface);
@@ -50,14 +53,7 @@ namespace HuntAlerts
             Svc.PluginInterface.UiBuilder.OpenConfigUi += DrawConfigUI;
 
             InitializeWebSocket();
-
-            LinkPayload = Svc.PluginInterface.AddChatLinkHandler(0, (id, s) =>
-            {
-                var msg = RemoveSymbolsRegex().Replace(s.ToString(), "");
-                NotifyWindow.IsOpen = true;
-                NotifyWindow.CurrentPayload = msg;
-                PluginLog.Debug($"Opening window for message {msg}");
-            });
+            MessageCacheManager = new();
         }
         public async void Dispose()
         {
@@ -94,7 +90,9 @@ namespace HuntAlerts
             }
 
             Svc.Commands.RemoveHandler(CommandName);
+            MessageCacheManager.Dispose();
             ECommonsMain.Dispose();
+            P = null; 
         }
         private void OnCommand(string command, string args)
         {
