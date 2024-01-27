@@ -22,12 +22,10 @@ using System.Threading.Tasks;
 namespace HuntAlerts.Windows;
 public class NotifyWindow : Window
 {
-    public Dictionary<string, (string Message, string huntKind, string huntWorld, string currentworldName, string currentregionName, string huntregionName, string Posted_Time,string startLocation, string startZone,string locationCoords,bool openmaponArrival ,bool teleporterEnabled,bool lifestreamEnabled)> Cache = new Dictionary<string, (string, string, string, string, string, string, string, string, string, string, bool, bool, bool)>();
-    public string CurrentPayload = "";
     internal TaskManager TaskManager;
     // ...
 
-
+    public HuntTrainMessage CurrentMessage;
 
     public NotifyWindow() : base("HuntAlerts Notification", ImGuiWindowFlags.None)
     {
@@ -36,8 +34,9 @@ public class NotifyWindow : Window
 
     public override void Draw()
     {
-        if (Cache.TryGetValue(CurrentPayload, out var entry))
-        {
+        var entry = CurrentMessage;
+        if(entry != null) 
+        { 
             string message = entry.Message;
             string world = entry.huntWorld;
             string currentworldName = entry.currentworldName;

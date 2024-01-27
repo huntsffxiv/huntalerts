@@ -201,16 +201,6 @@ namespace HuntAlerts
                                 // Code to handle the hunt
                                 // Since the handling code is the same for all hunts, place it here
 
-                                int textColor = this.Configuration.TextColor;
-                                SeString message;
-                                if (textColor != 0)
-                                {
-                                    message = new SeStringBuilder().AddUiForeground((ushort)textColor).Add(LinkPayload).AddText("New " + huntMessage.Kind + " train starting soon on " + huntMessage.World + "!!").Add(RawPayload.LinkTerminator).AddUiForegroundOff().Build();
-                                }
-                                else
-                                {
-                                    message = new SeStringBuilder().Add(LinkPayload).AddText("New " + huntMessage.Kind + " train starting soon on " + huntMessage.World + "!!").Add(RawPayload.LinkTerminator).Build();
-                                }
 
 
                                 // Get current region
@@ -275,12 +265,24 @@ namespace HuntAlerts
 
 
 
+                                int textColor = this.Configuration.TextColor;
+                                SeString message;
+
+                                var link = P.MessageCacheManager.AddMessage(new(formatted_message, huntMessage.Kind, huntMessage.World, currentworldName, currentregionName, huntregionName, ConvertTime(huntMessage.Posted_Epoch), startLocation, startZone, locationCoords, openmaponArrival, teleporterEnabled, lifestreamEnabled));
+
+                                if (textColor != 0)
+                                {
+                                    message = new SeStringBuilder().AddUiForeground((ushort)textColor).Add(link).AddText("New " + huntMessage.Kind + " train starting soon on " + huntMessage.World + "!!").Add(RawPayload.LinkTerminator).AddUiForegroundOff().Build();
+                                }
+                                else
+                                {
+                                    message = new SeStringBuilder().Add(link).AddText("New " + huntMessage.Kind + " train starting soon on " + huntMessage.World + "!!").Add(RawPayload.LinkTerminator).Build();
+                                }
 
                                 Svc.Chat.Print(new() { Message = message });
                                 var msg = RemoveSymbolsRegex().Replace(message.ToString(), "");
                                 PluginLog.Debug($"Adding cache entry {msg}");
                                 PluginLog.Verbose($"Teleporter: {teleporterEnabled} | Lifestream: {lifestreamEnabled} | startLocation: {startLocation} | startZone: {startZone}");
-                                NotifyWindow.Cache[msg] = (formatted_message, huntMessage.Kind, huntMessage.World, currentworldName, currentregionName, huntregionName, ConvertTime(huntMessage.Posted_Epoch), startLocation, startZone, locationCoords, openmaponArrival, teleporterEnabled, lifestreamEnabled);
 
                                 // Play sound effect if one is set
                                 if (this.Configuration.SoundEffect != 0)
@@ -343,20 +345,21 @@ namespace HuntAlerts
                                                 //string headerText = $"Hunt: {huntType}{Environment.NewLine}World: {world}{Environment.NewLine}Posted: {postedTime}{Environment.NewLine}{Environment.NewLine}";
                                                 messageContent = $"Type: S Rank{Environment.NewLine}Hunt: {kind}{Environment.NewLine}World: {world}{Environment.NewLine}Posted: {ConvertTime(postedTime)}{Environment.NewLine}Creature: {creatureName}{Environment.NewLine}{Environment.NewLine}Location: {locationName} ({locationCoords}){Environment.NewLine}Aetherite: {aetheriteName}";
 
+                                                var link = P.MessageCacheManager.AddMessage(new(messageContent, huntMessage.Kind, huntMessage.World, currentworldName, currentregionName, huntregionName, ConvertTime(huntMessage.Posted_Epoch), startLocation, startZone, locationCoords, openmaponArrival, teleporterEnabled, lifestreamEnabled));
+
                                                 if (sranktextColor != 0)
                                                 {
-                                                    message = new SeStringBuilder().AddUiForeground((ushort)sranktextColor).Add(LinkPayload).AddText("New S Rank spawned on " + world + "!!").Add(RawPayload.LinkTerminator).AddUiForegroundOff().Build();
+                                                    message = new SeStringBuilder().AddUiForeground((ushort)sranktextColor).Add(link).AddText("New S Rank spawned on " + world + "!!").Add(RawPayload.LinkTerminator).AddUiForegroundOff().Build();
                                                 }
                                                 else
                                                 {
-                                                    message = new SeStringBuilder().Add(LinkPayload).AddText("New " + kind + " S Rank spawned on " + world + "!!").Add(RawPayload.LinkTerminator).Build();
+                                                    message = new SeStringBuilder().Add(link).AddText("New " + kind + " S Rank spawned on " + world + "!!").Add(RawPayload.LinkTerminator).Build();
                                                 }
 
                                                 PluginLog.Verbose($"deathTime = {deathTime}");
                                                 Svc.Chat.Print(new() { Message = message });
                                                 var msg = RemoveSymbolsRegex().Replace(message.ToString(), "");
                                                 PluginLog.Verbose($"currentWorld: {currentworldName}  |  currentRegion: {currentregionName}  |  huntWorld: {huntMessage.World}  |  huntRegion: {huntregionName}");
-                                                NotifyWindow.Cache[msg] = (messageContent, huntMessage.Kind, huntMessage.World, currentworldName, currentregionName, huntregionName, ConvertTime(huntMessage.Posted_Epoch), startLocation, startZone, locationCoords, openmaponArrival, teleporterEnabled, lifestreamEnabled);
 
                                                 // Play sound effect if one is set
                                                 if (this.Configuration.SoundEffect != 0)
