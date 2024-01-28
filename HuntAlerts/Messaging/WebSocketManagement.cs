@@ -268,7 +268,7 @@ namespace HuntAlerts
                                 int textColor = this.Configuration.TextColor;
                                 SeString message;
 
-                                var link = P.MessageCacheManager.AddMessage(new(formatted_message, huntMessage.Kind, huntMessage.World, currentworldName, currentregionName, huntregionName, ConvertTime(huntMessage.Posted_Epoch), startLocation, startZone, locationCoords, openmaponArrival, teleporterEnabled, lifestreamEnabled));
+                                var link = P.MessageCacheManager.AddMessage(new(formatted_message, huntMessage.Type, huntMessage.Kind, huntMessage.World, currentworldName, currentregionName, huntregionName, ConvertTime(huntMessage.Posted_Epoch), startLocation, startZone, locationCoords, openmaponArrival, teleporterEnabled, lifestreamEnabled));
 
                                 if (textColor != 0)
                                 {
@@ -345,7 +345,7 @@ namespace HuntAlerts
                                                 //string headerText = $"Hunt: {huntType}{Environment.NewLine}World: {world}{Environment.NewLine}Posted: {postedTime}{Environment.NewLine}{Environment.NewLine}";
                                                 messageContent = $"Type: S Rank{Environment.NewLine}Hunt: {kind}{Environment.NewLine}World: {world}{Environment.NewLine}Posted: {ConvertTime(postedTime)}{Environment.NewLine}Creature: {creatureName}{Environment.NewLine}{Environment.NewLine}Location: {locationName} ({locationCoords}){Environment.NewLine}Aetherite: {aetheriteName}";
 
-                                                var link = P.MessageCacheManager.AddMessage(new(messageContent, huntMessage.Kind, huntMessage.World, currentworldName, currentregionName, huntregionName, ConvertTime(huntMessage.Posted_Epoch), startLocation, startZone, locationCoords, openmaponArrival, teleporterEnabled, lifestreamEnabled));
+                                                var link = P.MessageCacheManager.AddMessage(new(messageContent, huntMessage.Type, huntMessage.Kind, huntMessage.World, currentworldName, currentregionName, huntregionName, ConvertTime(huntMessage.Posted_Epoch), startLocation, startZone, locationCoords, openmaponArrival, teleporterEnabled, lifestreamEnabled));
 
                                                 if (sranktextColor != 0)
                                                 {

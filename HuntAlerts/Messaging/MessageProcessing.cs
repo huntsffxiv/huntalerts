@@ -39,7 +39,7 @@ namespace HuntAlerts
             string standardEmojiPattern = @":\w+:";
             return Regex.Replace(input, standardEmojiPattern, "");
         }
-        private static string ConvertTime(long epochTime)
+        public static string ConvertTime(long epochTime)
         {
 
             // Convert Unix timestamp to DateTime

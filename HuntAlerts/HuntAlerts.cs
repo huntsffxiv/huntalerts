@@ -50,8 +50,17 @@ namespace HuntAlerts
 
             Svc.Commands.AddHandler(CommandName, new CommandInfo(OnCommand)
             {
+                HelpMessage = "Opens a list of previous hunt alerts"
+            });
+
+            Svc.Commands.AddHandler("/huntalerts settings", new CommandInfo(OnCommand)
+            {
                 HelpMessage = "Opens the HuntAlerts options"
             });
+
+
+
+
 
             Svc.PluginInterface.UiBuilder.Draw += DrawUI;
             Svc.PluginInterface.UiBuilder.OpenConfigUi += DrawConfigUI;
@@ -119,27 +128,6 @@ namespace HuntAlerts
         public void DrawConfigUI()
         {
             ConfigWindow.IsOpen = true;
-        }
-
-        public void DisplayMessagesNewestToOldest()
-        {
-            // Get the ordered messages (oldest to newest)
-            HuntTrainMessage[] orderedMessages = MessageCacheManager.GetOrderedMessages();
-
-            // Reverse the array to get the newest to oldest
-            Array.Reverse(orderedMessages);
-
-            // Loop through the array and process each message
-            foreach (var message in orderedMessages)
-            {
-                if (message != null) // Check if the message is not null
-                {
-                    // Process the message here
-                    // For example, you could display it or log it
-                    //Console.WriteLine(message.ToString()); // Assuming HuntTrainMessage has a meaningful ToString implementation
-                    Svc.Chat.Print(message.Message);
-                }
-            }
         }
 
     }

@@ -174,6 +174,11 @@ public class NotifyWindow : Window
                                             await Task.Delay(2000, token); // wait 2 seconds to start teleport
                                         }
 
+                                        // Check and replace start location if a city is passed in
+                                        if (startLocation.ToLower().Contains("limsa")) { startLocation = "Limsa"; }
+                                        if (startLocation.ToLower().Contains("gridania")) { startLocation = "gridania"; }
+                                        if(startLocation.ToLower().Contains("ul'dah") || startLocation.ToLower().Contains("uldah")) { startLocation = "ul'dah"; }
+
                                         Svc.Commands.ProcessCommand($"/tp {startLocation}");
 
                                         if (openmaponArrival == true && locationCoords != "")

@@ -1,10 +1,14 @@
 using Dalamud.Interface.Windowing;
+using Dalamud.Logging;
 using ECommons.Automation;
 using ECommons.DalamudServices;
+using FFXIVClientStructs.FFXIV.Client.Game.UI;
 using HuntAlerts.Helpers;
 using ImGuiNET;
 using System;
 using System.Numerics;
+using System.Windows.Forms;
+using System.Collections.Generic;
 
 
 
@@ -14,7 +18,6 @@ public class HuntListWindow : Window
 {
     internal TaskManager TaskManager;
     // ...
-    public MessageCacheManager MessageCacheManager;
 
     public HuntListWindow() : base("HuntAlerts List", ImGuiWindowFlags.None)
     {
@@ -23,27 +26,61 @@ public class HuntListWindow : Window
 
     public override void Draw()
     {
+        try
+        {
             // Get the ordered messages (oldest to newest)
-            HuntTrainMessage[] orderedMessages = MessageCacheManager.GetOrderedMessages();
+            List<HuntTrainMessage> orderedMessages = HuntAlerts.P.MessageCacheManager.GetOrderedMessages();
 
             // Reverse the array to get the newest to oldest
-            Array.Reverse(orderedMessages);
-
-            // Loop through the array and display each message
-            foreach (var message in orderedMessages)
+            orderedMessages.Reverse();
+            if (orderedMessages.Count > 0)
             {
-                Svc.Chat.Print(message.Message);
-                if (message != null) // Check if the message is not null
+                foreach (var message in orderedMessages)
                 {
-                    // Display the message
-                    // You can format the message as you like, here's a simple example:
-                    ImGui.Text($"{message.Message}"); // Assuming HuntTrainMessage has a meaningful ToString implementation
-                
+                    if (message != null)
+                    {
+                        string huntType = message.huntType ?? "Unknown Type";
+                        string huntKind = message.huntKind ?? "Unknown Kind";
+                        string huntWorld = message.huntWorld ?? "Unknown World";
+                        string localPostedTime = message.Posted_Time ?? "Unknown Time";
+
+                        if (huntType == "new_hunt")
+                        {
+                            huntType = "Hunt Train";
+                        }
+                        else if (huntType == "srank")
+                        {
+                            huntType = "S Rank";
+                        }
+
+                        if (huntKind == "EW") { huntKind = "Endwalker"; }
+                        else if (huntKind == "SHB") { huntKind = "Shadowbringers"; }
+                        else if (huntKind == "SB" || huntKind == "HW" || huntKind == "ARR") { huntKind = "Centurio"; }
+                        
+
+
+
+
+                        if (ImGui.TreeNode($"{localPostedTime} - {huntType} - {huntKind} - {huntWorld}"))
+                        {
+                            // Display other message details here
+                            ImGui.Text($"{message.Message}");
+                            ImGui.TreePop();
+                        }
+                    }
                 }
+            }else
+            {
+                ImGui.Text($"There are no cached messages.");
             }
 
-            // Close the ImGui window
-            ImGui.End();
+        }
+        catch(Exception ex)
+        {
+            PluginLog.Error("Error while displaying the huntalert list");
+            PluginLog.Error(ex.Message);
+            return;
+        }
 
     }
 
