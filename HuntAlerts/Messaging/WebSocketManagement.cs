@@ -74,11 +74,15 @@ namespace HuntAlerts
 
                     // Get received message
                     var result = await _webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), _cancellationTokenSource.Token);
+
+
                     // Process received message
                     var messageString = Encoding.UTF8.GetString(buffer, 0, result.Count);
 
                     try
                     {
+
+
                         bool? teleporterInstalled = Svc.PluginInterface.InstalledPlugins.FirstOrDefault(x => x.InternalName == "TeleporterPlugin")?.IsLoaded;
                         bool? lifestreamInstalled = Svc.PluginInterface.InstalledPlugins.FirstOrDefault(x => x.InternalName == "Lifestream")?.IsLoaded;
 
@@ -424,6 +428,18 @@ namespace HuntAlerts
                 }
             }
         }
+
+        private async Task CloseWebSocketAsync()
+        {
+            PluginLog.Verbose($"Attempting to close websocket. State: {_webSocket.State}");
+            if (_webSocket != null && _webSocket.State == WebSocketState.Open)
+            {
+                // Send a close message to the server
+                await _webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closing connection", CancellationToken.None);
+                PluginLog.Information("WebSocket connection closed gracefully.");
+            }
+        }
+
         private async Task ReconnectWebSocket()
         {
             var retryInterval = 5000; // milliseconds to wait before retrying to connect
@@ -431,6 +447,13 @@ namespace HuntAlerts
             {
                 try
                 {
+                    // Check if the WebSocket is intentionally closed, and exit if so
+                    if (_webSocket.State == WebSocketState.Closed)
+                    {
+                        PluginLog.Information("WebSocket was closed intentionally, not reconnecting.");
+                        return;
+                    }
+
                     PluginLog.Information("Attempting to reconnect WebSocket...");
                     await Task.Delay(retryInterval, _cancellationTokenSource.Token); // Wait before reconnecting
                     _webSocket.Dispose(); // Dispose the old instance

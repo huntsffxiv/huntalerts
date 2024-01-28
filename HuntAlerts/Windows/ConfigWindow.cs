@@ -16,7 +16,7 @@ public class ConfigWindow : Window, IDisposable
 
 
     public ConfigWindow(HuntAlerts plugin) : base(
-       "HuntAlerts v1.1.9",
+       "HuntAlerts v1.2.0",
        ImGuiWindowFlags.NoResize)
     {
         this.Plugin = plugin;
@@ -54,16 +54,16 @@ public class ConfigWindow : Window, IDisposable
         }
 
 
-        // Local variable for color options
-        Dictionary<string, int> _colorOptions = new Dictionary<string, int>
-    {
-        { "Default", 0 },
-        { "Red", 16 },
-        { "Green", 43 },
-        { "Blue", 57 },
-        { "Yellow", 25 },
-        { "Purple", 48 }
-    };
+            // Local variable for color options
+            Dictionary<string, int> _colorOptions = new Dictionary<string, int>
+        {
+            { "Default", 0 },
+            { "Red", 16 },
+            { "Green", 43 },
+            { "Blue", 57 },
+            { "Yellow", 25 },
+            { "Purple", 48 }
+        };
 
         string[] items = _colorOptions.Keys.ToArray();
         var textColor = Array.IndexOf(items, _colorOptions.FirstOrDefault(x => x.Value == this.Configuration.TextColor).Key);

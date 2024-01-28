@@ -70,28 +70,15 @@ namespace HuntAlerts
         }
         public async void Dispose()
         {
-            this.WindowSystem.RemoveAllWindows();
-
-            ConfigWindow.Dispose();
-
-            Svc.PluginInterface.RemoveChatLinkHandler();
-
             // Dispose of websocket
             try
             {
+
+                // Close the WebSocket connection synchronously
+                CloseWebSocketAsync().GetAwaiter().GetResult();
+
                 // First, signal the cancellation
                 _cancellationTokenSource?.Cancel();
-
-                // Give a moment for the cancellation to propagate
-                Task.Delay(500).Wait();
-
-                // Then, dispose of resources
-                if (_webSocket != null && _webSocket.State == WebSocketState.Open)
-                {
-                    await _webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure,
-                                                "Disposing Plugin",
-                                                _cancellationTokenSource.Token);
-                }
 
 
                 _webSocket?.Dispose();
@@ -101,6 +88,12 @@ namespace HuntAlerts
             {
                 PluginLog.Error($"{ex}");
             }
+
+            this.WindowSystem.RemoveAllWindows();
+
+            ConfigWindow.Dispose();
+
+            Svc.PluginInterface.RemoveChatLinkHandler();
 
             Svc.Commands.RemoveHandler(CommandName);
             MessageCacheManager.Dispose();
