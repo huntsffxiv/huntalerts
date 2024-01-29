@@ -447,13 +447,6 @@ namespace HuntAlerts
             {
                 try
                 {
-                    // Check if the WebSocket is intentionally closed, and exit if so
-                    if (_webSocket.State == WebSocketState.Closed)
-                    {
-                        PluginLog.Information("WebSocket was closed intentionally, not reconnecting.");
-                        return;
-                    }
-
                     PluginLog.Information("Attempting to reconnect WebSocket...");
                     await Task.Delay(retryInterval, _cancellationTokenSource.Token); // Wait before reconnecting
                     _webSocket.Dispose(); // Dispose the old instance
