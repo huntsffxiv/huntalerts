@@ -1,0 +1,13 @@
+{
+    "Author": "FFXIV Hunts",
+    "Name": "HuntAlerts",
+    "Punchline": "Notifies you when hunt trains are starting soon",
+    "Description": "Notifies you when hunt trains are starting soon",
+    "ApplicableVersion": "any",
+    "Tags": [
+        "hunt",
+        "train",
+        "boat",
+        "rank"
+    ]
+}
