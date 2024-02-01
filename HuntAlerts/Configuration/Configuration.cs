@@ -196,7 +196,7 @@ namespace HuntAlerts
 
     public sealed partial class HuntAlerts
     {
-        public string serverURI = "wss://huntalerts.pro";
+        public string serverURI = "wss://huntalerts.pro:24842";
         //public string serverURI = "ws://localhost:6789";
     }
 }
