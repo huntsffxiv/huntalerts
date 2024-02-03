@@ -150,6 +150,7 @@ namespace HuntAlerts
                 { "dhoro", "Dhoro Iloh" },
                 { "reunion", "Reunion" },
                 { "throne", "The Dawn Throne" },
+                { "omicron", "Base Omicron" },
 
             };
 

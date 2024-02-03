@@ -16,11 +16,11 @@ public class ConfigWindow : Window, IDisposable
 
 
     public ConfigWindow(HuntAlerts plugin) : base(
-       "HuntAlerts v1.2.0.1",
+       "HuntAlerts v1.2.0.4",
        ImGuiWindowFlags.NoResize)
     {
         this.Plugin = plugin;
-        this.Size = new Vector2(400, 940);
+        this.Size = new Vector2(400, 960);
         this.SizeCondition = ImGuiCond.Always;
 
         this.Configuration = plugin.Configuration;
@@ -168,6 +168,26 @@ public class ConfigWindow : Window, IDisposable
         }
 
         if (lifestreamInstalled != true)
+        {
+            ImGui.EndDisabled();
+        }
+
+        if ((teleporterInstalled != true && lifestreamInstalled != true) || (!this.Configuration.TeleporterIntegration && !this.Configuration.LifestreamIntegration))
+        {
+            ImGui.BeginDisabled();
+
+        }
+
+        var ctrlclickTeleport = this.Configuration.ctrlclickTeleport;
+        if (ImGui.Checkbox("Ctrl-Click messages to teleport", ref ctrlclickTeleport))
+        {
+            this.Configuration.ctrlclickTeleport = ctrlclickTeleport;
+            // can save immediately on change, if you don't want to provide a "Save and Close" button
+            this.Configuration.Save();
+        }
+
+
+        if ((teleporterInstalled != true && lifestreamInstalled != true) || (!this.Configuration.TeleporterIntegration && !this.Configuration.LifestreamIntegration))
         {
             ImGui.EndDisabled();
         }

@@ -21,6 +21,7 @@ namespace HuntAlerts
         public int SoundEffect { get; set; } = 0;
         public bool TeleporterIntegration { get; set; } = false;
         public bool LifestreamIntegration { get; set; } = false;
+        public bool ctrlclickTeleport {  get; set; } = false;
         public bool SRankEnabled { get; set; } = false;
         public bool SRankCurrentWorld { get; set; } = true;
         public bool EndwalkerHunts { get; set; } = false;
@@ -196,7 +197,7 @@ namespace HuntAlerts
 
     public sealed partial class HuntAlerts
     {
-        public string serverURI = "wss://huntrelay.eastus.cloudapp.azure.com";
+        public string serverURI = "wss://huntalerts.pro:24842";
         //public string serverURI = "ws://localhost:6789";
     }
 }

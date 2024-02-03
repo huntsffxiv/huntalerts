@@ -16,6 +16,7 @@ using System.Net.WebSockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Forms;
 
 namespace HuntAlerts
 {
@@ -81,6 +82,20 @@ namespace HuntAlerts
 
                     try
                     {
+                        // Check if the message is an admin alert
+                        if (messageString.StartsWith("Alert:"))
+                        {
+                            // Extract the alert message
+                            var alertMessage = messageString.Substring("Alert:".Length).Trim();
+
+                            var formattedAlertMessage = "HuntAlerts Admin Broadcast\n" + alertMessage;
+
+                            var message = new SeStringBuilder().AddUiForeground((ushort)16).AddText(formattedAlertMessage).AddUiForegroundOff().Build();
+                            Svc.Chat.Print(message);
+
+                            // Skip the rest of the processing for this message
+                            continue;
+                        }
 
 
                         bool? teleporterInstalled = Svc.PluginInterface.InstalledPlugins.FirstOrDefault(x => x.InternalName == "TeleporterPlugin")?.IsLoaded;
