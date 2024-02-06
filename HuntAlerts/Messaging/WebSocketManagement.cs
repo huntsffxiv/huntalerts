@@ -91,7 +91,14 @@ namespace HuntAlerts
                             var formattedAlertMessage = "HuntAlerts Admin Broadcast\n" + alertMessage;
 
                             var message = new SeStringBuilder().AddUiForeground((ushort)16).AddText(formattedAlertMessage).AddUiForegroundOff().Build();
-                            Svc.Chat.Print(message);
+                            if (!this.Configuration.UseDalamudChat)
+                            {
+                                Svc.Chat.Print(new() { Message = message, Type = this.Configuration.OutputChat });
+                            }
+                            else
+                            {
+                                Svc.Chat.Print(new() { Message = message });
+                            }
 
                             // Skip the rest of the processing for this message
                             continue;
@@ -298,7 +305,17 @@ namespace HuntAlerts
                                     message = new SeStringBuilder().Add(link).AddText("New " + huntMessage.Kind + " train starting soon on " + huntMessage.World + "!!").Add(RawPayload.LinkTerminator).Build();
                                 }
 
-                                Svc.Chat.Print(new() { Message = message });
+
+                                if (!this.Configuration.UseDalamudChat)
+                                {
+                                    Svc.Chat.Print(new() { Message = message, Type = this.Configuration.OutputChat });
+                                }else
+                                {
+                                    Svc.Chat.Print(new() { Message = message });
+                                }
+
+
+
                                 var msg = RemoveSymbolsRegex().Replace(message.ToString(), "");
                                 PluginLog.Debug($"Adding cache entry {msg}");
                                 PluginLog.Verbose($"Teleporter: {teleporterEnabled} | Lifestream: {lifestreamEnabled} | startLocation: {startLocation} | startZone: {startZone}");
@@ -376,7 +393,16 @@ namespace HuntAlerts
                                                 }
 
                                                 PluginLog.Verbose($"deathTime = {deathTime}");
-                                                Svc.Chat.Print(new() { Message = message });
+
+                                                if (!this.Configuration.UseDalamudChat)
+                                                {
+                                                    Svc.Chat.Print(new() { Message = message, Type = this.Configuration.OutputChat });
+                                                }
+                                                else
+                                                {
+                                                    Svc.Chat.Print(new() { Message = message });
+                                                }
+
                                                 var msg = RemoveSymbolsRegex().Replace(message.ToString(), "");
                                                 PluginLog.Verbose($"currentWorld: {currentworldName}  |  currentRegion: {currentregionName}  |  huntWorld: {huntMessage.World}  |  huntRegion: {huntregionName}");
 
@@ -398,7 +424,15 @@ namespace HuntAlerts
                                                 {
                                                     message = new SeStringBuilder().AddText($"{kind} S Rank {creatureName} on {world} was killed at {ConvertTime(deathTime)}.").Build();
                                                 }
-                                                Svc.Chat.Print(new() { Message = message });
+
+                                                if (!this.Configuration.UseDalamudChat)
+                                                {
+                                                    Svc.Chat.Print(new() { Message = message, Type = this.Configuration.OutputChat });
+                                                }
+                                                else
+                                                {
+                                                    Svc.Chat.Print(new() { Message = message });
+                                                }
                                             }
                                         }
                                         else

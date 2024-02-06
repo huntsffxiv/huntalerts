@@ -1,7 +1,9 @@
+using Dalamud.Game.Text;
 using Dalamud.Interface.Windowing;
 using ECommons.DalamudServices;
 using FFXIVClientStructs.FFXIV.Client.UI;
 using ImGuiNET;
+using Microsoft.VisualBasic.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -20,7 +22,7 @@ public class ConfigWindow : Window, IDisposable
        ImGuiWindowFlags.NoResize)
     {
         this.Plugin = plugin;
-        this.Size = new Vector2(400, 960);
+        this.Size = new Vector2(400, 980);
         this.SizeCondition = ImGuiCond.Always;
 
         this.Configuration = plugin.Configuration;
@@ -45,6 +47,10 @@ public class ConfigWindow : Window, IDisposable
             this.Configuration.Save();
         }
 
+
+
+
+
         var openmaponArrival = this.Configuration.OpenMapOnArrival;
         if (ImGui.Checkbox("Flag Map automatically if possible", ref openmaponArrival))
         {
@@ -53,9 +59,40 @@ public class ConfigWindow : Window, IDisposable
             this.Configuration.Save();
         }
 
+        var usedalamudChat = this.Configuration.UseDalamudChat;
+        if (ImGui.Checkbox("Use Dalamud Default Chat", ref usedalamudChat))
+        {
+            this.Configuration.UseDalamudChat = usedalamudChat;
+            // can save immediately on change, if you don't want to provide a "Save and Close" button
+            this.Configuration.Save();
+        }
 
-            // Local variable for color options
-            Dictionary<string, int> _colorOptions = new Dictionary<string, int>
+
+        if (this.Configuration.UseDalamudChat == true)
+        {
+            ImGui.BeginDisabled();
+        }
+
+        var chatTypes = Enum.GetNames(typeof(XivChatType))
+                    .Where(name => name != "None")
+                    .ToArray();
+        var currentOutputChat = this.Configuration.OutputChat;
+        int outputChatIndex = Array.IndexOf(chatTypes, currentOutputChat.ToString());
+
+        if (ImGui.Combo("Chat Channel", ref outputChatIndex, chatTypes, chatTypes.Length))
+        {
+            // Update the Configuration.OutputChat with the new enum value based on the selected index
+            this.Configuration.OutputChat = (XivChatType)Enum.GetValues(typeof(XivChatType)).GetValue(outputChatIndex);
+            this.Configuration.Save();
+        }
+        if (this.Configuration.UseDalamudChat == true)
+        {
+            ImGui.EndDisabled();
+        }
+
+
+        // Local variable for color options
+        Dictionary<string, int> _colorOptions = new Dictionary<string, int>
         {
             { "Default", 0 },
             { "Red", 16 },
