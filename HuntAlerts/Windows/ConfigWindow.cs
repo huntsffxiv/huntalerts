@@ -18,7 +18,7 @@ public class ConfigWindow : Window, IDisposable
 
 
     public ConfigWindow(HuntAlerts plugin) : base(
-       "HuntAlerts v1.2.0.4",
+       "HuntAlerts v1.2.0.6",
        ImGuiWindowFlags.NoResize)
     {
         this.Plugin = plugin;
@@ -73,16 +73,23 @@ public class ConfigWindow : Window, IDisposable
             ImGui.BeginDisabled();
         }
 
-        var chatTypes = Enum.GetNames(typeof(XivChatType))
-                    .Where(name => name != "None")
-                    .ToArray();
+        // Get all enum values except "None"
+        var enumValues = Enum.GetValues(typeof(XivChatType))
+                             .Cast<XivChatType>()
+                             .Where(value => value != XivChatType.None) // Assuming XivChatType.None is the value you want to exclude
+                             .ToArray();
+
+        // Convert enum values to string array for display, excluding "None"
+        var chatTypes = enumValues.Select(e => e.ToString()).ToArray();
+
+        // Find the current index of OutputChat in the enumValues array (adjusted for exclusion of "None")
         var currentOutputChat = this.Configuration.OutputChat;
-        int outputChatIndex = Array.IndexOf(chatTypes, currentOutputChat.ToString());
+        int outputChatIndex = Array.IndexOf(enumValues, currentOutputChat);
 
         if (ImGui.Combo("Chat Channel", ref outputChatIndex, chatTypes, chatTypes.Length))
         {
             // Update the Configuration.OutputChat with the new enum value based on the selected index
-            this.Configuration.OutputChat = (XivChatType)Enum.GetValues(typeof(XivChatType)).GetValue(outputChatIndex);
+            this.Configuration.OutputChat = enumValues[outputChatIndex];
             this.Configuration.Save();
         }
         if (this.Configuration.UseDalamudChat == true)
