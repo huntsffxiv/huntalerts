@@ -251,8 +251,9 @@ namespace HuntAlerts
                                 bool teleporterEnabled = this.Configuration.TeleporterIntegration && (teleporterInstalled == true);
                                 bool lifestreamEnabled = this.Configuration.LifestreamIntegration && (lifestreamInstalled == true);
                                 bool openmaponArrival = this.Configuration.OpenMapOnArrival;
-                                string startLocation = ParseForStartLocation(messageContent);
-                                string startZone = ParseForStartZone(messageContent);
+                                string startLocation = huntMessage.AetheriteName; //ParseForStartLocation(messageContent);
+                                string startZone = huntMessage.LocationName; //ParseForStartZone(messageContent);
+                                string aetheriteName = huntMessage.AetheriteName;
                                 string formatted_message = $"Kind: Hunt Train{Environment.NewLine}Hunt: {huntMessage.Kind}{Environment.NewLine}World: {huntMessage.World}{Environment.NewLine}Posted: {ConvertTime(huntMessage.Posted_Epoch)}{Environment.NewLine}{Environment.NewLine}" + messageContent;
 
 

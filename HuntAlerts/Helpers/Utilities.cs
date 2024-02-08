@@ -67,12 +67,13 @@ namespace HuntAlerts.Helpers
                 // Code to execute when the button is pressed
                 PluginLog.Verbose($"Attempting to flag coords {startZone} {locationCoords} on Map");
                 uint tt;
-                var (x, y) = (locationCoords.Split(',').Select(s => float.Parse(s.Trim())).ToArray() is float[] coords) ? (coords[0], coords[1]) : (0f, 0f);
+                //var (x, y) = (locationCoords.Split(',').Select(s => float.Parse(s.Trim())).ToArray() is float[] coords) ? (coords[0], coords[1]) : (0f, 0f);
+                var (x, y) = HuntAlerts.ExtractCoordinates(locationCoords);
 
                 if (Svc.Data.GetExcelSheet<TerritoryType>().TryGetFirst(x => x.TerritoryIntendedUse == (uint)TerritoryIntendedUseEnum.Open_World && (x.PlaceName.Value?.Name.ExtractText() ?? "").EqualsIgnoreCase(startZone), out var value))
                 {
                     tt = value.RowId; //is territory id
-                    MapManager.OpenMapWithMarker(tt, x, y);
+                    MapManager.OpenMapWithMarker(tt, (float)x, (float)y);
                 }
             }
             catch (Exception ex)
