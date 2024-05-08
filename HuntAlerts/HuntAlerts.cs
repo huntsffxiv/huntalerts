@@ -67,6 +67,7 @@ namespace HuntAlerts
 
             InitializeWebSocket();
             MessageCacheManager = new();
+            this.Configuration.Save();
         }
         public async void Dispose()
         {

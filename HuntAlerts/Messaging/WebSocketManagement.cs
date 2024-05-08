@@ -299,11 +299,11 @@ namespace HuntAlerts
 
                                 if (textColor != 0)
                                 {
-                                    message = new SeStringBuilder().AddUiForeground((ushort)textColor).Add(link).AddText("New " + huntMessage.Kind + " train starting soon on " + huntMessage.World + "!!").Add(RawPayload.LinkTerminator).AddUiForegroundOff().Build();
+                                    message = new SeStringBuilder().AddUiForeground((ushort)textColor).Add(link).AddText("New " + huntMessage.Kind + " train starting soon on " + huntMessage.World + "!").Add(RawPayload.LinkTerminator).AddUiForegroundOff().Build();
                                 }
                                 else
                                 {
-                                    message = new SeStringBuilder().Add(link).AddText("New " + huntMessage.Kind + " train starting soon on " + huntMessage.World + "!!").Add(RawPayload.LinkTerminator).Build();
+                                    message = new SeStringBuilder().Add(link).AddText("New " + huntMessage.Kind + " train starting soon on " + huntMessage.World + "!").Add(RawPayload.LinkTerminator).Build();
                                 }
 
 
@@ -386,11 +386,11 @@ namespace HuntAlerts
 
                                                 if (sranktextColor != 0)
                                                 {
-                                                    message = new SeStringBuilder().AddUiForeground((ushort)sranktextColor).Add(link).AddText("New S Rank spawned on " + world + "!!").Add(RawPayload.LinkTerminator).AddUiForegroundOff().Build();
+                                                    message = new SeStringBuilder().AddUiForeground((ushort)sranktextColor).Add(link).AddText($"New {kind} S Rank {creatureName} spawned on {world}!").Add(RawPayload.LinkTerminator).AddUiForegroundOff().Build();
                                                 }
                                                 else
                                                 {
-                                                    message = new SeStringBuilder().Add(link).AddText("New " + kind + " S Rank spawned on " + world + "!!").Add(RawPayload.LinkTerminator).Build();
+                                                    message = new SeStringBuilder().Add(link).AddText($"New {kind} S Rank {creatureName} spawned on {world}!").Add(RawPayload.LinkTerminator).Build();
                                                 }
 
                                                 PluginLog.Verbose($"deathTime = {deathTime}");

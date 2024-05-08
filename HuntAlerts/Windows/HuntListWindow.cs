@@ -21,7 +21,11 @@ public class HuntListWindow : Window
 
     public HuntListWindow() : base("HuntAlerts List", ImGuiWindowFlags.None)
     {
-        ImGui.SetNextWindowSize(new Vector2(400, 300)); // Set your desired initial width and height here
+    }
+
+    public override void PreDraw()
+    {
+        ImGui.SetNextWindowSize(new(400, 200), ImGuiCond.FirstUseEver);
     }
 
     public override void Draw()
