@@ -3,20 +3,23 @@ using Dalamud.Game.Text.SeStringHandling.Payloads;
 using ECommons;
 using ECommons.DalamudServices;
 using ECommons.ExcelServices;
+using ECommons.GameHelpers;
 using ECommons.Logging;
+using ECommons.Schedulers;
 using FFXIVClientStructs.FFXIV.Client.UI;
 using HuntAlerts.Helpers;
+using HuntAlerts.Services;
 using HuntAlerts.Windows;
 using Lumina.Excel.GeneratedSheets;
 using Newtonsoft.Json;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.WebSockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Windows.Forms;
 
 namespace HuntAlerts
 {
@@ -59,7 +62,7 @@ namespace HuntAlerts
                     // Add more mappings as necessary
                 };
 
-                Dictionary<(string Kind, string World), DateTime> recentMessagesCache = new Dictionary<(string Kind, string World), DateTime>();
+                ConcurrentDictionary<(string Kind, string World), DateTime> recentMessagesCache = [];
 
 
                 var buffer = new byte[2048];
@@ -70,7 +73,7 @@ namespace HuntAlerts
                     var keysToRemove = recentMessagesCache.Where(kvp => kvp.Value < twoMinutesAgo).Select(kvp => kvp.Key).ToList();
                     foreach (var key in keysToRemove)
                     {
-                        recentMessagesCache.Remove(key);
+                        recentMessagesCache.TryRemove(key, out _);
                     }
 
                     // Get received message
@@ -80,41 +83,69 @@ namespace HuntAlerts
                     // Process received message
                     var messageString = Encoding.UTF8.GetString(buffer, 0, result.Count);
 
-                    try
+                    ProcessMessage(messageString, recentMessagesCache);
+                }
+            }
+            catch (TaskCanceledException)
+            {
+                // Expected when the task is canceled. No need to log as an error.
+                PluginLog.Information("WebSocket receive task was canceled.");
+            }
+            catch (Exception ex)
+            {
+                if (!cancellationToken.IsCancellationRequested)
+                {
+                    // PluginLog.Error($"WebSocket connection error: {ex}");
+                    // If cancellation hasn't been requested, this is an actual error.
+                    PluginLog.Warning($"Lost connection to the server");
+                    // Start reconnection logic.
+                    await ReconnectWebSocket();
+                }
+            }
+        }
+
+        public void ProcessMessage(string messageString, ConcurrentDictionary<(string Kind, string World), DateTime> recentMessagesCache)
+        {
+            try
+            {
+                // Check if the message is an admin alert
+                if (messageString.StartsWith("Alert:"))
+                {
+                    // Extract the alert message
+                    var alertMessage = messageString.Substring("Alert:".Length).Trim();
+
+                    var formattedAlertMessage = "HuntAlerts Admin Broadcast\n" + alertMessage;
+
+                    var message = new SeStringBuilder().AddUiForeground((ushort)16).AddText(formattedAlertMessage).AddUiForegroundOff().Build();
+                    if (!this.Configuration.UseDalamudChat)
                     {
-                        // Check if the message is an admin alert
-                        if (messageString.StartsWith("Alert:"))
-                        {
-                            // Extract the alert message
-                            var alertMessage = messageString.Substring("Alert:".Length).Trim();
+                        Svc.Chat.Print(new() { Message = message, Type = this.Configuration.OutputChat });
+                    }
+                    else
+                    {
+                        Svc.Chat.Print(new() { Message = message });
+                    }
 
-                            var formattedAlertMessage = "HuntAlerts Admin Broadcast\n" + alertMessage;
-
-                            var message = new SeStringBuilder().AddUiForeground((ushort)16).AddText(formattedAlertMessage).AddUiForegroundOff().Build();
-                            if (!this.Configuration.UseDalamudChat)
-                            {
-                                Svc.Chat.Print(new() { Message = message, Type = this.Configuration.OutputChat });
-                            }
-                            else
-                            {
-                                Svc.Chat.Print(new() { Message = message });
-                            }
-
-                            // Skip the rest of the processing for this message
-                            continue;
-                        }
+                    // Skip the rest of the processing for this message
+                    return;
+                }
 
 
-                        bool? teleporterInstalled = Svc.PluginInterface.InstalledPlugins.FirstOrDefault(x => x.InternalName == "TeleporterPlugin")?.IsLoaded;
-                        bool? lifestreamInstalled = Svc.PluginInterface.InstalledPlugins.FirstOrDefault(x => x.InternalName == "Lifestream")?.IsLoaded;
+                bool? teleporterInstalled = Svc.PluginInterface.InstalledPlugins.FirstOrDefault(x => x.InternalName == "TeleporterPlugin")?.IsLoaded;
+                bool? lifestreamInstalled = Svc.PluginInterface.InstalledPlugins.FirstOrDefault(x => x.InternalName == "Lifestream")?.IsLoaded;
 
-                        var huntMessage = JsonConvert.DeserializeObject<HuntMessage>(messageString);
+                var huntMessage = JsonConvert.DeserializeObject<HuntMessage>(messageString);
 
-                        string currentdatacentername = "";
-                        string homeworldName = "";
-                        string currentworldName = "";
+                string currentdatacentername = "";
+                string homeworldName = "";
+                string currentworldName = "";
 
-                        if (Svc.ClientState.IsLoggedIn)
+                if (Svc.ClientState.IsLoggedIn)
+                {
+                    //now working with game data and must use game thread
+                    new TickScheduler(() =>
+                    {
+                        try
                         {
                             if (huntMessage.Type == "new_hunt")
                             {
@@ -128,7 +159,7 @@ namespace HuntAlerts
                                     {
                                         // Message with same Kind and World received within last 2 minutes
                                         PluginLog.Verbose("Similar message received recently, suppressing notification");
-                                        continue;
+                                        return;
                                     }
                                 }
 
@@ -151,7 +182,6 @@ namespace HuntAlerts
                                 bool isHuntEnabled = IsHuntEnabled(huntMessage.Kind);
 
 
-
                                 if (Svc.ClientState.IsLoggedIn && Svc.ClientState.LocalPlayer != null)
                                 {
                                     homeworldName = Svc.ClientState.LocalPlayer.HomeWorld.GameData.Name;
@@ -170,14 +200,14 @@ namespace HuntAlerts
                                 if (currentworldOnly && huntMessage.World != currentworldName)
                                 {
                                     PluginLog.Verbose("Current World Only option is enabled and player is not on the hunt world currently, suppressing notification");
-                                    continue;
+                                    return;
                                 }
 
                                 // Checks against Homeworld Only option
                                 if (homeworldOnly && huntMessage.World != homeworldName)
                                 {
                                     PluginLog.Verbose("Home World Only option is enabled and hunt is not for player's home world, suppressing notification");
-                                    continue;
+                                    return;
                                 }
 
 
@@ -186,7 +216,7 @@ namespace HuntAlerts
                                 {
                                     // Data center is not enabled or unknown world
                                     PluginLog.Verbose("Datacenter is not enabled, suppressing notification");
-                                    continue;
+                                    return;
                                 }
 
                                 // Check if the world is enabled
@@ -194,7 +224,7 @@ namespace HuntAlerts
                                 {
                                     // World is not enabled
                                     PluginLog.Verbose("World is not enabled, suppressing notification");
-                                    continue;
+                                    return;
                                 }
 
                                 // Check if the hunt type is enabled
@@ -202,7 +232,7 @@ namespace HuntAlerts
                                 {
                                     // Hunt type is not enabled
                                     PluginLog.Verbose("Hunt type is not enabled, suppressing notification");
-                                    continue;
+                                    return;
                                 }
 
 
@@ -295,7 +325,9 @@ namespace HuntAlerts
                                 int textColor = this.Configuration.TextColor;
                                 SeString message;
 
-                                var link = P.MessageCacheManager.AddMessage(new(formatted_message, huntMessage.Type, huntMessage.Kind, huntMessage.World, currentworldName, currentregionName, huntregionName, ConvertTime(huntMessage.Posted_Epoch), startLocation, startZone, locationCoords, openmaponArrival, teleporterEnabled, lifestreamEnabled));
+                                var htmessage = new HuntTrainMessage(formatted_message, huntMessage.Type, huntMessage.Kind, huntMessage.World, currentworldName, currentregionName, huntregionName, ConvertTime(huntMessage.Posted_Epoch), startLocation, startZone, locationCoords, openmaponArrival, teleporterEnabled, lifestreamEnabled);
+                                var link = P.MessageCacheManager.AddMessage(htmessage);
+                                Service.IPCManager.OnHuntTrainMessageReceived(htmessage);
 
                                 if (textColor != 0)
                                 {
@@ -310,7 +342,8 @@ namespace HuntAlerts
                                 if (!this.Configuration.UseDalamudChat)
                                 {
                                     Svc.Chat.Print(new() { Message = message, Type = this.Configuration.OutputChat });
-                                }else
+                                }
+                                else
                                 {
                                     Svc.Chat.Print(new() { Message = message });
                                 }
@@ -382,7 +415,9 @@ namespace HuntAlerts
                                                 //string headerText = $"Hunt: {huntType}{Environment.NewLine}World: {world}{Environment.NewLine}Posted: {postedTime}{Environment.NewLine}{Environment.NewLine}";
                                                 messageContent = $"Type: S Rank{Environment.NewLine}Hunt: {kind}{Environment.NewLine}World: {world}{Environment.NewLine}Posted: {ConvertTime(postedTime)}{Environment.NewLine}Creature: {creatureName}{Environment.NewLine}{Environment.NewLine}Location: {locationName} ({locationCoords}){Environment.NewLine}Aetherite: {aetheriteName}";
 
-                                                var link = P.MessageCacheManager.AddMessage(new(messageContent, huntMessage.Type, huntMessage.Kind, huntMessage.World, currentworldName, currentregionName, huntregionName, ConvertTime(huntMessage.Posted_Epoch), startLocation, startZone, locationCoords, openmaponArrival, teleporterEnabled, lifestreamEnabled));
+                                                var htmessage = new HuntTrainMessage(messageContent, huntMessage.Type, huntMessage.Kind, huntMessage.World, currentworldName, currentregionName, huntregionName, ConvertTime(huntMessage.Posted_Epoch), startLocation, startZone, locationCoords, openmaponArrival, teleporterEnabled, lifestreamEnabled);
+                                                var link = P.MessageCacheManager.AddMessage(htmessage);
+                                                Service.IPCManager.OnHuntTrainMessageReceived(htmessage);
 
                                                 if (sranktextColor != 0)
                                                 {
@@ -451,31 +486,19 @@ namespace HuntAlerts
                                 }
                             }
                         }
+                        catch (Exception e)
+                        {
+                            e.Log();
+                        }
+                    });
+                }
 
-                    }
-                    catch (JsonException ex)
-                    {
-                        // Handle JSON parsing error
-                        PluginLog.Warning("Plugin had issues parsing json");
-                        PluginLog.Verbose($"Plugin had issues parsing json: {ex}");
-                    }
-                }
             }
-            catch (TaskCanceledException)
+            catch (JsonException ex)
             {
-                // Expected when the task is canceled. No need to log as an error.
-                PluginLog.Information("WebSocket receive task was canceled.");
-            }
-            catch (Exception ex)
-            {
-                if (!cancellationToken.IsCancellationRequested)
-                {
-                    // PluginLog.Error($"WebSocket connection error: {ex}");
-                    // If cancellation hasn't been requested, this is an actual error.
-                    PluginLog.Warning($"Lost connection to the server");
-                    // Start reconnection logic.
-                    await ReconnectWebSocket();
-                }
+                // Handle JSON parsing error
+                PluginLog.Warning("Plugin had issues parsing json");
+                PluginLog.Verbose($"Plugin had issues parsing json: {ex}");
             }
         }
 
