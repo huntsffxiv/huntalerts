@@ -6,8 +6,11 @@ using ECommons;
 using ECommons.Automation;
 using ECommons.DalamudServices;
 using ECommons.Logging;
+using ECommons.Singletons;
 using HuntAlerts.Helpers;
+using HuntAlerts.Services;
 using HuntAlerts.Windows;
+using Microsoft.Win32.SafeHandles;
 using System;
 using System.Net.WebSockets;
 using System.Threading.Tasks;
@@ -67,6 +70,8 @@ namespace HuntAlerts
 
             InitializeWebSocket();
             MessageCacheManager = new();
+            this.Configuration.Save();
+            SingletonServiceManager.Initialize(typeof(Service));
         }
         public async void Dispose()
         {
@@ -105,6 +110,12 @@ namespace HuntAlerts
             if(args.EqualsIgnoreCaseAny("settings", "s"))
             {
                 ConfigWindow.IsOpen = true;
+            }
+            else if (args.EqualsIgnoreCase("paste"))
+            {
+#pragma warning disable CS0618 // Type or member is obsolete
+                GenericHelpers.Safe(() => ProcessMessage(GenericHelpers.Paste(), []));
+#pragma warning restore CS0618 // Type or member is obsolete
             }
             else
             {

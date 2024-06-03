@@ -1,13 +1,14 @@
 ﻿using ImGuiNET;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace ECommons.ImGuiMethods;
 public static unsafe partial class ImGuiEx
 {
+    /// <summary>
+    /// <see cref="ImGui.Checkbox"/> that has bullet marker instead of normal check mark when enabled.
+    /// </summary>
+    /// <param name="label"></param>
+    /// <param name="value"></param>
+    /// <returns></returns>
     public static bool CheckboxBullet(string label, ref bool value)
     {
         int flags = value ? 1 : 0;
@@ -19,6 +20,12 @@ public static unsafe partial class ImGuiEx
         return false;
     }
 
+    /// <summary>
+    /// Inverted <see cref="ImGui.Checkbox"/>
+    /// </summary>
+    /// <param name="label"></param>
+    /// <param name="value"></param>
+    /// <returns></returns>
     public static bool CheckboxInverted(string label, ref bool value)
     {
         var inv = !value;
@@ -30,6 +37,12 @@ public static unsafe partial class ImGuiEx
         return false;
     }
 
+    /// <summary>
+    /// <see cref="ImGui.Checkbox"/> that accepts int as a bool. 0 is false, 1 is true.
+    /// </summary>
+    /// <param name="label"></param>
+    /// <param name="value"></param>
+    /// <returns></returns>
     public static bool Checkbox(string label, ref int value)
     {
         var b = value != 0;
@@ -41,7 +54,13 @@ public static unsafe partial class ImGuiEx
         return false;
     }
 
-    public static bool? Checkbox(string label, ref bool? value)
+    /// <summary>
+    /// Tri-way <see cref="ImGui.Checkbox"/>. Null will be displayed as a bullet. Switching order: false -> null -> true.
+    /// </summary>
+    /// <param name="label"></param>
+    /// <param name="value"></param>
+    /// <returns></returns>
+    public static bool Checkbox(string label, ref bool? value)
     {
         if(value != null)
         {

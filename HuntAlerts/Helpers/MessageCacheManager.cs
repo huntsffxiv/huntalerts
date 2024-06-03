@@ -48,7 +48,7 @@ public class MessageCacheManager : IDisposable //IDisposable because we will nee
         bool? lifestreamInstalled = Svc.PluginInterface.InstalledPlugins.FirstOrDefault(x => x.InternalName == "Lifestream")?.IsLoaded;
         bool ctrlHeld = (GetKeyState(VK_CONTROL) & 0x8000) != 0; // Check if Ctrl key is held down
         bool ctrlclickTeleport = HuntAlerts.P.Configuration.ctrlclickTeleport && ((teleporterInstalled == true && HuntAlerts.P.Configuration.TeleporterIntegration ) || (lifestreamInstalled == true && HuntAlerts.P.Configuration.LifestreamIntegration));
-       
+
         if (Messages[cmd] != null) //if message with this number exists
         {
             if (ctrlHeld && ctrlclickTeleport)

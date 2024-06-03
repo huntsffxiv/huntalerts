@@ -1,5 +1,6 @@
 using ECommons;
 using ECommons.Automation;
+using ECommons.Automation.LegacyTaskManager;
 using ECommons.DalamudServices;
 using ECommons.ExcelServices;
 using ECommons.Logging;
@@ -67,12 +68,13 @@ namespace HuntAlerts.Helpers
                 // Code to execute when the button is pressed
                 PluginLog.Verbose($"Attempting to flag coords {startZone} {locationCoords} on Map");
                 uint tt;
-                var (x, y) = (locationCoords.Split(',').Select(s => float.Parse(s.Trim())).ToArray() is float[] coords) ? (coords[0], coords[1]) : (0f, 0f);
+                //var (x, y) = (locationCoords.Split(',').Select(s => float.Parse(s.Trim())).ToArray() is float[] coords) ? (coords[0], coords[1]) : (0f, 0f);
+                var (x, y) = HuntAlerts.ExtractCoordinates(locationCoords);
 
                 if (Svc.Data.GetExcelSheet<TerritoryType>().TryGetFirst(x => x.TerritoryIntendedUse == (uint)TerritoryIntendedUseEnum.Open_World && (x.PlaceName.Value?.Name.ExtractText() ?? "").EqualsIgnoreCase(startZone), out var value))
                 {
                     tt = value.RowId; //is territory id
-                    MapManager.OpenMapWithMarker(tt, x, y);
+                    MapManager.OpenMapWithMarker(tt, (float)x, (float)y);
                 }
             }
             catch (Exception ex)
@@ -102,119 +104,128 @@ namespace HuntAlerts.Helpers
             {
                 bool hastoserverTransfer = false;
                 string currentworldName = "";
+                string currentregionName = "";
+                string huntregionName = "";
                 currentworldName = Svc.ClientState.LocalPlayer.CurrentWorld.GameData.Name;
+                currentregionName = HuntAlerts.P.Configuration.DatacenterRegionMap[HuntAlerts.P.Configuration.WorldDatacenterMap[currentworldName]];
+                huntregionName = HuntAlerts.P.Configuration.DatacenterRegionMap[HuntAlerts.P.Configuration.WorldDatacenterMap[world]];
 
-
-                if (lifestreamEnabled && currentworldName != world)
+                if (huntregionName == currentregionName)
                 {
-                    if (currentworldName != world)
+                    if (lifestreamEnabled && currentworldName != world)
                     {
-                        hastoserverTransfer = true;
-                        // Execute initial command
-                        Svc.Commands.ProcessCommand($"/li {world}");
-                    }
-                }
-                else
-                {
-                    if (currentworldName != world)
-                    {
-                        Svc.Chat.Print("Can't teleport to hunt world without the Lifestream plugin being enabled as you are off world.");
-                        return;
-                    }
-                }
-
-                if (teleporterEnabled)
-                {
-                    // Start loop
-                    var startTime = DateTime.Now;
-                    while (!token.IsCancellationRequested && (DateTime.Now - startTime).TotalSeconds <= 720)
-                    {
-
-                        // Check character's current world and logged in status here
-                        // if condition met, break loop and run another command
-                        if (Svc.ClientState.IsLoggedIn && Svc.ClientState.LocalPlayer != null)
+                        if (currentworldName != world)
                         {
-                            currentworldName = Svc.ClientState.LocalPlayer.CurrentWorld.GameData.Name;
-                            PluginLog.Verbose($"Player is logged in. Currentworld: " + currentworldName);
+                            hastoserverTransfer = true;
+                            // Execute initial command
+                            Svc.Commands.ProcessCommand($"/li {world}");
+                        }
+                    }
+                    else
+                    {
+                        if (currentworldName != world)
+                        {
+                            Svc.Chat.Print("Can't teleport to hunt world without the Lifestream plugin being enabled as you are off world.");
+                            return;
+                        }
+                    }
 
-                            if (currentworldName == world)
+                    if (teleporterEnabled)
+                    {
+                        // Start loop
+                        var startTime = DateTime.Now;
+                        while (!token.IsCancellationRequested && (DateTime.Now - startTime).TotalSeconds <= 720)
+                        {
+
+                            // Check character's current world and logged in status here
+                            // if condition met, break loop and run another command
+                            if (Svc.ClientState.IsLoggedIn && Svc.ClientState.LocalPlayer != null)
                             {
-                                var targetableStartTime = DateTime.Now;
+                                currentworldName = Svc.ClientState.LocalPlayer.CurrentWorld.GameData.Name;
+                                PluginLog.Verbose($"Player is logged in. Currentworld: " + currentworldName);
 
-                                // Loop until the player is targetable or until canceled
-                                while (!token.IsCancellationRequested && (DateTime.Now - targetableStartTime).TotalSeconds <= 60) // Inner loop timeout (e.g., 60 seconds)
+                                if (currentworldName == world)
                                 {
-                                    if (Svc.ClientState.LocalPlayer?.IsTargetable == true)
+                                    var targetableStartTime = DateTime.Now;
+
+                                    // Loop until the player is targetable or until canceled
+                                    while (!token.IsCancellationRequested && (DateTime.Now - targetableStartTime).TotalSeconds <= 60) // Inner loop timeout (e.g., 60 seconds)
                                     {
-                                        // Player is targetable, execute the command
-                                        // Code to execute when the button is pressed
-                                        if (startLocation != "invalid" && startLocation != "")
+                                        if (Svc.ClientState.LocalPlayer?.IsTargetable == true)
                                         {
-                                            PluginLog.Verbose($"Player is on hunt world, starting teleport to hunt location. Currentworld: " + currentworldName + "StartLocation: " + startLocation);
-                                            if (hastoserverTransfer == true)
+                                            // Player is targetable, execute the command
+                                            // Code to execute when the button is pressed
+                                            if (startLocation != "invalid" && startLocation != "")
                                             {
-                                                await Task.Delay(2000, token); // wait 2 seconds to start teleport
-                                            }
-
-                                            // Check and replace start location if a city is passed in
-                                            if (startLocation.ToLower().Contains("limsa")) { startLocation = "Limsa"; }
-                                            if (startLocation.ToLower().Contains("gridania")) { startLocation = "gridania"; }
-                                            if (startLocation.ToLower().Contains("ul'dah") || startLocation.ToLower().Contains("uldah")) { startLocation = "ul'dah"; }
-
-                                            Svc.Commands.ProcessCommand($"/tp {startLocation}");
-
-                                            if (openmaponArrival == true && locationCoords != "")
-                                            {
-                                                PluginLog.Verbose("Open map on arrival is enabled and coords exist");
-                                                var flagtargetableStartTime = DateTime.Now;
-                                                while (!token.IsCancellationRequested && (DateTime.Now - flagtargetableStartTime).TotalSeconds <= 60) // Inner loop timeout (e.g., 60 seconds)
+                                                PluginLog.Verbose($"Player is on hunt world, starting teleport to hunt location. Currentworld: " + currentworldName + "StartLocation: " + startLocation);
+                                                if (hastoserverTransfer == true)
                                                 {
+                                                    await Task.Delay(2000, token); // wait 2 seconds to start teleport
+                                                }
 
-                                                    var territoryType = Svc.ClientState.TerritoryType;
-                                                    var territoryName = Svc.Data.GetExcelSheet<TerritoryType>()
-                                                                         .GetRow(territoryType)?.PlaceName.Value?.Name.ToString();
+                                                // Check and replace start location if a city is passed in
+                                                if (startLocation.ToLower().Contains("limsa")) { startLocation = "Limsa"; }
+                                                if (startLocation.ToLower().Contains("gridania")) { startLocation = "gridania"; }
+                                                if (startLocation.ToLower().Contains("ul'dah") || startLocation.ToLower().Contains("uldah")) { startLocation = "ul'dah"; }
 
-                                                    PluginLog.Verbose($"In Loop waiting on targetable and location match. Current Zone: {territoryName} | Destination Zone: {startZone}");
+                                                Svc.Commands.ProcessCommand($"/tp {startLocation}");
 
-                                                    if ((Svc.ClientState.LocalPlayer?.IsTargetable == true) && (territoryName == startZone))
+                                                if (openmaponArrival == true && locationCoords != "")
+                                                {
+                                                    PluginLog.Verbose("Open map on arrival is enabled and coords exist");
+                                                    var flagtargetableStartTime = DateTime.Now;
+                                                    while (!token.IsCancellationRequested && (DateTime.Now - flagtargetableStartTime).TotalSeconds <= 60) // Inner loop timeout (e.g., 60 seconds)
                                                     {
-                                                        await Task.Delay(500, token);
-                                                        PluginLog.Verbose($"Opening map and flagging coordinates");
-                                                        FlagOnMap(locationCoords, startZone);
-                                                        return;
+
+                                                        var territoryType = Svc.ClientState.TerritoryType;
+                                                        var territoryName = Svc.Data.GetExcelSheet<TerritoryType>()
+                                                                             .GetRow(territoryType)?.PlaceName.Value?.Name.ToString();
+
+                                                        PluginLog.Verbose($"In Loop waiting on targetable and location match. Current Zone: {territoryName} | Destination Zone: {startZone}");
+
+                                                        if ((Svc.ClientState.LocalPlayer?.IsTargetable == true) && (territoryName == startZone))
+                                                        {
+                                                            await Task.Delay(500, token);
+                                                            PluginLog.Verbose($"Opening map and flagging coordinates");
+                                                            FlagOnMap(locationCoords, startZone);
+                                                            return;
+                                                        }
+                                                        await Task.Delay(1000, token); // wait 2 seconds to start teleport
                                                     }
-                                                    await Task.Delay(1000, token); // wait 2 seconds to start teleport
+                                                }
+                                                else
+                                                {
+                                                    return;
                                                 }
                                             }
-                                            else
+                                            else if (startZone != "invalid")
                                             {
+                                                PluginLog.Verbose($"Player is on hunt world, starting teleport to hunt location. Currentworld: " + currentworldName + "StartZone: " + startZone);
+                                                Svc.Commands.ProcessCommand($"/tpm {startZone}");
                                                 return;
                                             }
-                                        }
-                                        else if (startZone != "invalid")
-                                        {
-                                            PluginLog.Verbose($"Player is on hunt world, starting teleport to hunt location. Currentworld: " + currentworldName + "StartZone: " + startZone);
-                                            Svc.Commands.ProcessCommand($"/tpm {startZone}");
-                                            return;
+
                                         }
 
+                                        // Wait a bit before checking again
+                                        await Task.Delay(1000, token); // Check every second, for example
                                     }
-
-                                    // Wait a bit before checking again
-                                    await Task.Delay(1000, token); // Check every second, for example
                                 }
+
+                            }
+                            else
+                            {
+                                PluginLog.Verbose($"Player is still transfering");
                             }
 
+
+
+                            await Task.Delay(5000, token); // Wait for 5 seconds
                         }
-                        else
-                        {
-                            PluginLog.Verbose($"Player is still transfering");
-                        }
-
-
-
-                        await Task.Delay(5000, token); // Wait for 5 seconds
                     }
+                }else
+                {
+                    Svc.Chat.Print("You can't teleport there, you are not in the same region as this hunt");
                 }
             }
             catch (TaskCanceledException)
