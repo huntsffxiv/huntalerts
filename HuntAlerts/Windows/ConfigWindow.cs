@@ -17,7 +17,7 @@ public class ConfigWindow : Window, IDisposable
 
 
     public ConfigWindow(HuntAlerts plugin) : base(
-       "HuntAlerts v1.2.1.2",
+       "HuntAlerts",
        ImGuiWindowFlags.NoResize)
     {
         this.Plugin = plugin;
