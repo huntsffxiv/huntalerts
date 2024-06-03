@@ -29,7 +29,7 @@ namespace HuntAlerts
         {
             try {
                 // Regex adjusted to include hyphen as a delimiter
-                var regex = new Regex(@"\b(-?\d+(\.\d+)?)(\s*,\s*|\s+|\s*-\s*)(-?\d+(\.\d+)?)\b");
+                var regex = CoordsRegex();
                 var match = regex.Match(message);
 
                 if (match.Success)
@@ -44,10 +44,13 @@ namespace HuntAlerts
             }
             catch(Exception ex)
             {
-                return (0, 0);
                 PluginLog.Verbose($"Could not parse coordinates: {ex}");
+                return (0, 0);
             }
         }
+
+        [GeneratedRegex(@"\b(-?\d+(\.\d+)?)(\s*,\s*|\s+|\s*-\s*)(-?\d+(\.\d+)?)\b")]
+        private static partial Regex CoordsRegex();
     }
 
 
