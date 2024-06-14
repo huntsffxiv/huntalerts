@@ -453,6 +453,16 @@ public class ConfigWindow : Window, IDisposable
             this.Configuration.Save();
         }
 
+        ImGui.NextColumn();
+
+        var shadowValue = this.Configuration.Shadow;
+        if (ImGui.Checkbox("Shadow", ref shadowValue))
+        {
+            this.Configuration.Shadow = shadowValue;
+            // can save immediately on change, if you don't want to provide a "Save and Close" button
+            this.Configuration.Save();
+        }
+
         ImGui.Columns(1);
 
 
@@ -715,6 +725,34 @@ public class ConfigWindow : Window, IDisposable
                     this.Configuration.Save();
                 }
 
+                var cuchulainnWorldValue = this.Configuration.CuchulainnWorld;
+                if (ImGui.Checkbox("Cuchulainn", ref cuchulainnWorldValue))
+                {
+                    this.Configuration.CuchulainnWorld = cuchulainnWorldValue;
+                    this.Configuration.Save();
+                }
+
+                var golemWorldValue = this.Configuration.GolemWorld;
+                if (ImGui.Checkbox("Golem", ref golemWorldValue))
+                {
+                    this.Configuration.GolemWorld = golemWorldValue;
+                    this.Configuration.Save();
+                }
+
+                var krakenWorldValue = this.Configuration.KrakenWorld;
+                if (ImGui.Checkbox("Kraken", ref krakenWorldValue))
+                {
+                    this.Configuration.KrakenWorld = krakenWorldValue;
+                    this.Configuration.Save();
+                }
+
+                var rafflesiaWorldValue = this.Configuration.RafflesiaWorld;
+                if (ImGui.Checkbox("Rafflesia", ref rafflesiaWorldValue))
+                {
+                    this.Configuration.RafflesiaWorld = rafflesiaWorldValue;
+                    this.Configuration.Save();
+                }
+
                 ImGui.Unindent();
                 ImGui.TreePop();
 
@@ -852,6 +890,48 @@ public class ConfigWindow : Window, IDisposable
                 if (ImGui.Checkbox("Spriggan", ref sprigganWorldValue))
                 {
                     this.Configuration.SprigganWorld = sprigganWorldValue;
+                    this.Configuration.Save();
+                }
+
+                ImGui.Unindent();
+                ImGui.TreePop();
+
+            }
+        }
+
+        // Shadow world selection
+        if (shadowValue)
+        {
+
+            if (ImGui.TreeNode("Shadow World Selection"))
+            {
+                ImGui.Indent();
+
+                var innocenceWorldValue = this.Configuration.InnocenceWorld;
+                if (ImGui.Checkbox("Innocence", ref innocenceWorldValue))
+                {
+                    this.Configuration.InnocenceWorld = innocenceWorldValue;
+                    this.Configuration.Save();
+                }
+
+                var pixieWorldValue = this.Configuration.PixieWorld;
+                if (ImGui.Checkbox("Pixie", ref pixieWorldValue))
+                {
+                    this.Configuration.PixieWorld = pixieWorldValue;
+                    this.Configuration.Save();
+                }
+
+                var titaniaWorldValue = this.Configuration.TitaniaWorld;
+                if (ImGui.Checkbox("Titania", ref titaniaWorldValue))
+                {
+                    this.Configuration.TitaniaWorld = titaniaWorldValue;
+                    this.Configuration.Save();
+                }
+
+                var tycoonWorldValue = this.Configuration.TycoonWorld;
+                if (ImGui.Checkbox("Tycoon", ref tycoonWorldValue))
+                {
+                    this.Configuration.TycoonWorld = tycoonWorldValue;
                     this.Configuration.Save();
                 }
 

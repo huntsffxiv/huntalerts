@@ -1,6 +1,7 @@
 using Dalamud.Configuration;
 using Dalamud.Game.Text;
 using Dalamud.Plugin;
+using FFXIVClientStructs.FFXIV.Client.UI;
 using System;
 using System.Collections.Generic;
 
@@ -38,6 +39,7 @@ namespace HuntAlerts
         public bool Dynamis { get; set; } = false;
         public bool Light { get; set; } = false;
         public bool Chaos { get; set; } = false;
+        public bool Shadow {  get; set; } = false;
 
         // Aether World Options
         public bool MidgardsormrWorld { get; set; } = true;
@@ -74,6 +76,11 @@ namespace HuntAlerts
         public bool MaduinWorld { get; set; } = true;
         public bool MarilithWorld { get; set; } = true;
         public bool SeraphWorld { get; set; } = true;
+        public bool CuchulainnWorld { get; set; } = true;
+        public bool GolemWorld { get; set; } = true;
+        public bool KrakenWorld { get; set; } = true;
+        public bool RafflesiaWorld { get; set; } = true;
+
 
         // Chaos World Options
         public bool CerberusWorld { get; set; } = true;
@@ -94,6 +101,12 @@ namespace HuntAlerts
         public bool ShivaWorld { get; set; } = true;
         public bool TwintaniaWorld { get; set; } = true;
         public bool ZodiarkWorld { get; set; } = true;
+
+        // Shadow World Options
+        public bool InnocenceWorld { get; set; } = true;
+        public bool PixieWorld { get; set; } = true;
+        public bool TitaniaWorld { get; set; } = true;
+        public bool TycoonWorld { get; set; } = true;
 
 
         // the below exist just to make saving less cumbersome
@@ -152,6 +165,10 @@ namespace HuntAlerts
                 { "Maduin", "Dynamis" },
                 { "Marilith", "Dynamis" },
                 { "Seraph", "Dynamis" },
+                { "Cuchulainn", "Dynamis" },
+                { "Golem", "Dynamis" },
+                { "Kraken", "Dynamis" },
+                { "Rafflesia", "Dynamis" },
 
                 // Light
                 { "Cerberus", "Chaos" },
@@ -173,6 +190,12 @@ namespace HuntAlerts
                 { "Twintania", "Light" },
                 { "Zodiark", "Light" },
 
+                // Shadow
+                { "Innocence", "Shadow" },
+                { "Pixie", "Shadow" },
+                { "Titania", "Shadow" },
+                { "Tycoon", "Tycoon" },
+
                 // Add mappings for all worlds in their respective data centers
             };
 
@@ -187,6 +210,7 @@ namespace HuntAlerts
                 // EU
                 { "Light", "EU" },
                 { "Chaos", "EU" },
+                { "Shadow", "EU" },
 
                 // Add mappings for all Datacenters in their respective Regions
             };

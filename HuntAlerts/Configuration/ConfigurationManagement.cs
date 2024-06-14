@@ -15,6 +15,7 @@ namespace HuntAlerts
                 "Dynamis" => this.Configuration.Dynamis,
                 "Light" => this.Configuration.Light,
                 "Chaos" => this.Configuration.Chaos,
+                "Shadow" => this.Configuration.Shadow,
                 _ => false,
             };
         }
