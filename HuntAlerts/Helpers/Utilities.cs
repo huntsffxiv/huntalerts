@@ -187,7 +187,10 @@ namespace HuntAlerts.Helpers
                                                         {
                                                             await Task.Delay(500, token);
                                                             PluginLog.Verbose($"Opening map and flagging coordinates");
-                                                            FlagOnMap(locationCoords, startZone);
+                                                            Svc.Framework.RunOnFrameworkThread(() =>
+                                                            {
+                                                                FlagOnMap(locationCoords, startZone);
+                                                            });
                                                             return;
                                                         }
                                                         await Task.Delay(1000, token); // wait 2 seconds to start teleport

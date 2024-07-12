@@ -9,6 +9,7 @@ using System;
 using System.Numerics;
 using System.Collections.Generic;
 using ECommons.Automation.LegacyTaskManager;
+using ECommons.Logging;
 
 
 

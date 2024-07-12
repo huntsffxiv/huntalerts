@@ -59,6 +59,7 @@ namespace HuntAlerts
                     { "Shadowbringers", this.Configuration.ShadowbringersHunts },
                     { "Centurio", this.Configuration.CenturioHunts },
                     { "Endwalker", this.Configuration.EndwalkerHunts },
+                    { "Dawntrail", this.Configuration.DawntrailHunts },
                     // Add more mappings as necessary
                 };
 
@@ -236,7 +237,7 @@ namespace HuntAlerts
                                 }
 
 
-
+                                PluginLog.Debug($"DawntrailHunts setting: {this.Configuration.DawntrailHunts}");
                                 PluginLog.Debug($"EndwalkerHunts setting: {this.Configuration.EndwalkerHunts}");
                                 PluginLog.Debug($"ShadowbringersHunts setting: {this.Configuration.ShadowbringersHunts}");
                                 PluginLog.Debug($"CenturioHunts setting: {this.Configuration.CenturioHunts}");
@@ -379,11 +380,12 @@ namespace HuntAlerts
                                 if (isSRankEnabled)
                                 {
                                     // Get Notification settings
+                                    bool srankDawntrail = this.Configuration.DawntrailSRank;
                                     bool srankEndwalker = this.Configuration.EndwalkerSRank;
                                     bool srankShadowbringers = this.Configuration.ShadowbringersSRank;
                                     bool srankCenturio = this.Configuration.CenturioSRank;
 
-                                    if ((srankEndwalker && kind == "EW") || (srankShadowbringers && kind == "SHB") || (srankCenturio && (kind == "ARR" || kind == "HW" || kind == "SB")))
+                                    if ((srankDawntrail && kind == "DT") || (srankEndwalker && kind == "EW") || (srankShadowbringers && kind == "SHB") || (srankCenturio && (kind == "ARR" || kind == "HW" || kind == "SB")))
                                     {
                                         // Get current region
                                         string currentregionName = "";

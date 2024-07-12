@@ -3,6 +3,8 @@ using Dalamud.Game.Text;
 using Dalamud.Plugin;
 using FFXIVClientStructs.FFXIV.Client.UI;
 using System;
+using ECommons;
+using ECommons.DalamudServices;
 using System.Collections.Generic;
 
 namespace HuntAlerts
@@ -19,6 +21,7 @@ namespace HuntAlerts
         public bool UseDalamudChat { get; set; } = true;
         public XivChatType OutputChat { get; set; } = (XivChatType)56;
         public bool OpenMapOnArrival { get; set; } = true;
+        public bool DawntrailSRank { get; set; } = false;
         public bool EndwalkerSRank { get; set; } = false;
         public bool ShadowbringersSRank { get; set; } = false;
         public bool CenturioSRank { get; set; } = false;
@@ -28,6 +31,7 @@ namespace HuntAlerts
         public bool ctrlclickTeleport {  get; set; } = false;
         public bool SRankEnabled { get; set; } = false;
         public bool SRankCurrentWorld { get; set; } = true;
+        public bool DawntrailHunts { get; set; } = false;
         public bool EndwalkerHunts { get; set; } = false;
         public bool ShadowbringersHunts { get; set; } = false;
         public bool CenturioHunts { get; set; } = false;
@@ -111,7 +115,7 @@ namespace HuntAlerts
 
         // the below exist just to make saving less cumbersome
         [NonSerialized]
-        private DalamudPluginInterface? PluginInterface;
+        private IDalamudPluginInterface? PluginInterface;
 
 
         // Add a dictionary to map world names to their Datacenter
@@ -122,9 +126,8 @@ namespace HuntAlerts
         [NonSerialized]
         public Dictionary<string, string> DatacenterRegionMap;
 
-        public void Initialize(DalamudPluginInterface pluginInterface)
+        public void Initialize(IDalamudPluginInterface pluginInterface)
         {
-            this.PluginInterface = pluginInterface;
 
 
 
@@ -218,7 +221,7 @@ namespace HuntAlerts
 
         public void Save()
         {
-            this.PluginInterface!.SavePluginConfig(this);
+            Svc.PluginInterface.SavePluginConfig(this);
         }
     }
 

@@ -91,6 +91,9 @@ namespace HuntAlerts
             {
                 switch (huntType)
                 {
+                    case "Dawntrail":
+                        if (this.Configuration.DawntrailHunts) return true;
+                        break;
                     case "Endwalker":
                         if (this.Configuration.EndwalkerHunts) return true;
                         break;

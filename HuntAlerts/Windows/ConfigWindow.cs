@@ -278,6 +278,14 @@ public class ConfigWindow : Window, IDisposable
         ImGui.Separator();
 
         // can't ref a property, so use a local copy
+        var dawntrailSRankValue = this.Configuration.DawntrailSRank;
+        if (ImGui.Checkbox("Dawntrail##SRank", ref dawntrailSRankValue))
+        {
+            this.Configuration.DawntrailSRank = dawntrailSRankValue;
+            // can save immediately on change, if you don't want to provide a "Save and Close" button
+            this.Configuration.Save();
+        }
+
         var endwalkerSRankValue = this.Configuration.EndwalkerSRank;
         if (ImGui.Checkbox("Endwalker##SRank", ref endwalkerSRankValue))
         {
@@ -316,6 +324,14 @@ public class ConfigWindow : Window, IDisposable
         ImGui.Separator();
 
         // can't ref a property, so use a local copy
+        var dawntrailValue = this.Configuration.DawntrailHunts;
+        if (ImGui.Checkbox("Dawntrail##HuntTrains", ref dawntrailValue))
+        {
+            this.Configuration.DawntrailHunts = dawntrailValue;
+            // can save immediately on change, if you don't want to provide a "Save and Close" button
+            this.Configuration.Save();
+        }
+
         var endwalkerValue = this.Configuration.EndwalkerHunts;
         if (ImGui.Checkbox("Endwalker##HuntTrains", ref endwalkerValue))
         {

@@ -35,7 +35,7 @@ namespace HuntAlerts
         public MessageCacheManager MessageCacheManager;
 
         public HuntAlerts(
-            DalamudPluginInterface pluginInterface
+            IDalamudPluginInterface pluginInterface
         )
         {
             P = this;
@@ -73,7 +73,7 @@ namespace HuntAlerts
             this.Configuration.Save();
             SingletonServiceManager.Initialize(typeof(Service));
         }
-        public async void Dispose()
+        public void Dispose()
         {
             // Dispose of websocket
             try
