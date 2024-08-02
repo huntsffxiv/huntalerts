@@ -44,6 +44,7 @@ namespace HuntAlerts
         public bool Light { get; set; } = false;
         public bool Chaos { get; set; } = false;
         public bool Shadow {  get; set; } = false;
+        public bool Materia { get; set; } = false;
 
         // Aether World Options
         public bool MidgardsormrWorld { get; set; } = true;
@@ -111,6 +112,13 @@ namespace HuntAlerts
         public bool PixieWorld { get; set; } = true;
         public bool TitaniaWorld { get; set; } = true;
         public bool TycoonWorld { get; set; } = true;
+
+        // Materia World Options
+        public bool BismarckWorld { get; set; } = true;
+        public bool RavanaWorld { get; set; } = true;
+        public bool SephirotWorld { get; set; } = true;
+        public bool SophiaWorld { get; set; } = true;
+        public bool ZurvanWorld { get; set; } = true;
 
 
         // the below exist just to make saving less cumbersome
@@ -199,6 +207,15 @@ namespace HuntAlerts
                 { "Titania", "Shadow" },
                 { "Tycoon", "Tycoon" },
 
+
+                // Materia
+                { "Bismarck", "Materia" },
+                { "Ravana", "Materia" },
+                { "Sephirot", "Materia" },
+                { "Sophia", "Materia" },
+                { "Zurvan", "Materia" },
+
+
                 // Add mappings for all worlds in their respective data centers
             };
 
@@ -215,6 +232,9 @@ namespace HuntAlerts
                 { "Chaos", "EU" },
                 { "Shadow", "EU" },
 
+                // Oceania
+                {"Materia", "OCE" },
+
                 // Add mappings for all Datacenters in their respective Regions
             };
         }
@@ -228,6 +248,6 @@ namespace HuntAlerts
     public sealed partial class HuntAlerts
     {
         public string serverURI = "wss://huntalerts.pro:24842";
-        //public string serverURI = "ws://localhost:6789";
+        //public string serverURI = "ws://localhost:8088";
     }
 }

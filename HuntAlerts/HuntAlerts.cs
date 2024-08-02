@@ -68,7 +68,7 @@ namespace HuntAlerts
             Svc.PluginInterface.UiBuilder.Draw += DrawUI;
             Svc.PluginInterface.UiBuilder.OpenConfigUi += DrawConfigUI;
 
-            InitializeWebSocket();
+            InitializeSocketIO();
             MessageCacheManager = new();
             this.Configuration.Save();
             SingletonServiceManager.Initialize(typeof(Service));
@@ -79,15 +79,13 @@ namespace HuntAlerts
             try
             {
 
-                // Close the WebSocket connection synchronously
-                CloseWebSocketAsync().GetAwaiter().GetResult();
-
                 // First, signal the cancellation
                 _cancellationTokenSource?.Cancel();
-
-
-                _webSocket?.Dispose();
                 _cancellationTokenSource?.Dispose();
+
+                _socket?.Dispose();
+                // Close the WebSocket connection synchronously
+                _socket?.DisconnectAsync().GetAwaiter().GetResult();
             }
             catch (Exception ex)
             {
@@ -110,12 +108,6 @@ namespace HuntAlerts
             if(args.EqualsIgnoreCaseAny("settings", "s"))
             {
                 ConfigWindow.IsOpen = true;
-            }
-            else if (args.EqualsIgnoreCase("paste"))
-            {
-#pragma warning disable CS0618 // Type or member is obsolete
-                GenericHelpers.Safe(() => ProcessMessage(GenericHelpers.Paste(), []));
-#pragma warning restore CS0618 // Type or member is obsolete
             }
             else
             {

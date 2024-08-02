@@ -479,6 +479,16 @@ public class ConfigWindow : Window, IDisposable
             this.Configuration.Save();
         }
 
+        ImGui.NextColumn();
+
+        var materiaValue = this.Configuration.Materia;
+        if (ImGui.Checkbox("Materia", ref materiaValue))
+        {
+            this.Configuration.Materia = materiaValue;
+            // can save immediately on change, if you don't want to provide a "Save and Close" button
+            this.Configuration.Save();
+        }
+
         ImGui.Columns(1);
 
 
@@ -948,6 +958,48 @@ public class ConfigWindow : Window, IDisposable
                 if (ImGui.Checkbox("Tycoon", ref tycoonWorldValue))
                 {
                     this.Configuration.TycoonWorld = tycoonWorldValue;
+                    this.Configuration.Save();
+                }
+
+                ImGui.Unindent();
+                ImGui.TreePop();
+
+            }
+        }
+
+        // Materia world selection
+        if (materiaValue)
+        {
+
+            if (ImGui.TreeNode("Materia World Selection"))
+            {
+                ImGui.Indent();
+
+                var bismarckWorldValue = this.Configuration.BismarckWorld;
+                if (ImGui.Checkbox("Bismarck", ref bismarckWorldValue))
+                {
+                    this.Configuration.BismarckWorld = bismarckWorldValue;
+                    this.Configuration.Save();
+                }
+
+                var ravanaWorldValue = this.Configuration.RavanaWorld;
+                if (ImGui.Checkbox("Ravana", ref ravanaWorldValue))
+                {
+                    this.Configuration.RavanaWorld = ravanaWorldValue;
+                    this.Configuration.Save();
+                }
+
+                var sephirotWorldValue = this.Configuration.SephirotWorld;
+                if (ImGui.Checkbox("Sephirot", ref sephirotWorldValue))
+                {
+                    this.Configuration.SephirotWorld = sephirotWorldValue;
+                    this.Configuration.Save();
+                }
+
+                var zurvanWorldValue = this.Configuration.ZurvanWorld;
+                if (ImGui.Checkbox("Zurvan", ref zurvanWorldValue))
+                {
+                    this.Configuration.ZurvanWorld = zurvanWorldValue;
                     this.Configuration.Save();
                 }
 

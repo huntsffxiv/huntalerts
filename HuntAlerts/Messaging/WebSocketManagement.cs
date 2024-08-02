@@ -16,7 +16,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net.WebSockets;
+using SocketIOClient;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -25,87 +25,61 @@ namespace HuntAlerts
 {
     public sealed partial class HuntAlerts
     {
-        private ClientWebSocket _webSocket;
+        private SocketIOClient.SocketIO _socket;
         private CancellationTokenSource _cancellationTokenSource;
-        private async void InitializeWebSocket()
+        private ConcurrentDictionary<(string Kind, string World), DateTime> recentMessagesCache = new ConcurrentDictionary<(string Kind, string World), DateTime>();
+
+        private void InitializeSocketIO()
         {
-            _webSocket = new ClientWebSocket();
-            try
+            _cancellationTokenSource = new CancellationTokenSource();
+            _socket = new SocketIOClient.SocketIO(serverURI, new SocketIOOptions
             {
-                _cancellationTokenSource = new CancellationTokenSource();
+                Reconnection = true,
+                ReconnectionAttempts = 5,
+                ReconnectionDelay = 5000,
+            });
 
-                // Connect to WebSocket
-                await _webSocket.ConnectAsync(new Uri(serverURI), _cancellationTokenSource.Token);
-                PluginLog.Information("Connected to WebSocket.");
-                // Start listening for messages
-                StartReceiving(_cancellationTokenSource.Token);
-            }
-            catch (Exception ex)
+            _socket.OnConnected += (sender, e) =>
             {
-                PluginLog.Warning("Websocket connection error");
-                PluginLog.Verbose($"WebSocket connection error: {ex}");
-                // Start reconnection logic
-                await ReconnectWebSocket();
-            }
-        }
-        private async void StartReceiving(CancellationToken cancellationToken)
-        {
-            try
+                PluginLog.Information("Connected to SocketIO.");
+                // Perform any post-connection setup here
+            };
+
+            _socket.OnDisconnected += (sender, e) =>
             {
-                // Create a dictionary
-                // ping hunt types to their corresponding configuration flags
-                var HuntTypeEnabledMap = new Dictionary<string, bool>
+                PluginLog.Information("Disconnected from SocketIO.");
+                // Handle disconnection logic if needed
+            };
+
+            _socket.On("event", async response =>
+            {
+                var messageString = response.GetValue<string>();
+                await ProcessMessage(messageString);
+            });
+
+            _socket.OnReconnectAttempt += (sender, e) =>
+            {
+                PluginLog.Information($"Reconnecting... Attempt: {e}");
+            };
+
+            _socket.OnReconnectError += (sender, e) =>
+            {
+                PluginLog.Warning($"Reconnection error: {e}");
+            };
+
+            _socket.ConnectAsync().ContinueWith(task =>
+            {
+                if (task.IsFaulted)
                 {
-                    { "Shadowbringers", this.Configuration.ShadowbringersHunts },
-                    { "Centurio", this.Configuration.CenturioHunts },
-                    { "Endwalker", this.Configuration.EndwalkerHunts },
-                    { "Dawntrail", this.Configuration.DawntrailHunts },
-                    // Add more mappings as necessary
-                };
-
-                ConcurrentDictionary<(string Kind, string World), DateTime> recentMessagesCache = [];
-
-
-                var buffer = new byte[2048];
-                while (_webSocket.State == WebSocketState.Open && !cancellationToken.IsCancellationRequested)
-                {
-                    // Remove entries older than 2 minutes
-                    var twoMinutesAgo = DateTime.Now - TimeSpan.FromMinutes(2);
-                    var keysToRemove = recentMessagesCache.Where(kvp => kvp.Value < twoMinutesAgo).Select(kvp => kvp.Key).ToList();
-                    foreach (var key in keysToRemove)
-                    {
-                        recentMessagesCache.TryRemove(key, out _);
-                    }
-
-                    // Get received message
-                    var result = await _webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), _cancellationTokenSource.Token);
-
-
-                    // Process received message
-                    var messageString = Encoding.UTF8.GetString(buffer, 0, result.Count);
-
-                    ProcessMessage(messageString, recentMessagesCache);
+                    PluginLog.Warning("SocketIO connection error");
+                    PluginLog.Verbose($"SocketIO connection error: {task.Exception}");
                 }
-            }
-            catch (TaskCanceledException)
-            {
-                // Expected when the task is canceled. No need to log as an error.
-                PluginLog.Information("WebSocket receive task was canceled.");
-            }
-            catch (Exception ex)
-            {
-                if (!cancellationToken.IsCancellationRequested)
-                {
-                    // PluginLog.Error($"WebSocket connection error: {ex}");
-                    // If cancellation hasn't been requested, this is an actual error.
-                    PluginLog.Warning($"Lost connection to the server");
-                    // Start reconnection logic.
-                    await ReconnectWebSocket();
-                }
-            }
+            });
         }
 
-        public void ProcessMessage(string messageString, ConcurrentDictionary<(string Kind, string World), DateTime> recentMessagesCache)
+
+
+        public async Task ProcessMessage(string messageString)
         {
             try
             {
@@ -501,42 +475,6 @@ namespace HuntAlerts
                 // Handle JSON parsing error
                 PluginLog.Warning("Plugin had issues parsing json");
                 PluginLog.Verbose($"Plugin had issues parsing json: {ex}");
-            }
-        }
-
-        private async Task CloseWebSocketAsync()
-        {
-            PluginLog.Verbose($"Attempting to close websocket. State: {_webSocket.State}");
-            if (_webSocket != null && _webSocket.State == WebSocketState.Open)
-            {
-                // Send a close message to the server
-                await _webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closing connection", CancellationToken.None);
-                PluginLog.Information("WebSocket connection closed gracefully.");
-            }
-        }
-
-        private async Task ReconnectWebSocket()
-        {
-            var retryInterval = 5000; // milliseconds to wait before retrying to connect
-            while (!_cancellationTokenSource.IsCancellationRequested && _webSocket.State != WebSocketState.Open)
-            {
-                try
-                {
-                    PluginLog.Information("Attempting to reconnect WebSocket...");
-                    await Task.Delay(retryInterval, _cancellationTokenSource.Token); // Wait before reconnecting
-                    _webSocket.Dispose(); // Dispose the old instance
-                    _webSocket = new ClientWebSocket(); // Create a new instance
-                    await _webSocket.ConnectAsync(new Uri(serverURI), _cancellationTokenSource.Token);
-                    PluginLog.Information("Reconnected to WebSocket.");
-                    StartReceiving(_cancellationTokenSource.Token); // Start listening for messages again
-                }
-                catch (Exception ex)
-                {
-                    PluginLog.Warning($"Websocket reconnection error");
-                    PluginLog.Verbose($"WebSocket reconnection error: {ex}");
-                    // Loop will continue until connection is re-established
-
-                }
             }
         }
     }

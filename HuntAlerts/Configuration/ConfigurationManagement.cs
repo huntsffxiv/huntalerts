@@ -58,6 +58,10 @@ namespace HuntAlerts
                 "Maduin" => this.Configuration.MaduinWorld,
                 "Marilith" => this.Configuration.MarilithWorld,
                 "Seraph" => this.Configuration.SeraphWorld,
+                "Cuchulainn" => this.Configuration.CuchulainnWorld,
+                "Golem" => this.Configuration.GolemWorld,
+                "Rafflesia" => this.Configuration.RafflesiaWorld,
+                "Kraken" => this.Configuration.KrakenWorld,
 
                 // Chaos
                 "Cerberus" => this.Configuration.CerberusWorld,
@@ -78,6 +82,20 @@ namespace HuntAlerts
                 "Shiva" => this.Configuration.ShivaWorld,
                 "Twintania" => this.Configuration.TwintaniaWorld,
                 "Zodiark" => this.Configuration.ZodiarkWorld,
+
+                // Materia
+                "Bismarck" => this.Configuration.BismarckWorld,
+                "Ravana" => this.Configuration.RavanaWorld,
+                "Sephirot" => this.Configuration.SephirotWorld,
+                "Sophia" => this.Configuration.SophiaWorld,
+                "Zurvan" => this.Configuration.ZurvanWorld,
+
+                // Shadow
+                "Innocence" => this.Configuration.InnocenceWorld,
+                "Pixie" => this.Configuration.PixieWorld,
+                "Titania" => this.Configuration.TitaniaWorld,
+                "Tycoon" => this.Configuration.TycoonWorld,
+
                 _ => false,
             };
         }
