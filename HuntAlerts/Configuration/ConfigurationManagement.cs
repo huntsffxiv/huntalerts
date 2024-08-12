@@ -15,7 +15,7 @@ namespace HuntAlerts
                 "Dynamis" => this.Configuration.Dynamis,
                 "Light" => this.Configuration.Light,
                 "Chaos" => this.Configuration.Chaos,
-                "Shadow" => this.Configuration.Shadow,
+                "Materia" => this.Configuration.Materia,
                 _ => false,
             };
         }
@@ -89,12 +89,6 @@ namespace HuntAlerts
                 "Sephirot" => this.Configuration.SephirotWorld,
                 "Sophia" => this.Configuration.SophiaWorld,
                 "Zurvan" => this.Configuration.ZurvanWorld,
-
-                // Shadow
-                "Innocence" => this.Configuration.InnocenceWorld,
-                "Pixie" => this.Configuration.PixieWorld,
-                "Titania" => this.Configuration.TitaniaWorld,
-                "Tycoon" => this.Configuration.TycoonWorld,
 
                 _ => false,
             };

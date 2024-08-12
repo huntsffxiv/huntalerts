@@ -170,6 +170,7 @@ namespace HuntAlerts
 
                                 bool currentworldOnly = this.Configuration.CurrentWorldOnly;
                                 bool homeworldOnly = this.Configuration.HomeWorldOnly;
+                                bool currentdatacenterOnly = this.Configuration.CurrentDatacenterOnly;
 
                                 // Checks against Current world only option
                                 if (currentworldOnly && huntMessage.World != currentworldName)
@@ -185,20 +186,43 @@ namespace HuntAlerts
                                     return;
                                 }
 
+                                if (currentdatacenterOnly && (this.Configuration.WorldDatacenterMap[huntMessage.World] != this.Configuration.WorldDatacenterMap[currentworldName]))
+                                {
+                                    PluginLog.Verbose($"Current Datacenter Only option is enabled and hunt is not for player's datacenter, suppressing notification. Hunt Datacenter: {this.Configuration.WorldDatacenterMap[huntMessage.World]}");
+                                    return;
+                                }
+                                else
+
 
                                 // Check if the data center is enabled
                                 if (!isDataCenterEnabled)
                                 {
-                                    // Data center is not enabled or unknown world
-                                    PluginLog.Verbose("Datacenter is not enabled, suppressing notification");
-                                    return;
+                                    if (currentdatacenterOnly && (this.Configuration.WorldDatacenterMap[huntMessage.World] == this.Configuration.WorldDatacenterMap[currentworldName]))
+                                    { 
+                                        PluginLog.Verbose($"Current Datacenter Only enabled and hunt is on current datacenter. Processing message...");
+                                    }
+                                    else if (currentworldOnly && (huntMessage.World == currentworldName))
+                                    {
+                                        PluginLog.Verbose($"Current World Only enabled and hunt is on current world. Processing message...");
+                                    }
+                                    else if (homeworldOnly && (huntMessage.World == homeworldName))
+                                    {
+                                        PluginLog.Verbose($"Home World Only enabled and hunt is on your homeworld. Processing message...");
+                                    }
+                                    else 
+                                    {
+                                        // Data center is not enabled or unknown world
+                                        PluginLog.Verbose($"Datacenter is not enabled, suppressing notification. Hunt Datacenter: {this.Configuration.WorldDatacenterMap[huntMessage.World]}");
+                                        return;
+                                    }
                                 }
 
                                 // Check if the world is enabled
-                                if (!isWorldEnabled)
+                                // if midgard is not enabled and current datacenter only is not enabled then don't alert
+                                if (!isWorldEnabled && (!currentdatacenterOnly && !currentworldOnly && !homeworldOnly))
                                 {
                                     // World is not enabled
-                                    PluginLog.Verbose("World is not enabled, suppressing notification");
+                                    PluginLog.Verbose($"World is not enabled, suppressing notification: Hunt World:{huntMessage.World}");
                                     return;
                                 }
 
@@ -206,7 +230,7 @@ namespace HuntAlerts
                                 if (!isHuntEnabled)
                                 {
                                     // Hunt type is not enabled
-                                    PluginLog.Verbose("Hunt type is not enabled, suppressing notification");
+                                    PluginLog.Verbose($"Hunt type is not enabled, suppressing notification. HuntType: {huntMessage.Type} HuntKind: {huntMessage.Kind}");
                                     return;
                                 }
 
@@ -259,7 +283,7 @@ namespace HuntAlerts
                                 string startLocation = huntMessage.AetheriteName; //ParseForStartLocation(messageContent);
                                 string startZone = huntMessage.LocationName; //ParseForStartZone(messageContent);
                                 string aetheriteName = huntMessage.AetheriteName;
-                                string formatted_message = $"Kind: Hunt Train{Environment.NewLine}Hunt: {huntMessage.Kind}{Environment.NewLine}World: {huntMessage.World}{Environment.NewLine}Posted: {ConvertTime(huntMessage.Posted_Epoch)}{Environment.NewLine}{Environment.NewLine}" + messageContent;
+                                string formatted_message = $"Kind: Hunt Train{Environment.NewLine}Hunt: {huntMessage.Kind}{Environment.NewLine}Start Zone: {startZone}{Environment.NewLine}World: {huntMessage.World}{Environment.NewLine}Posted: {ConvertTime(huntMessage.Posted_Epoch)}{Environment.NewLine}{Environment.NewLine}" + messageContent;
 
 
 
@@ -306,11 +330,11 @@ namespace HuntAlerts
 
                                 if (textColor != 0)
                                 {
-                                    message = new SeStringBuilder().AddUiForeground((ushort)textColor).Add(link).AddText("New " + huntMessage.Kind + " train starting soon on " + huntMessage.World + "!").Add(RawPayload.LinkTerminator).AddUiForegroundOff().Build();
+                                    message = new SeStringBuilder().AddUiForeground((ushort)textColor).Add(link).AddText(huntMessage.Kind + " train starting on " + huntMessage.World + "! (Click for info)").Add(RawPayload.LinkTerminator).AddUiForegroundOff().Build();
                                 }
                                 else
                                 {
-                                    message = new SeStringBuilder().Add(link).AddText("New " + huntMessage.Kind + " train starting soon on " + huntMessage.World + "!").Add(RawPayload.LinkTerminator).Build();
+                                    message = new SeStringBuilder().Add(link).AddText(huntMessage.Kind + " train starting on " + huntMessage.World + "! (Click for info)").Add(RawPayload.LinkTerminator).Build();
                                 }
 
 
@@ -397,11 +421,11 @@ namespace HuntAlerts
 
                                                 if (sranktextColor != 0)
                                                 {
-                                                    message = new SeStringBuilder().AddUiForeground((ushort)sranktextColor).Add(link).AddText($"New {kind} S Rank {creatureName} spawned on {world}!").Add(RawPayload.LinkTerminator).AddUiForegroundOff().Build();
+                                                    message = new SeStringBuilder().AddUiForeground((ushort)sranktextColor).Add(link).AddText($"{kind} S Rank {creatureName} spawned on {world}! (Click for info)").Add(RawPayload.LinkTerminator).AddUiForegroundOff().Build();
                                                 }
                                                 else
                                                 {
-                                                    message = new SeStringBuilder().Add(link).AddText($"New {kind} S Rank {creatureName} spawned on {world}!").Add(RawPayload.LinkTerminator).Build();
+                                                    message = new SeStringBuilder().Add(link).AddText($"{kind} S Rank {creatureName} spawned on {world}! (Click for info)").Add(RawPayload.LinkTerminator).Build();
                                                 }
 
                                                 PluginLog.Verbose($"deathTime = {deathTime}");

@@ -38,12 +38,12 @@ namespace HuntAlerts
         public bool Aether { get; set; } = false;
         public bool HomeWorldOnly { get; set; } = false;
         public bool CurrentWorldOnly { get; set; } = false;
+        public bool CurrentDatacenterOnly { get; set; } = false;
         public bool Primal { get; set; } = false;
         public bool Crystal { get; set; } = false;
         public bool Dynamis { get; set; } = false;
         public bool Light { get; set; } = false;
         public bool Chaos { get; set; } = false;
-        public bool Shadow {  get; set; } = false;
         public bool Materia { get; set; } = false;
 
         // Aether World Options
@@ -107,11 +107,6 @@ namespace HuntAlerts
         public bool TwintaniaWorld { get; set; } = true;
         public bool ZodiarkWorld { get; set; } = true;
 
-        // Shadow World Options
-        public bool InnocenceWorld { get; set; } = true;
-        public bool PixieWorld { get; set; } = true;
-        public bool TitaniaWorld { get; set; } = true;
-        public bool TycoonWorld { get; set; } = true;
 
         // Materia World Options
         public bool BismarckWorld { get; set; } = true;

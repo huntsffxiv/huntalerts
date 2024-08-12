@@ -372,6 +372,7 @@ public class ConfigWindow : Window, IDisposable
             if(homeworldonlyValue)
             {
                 this.Configuration.CurrentWorldOnly = false;
+                this.Configuration.CurrentDatacenterOnly = false;
             }
 
             // can save immediately on change, if you don't want to provide a "Save and Close" button
@@ -387,6 +388,8 @@ public class ConfigWindow : Window, IDisposable
             if(currentworldonlyValue)
             {
                 this.Configuration.HomeWorldOnly = false;
+                this.Configuration.CurrentDatacenterOnly = false;
+
             }
             // can save immediately on change, if you don't want to provide a "Save and Close" button
 
@@ -395,6 +398,22 @@ public class ConfigWindow : Window, IDisposable
 
         ImGui.Columns(1);
 
+        var currentdatacenteronlyValue = this.Configuration.CurrentDatacenterOnly;
+        if (ImGui.Checkbox("Current Datacenter Only##HuntTrainsDatacenterOnly", ref currentdatacenteronlyValue))
+        {
+            this.Configuration.CurrentDatacenterOnly = currentdatacenteronlyValue;
+
+            if (currentdatacenteronlyValue)
+            {
+                this.Configuration.HomeWorldOnly = false;
+                this.Configuration.CurrentWorldOnly = false;
+            }
+
+            this.Configuration.Save();
+        }
+
+        
+
         // Create a simple header
         ImGui.NewLine();
         ImGui.Text("Hunt Train Datacenter");
@@ -402,7 +421,7 @@ public class ConfigWindow : Window, IDisposable
         // Optional: Draw a separator line
         ImGui.Separator();
 
-        if(currentworldonlyValue || homeworldonlyValue)
+        if(currentworldonlyValue || homeworldonlyValue || currentdatacenteronlyValue)
         {
             ImGui.BeginDisabled();
         }
@@ -471,16 +490,6 @@ public class ConfigWindow : Window, IDisposable
 
         ImGui.NextColumn();
 
-        var shadowValue = this.Configuration.Shadow;
-        if (ImGui.Checkbox("Shadow", ref shadowValue))
-        {
-            this.Configuration.Shadow = shadowValue;
-            // can save immediately on change, if you don't want to provide a "Save and Close" button
-            this.Configuration.Save();
-        }
-
-        ImGui.NextColumn();
-
         var materiaValue = this.Configuration.Materia;
         if (ImGui.Checkbox("Materia", ref materiaValue))
         {
@@ -492,7 +501,7 @@ public class ConfigWindow : Window, IDisposable
         ImGui.Columns(1);
 
 
-        if (currentworldonlyValue || homeworldonlyValue)
+        if (currentworldonlyValue || homeworldonlyValue || currentdatacenteronlyValue)
         {
             ImGui.EndDisabled();
         }
@@ -503,12 +512,12 @@ public class ConfigWindow : Window, IDisposable
 
 
 
-        if (!aetherValue && !crystalValue && !primalValue && !dynamisValue && !lightValue && !chaosValue)
+        if (!aetherValue && !crystalValue && !primalValue && !dynamisValue && !lightValue && !chaosValue & !materiaValue)
         {
             ImGui.Text("No Datacenters selected, please choose a datacenter");
         }
 
-        if (currentworldonlyValue || homeworldonlyValue)
+        if (currentworldonlyValue || homeworldonlyValue || currentdatacenteronlyValue)
         {
             ImGui.BeginDisabled();
         }
@@ -925,47 +934,6 @@ public class ConfigWindow : Window, IDisposable
             }
         }
 
-        // Shadow world selection
-        if (shadowValue)
-        {
-
-            if (ImGui.TreeNode("Shadow World Selection"))
-            {
-                ImGui.Indent();
-
-                var innocenceWorldValue = this.Configuration.InnocenceWorld;
-                if (ImGui.Checkbox("Innocence", ref innocenceWorldValue))
-                {
-                    this.Configuration.InnocenceWorld = innocenceWorldValue;
-                    this.Configuration.Save();
-                }
-
-                var pixieWorldValue = this.Configuration.PixieWorld;
-                if (ImGui.Checkbox("Pixie", ref pixieWorldValue))
-                {
-                    this.Configuration.PixieWorld = pixieWorldValue;
-                    this.Configuration.Save();
-                }
-
-                var titaniaWorldValue = this.Configuration.TitaniaWorld;
-                if (ImGui.Checkbox("Titania", ref titaniaWorldValue))
-                {
-                    this.Configuration.TitaniaWorld = titaniaWorldValue;
-                    this.Configuration.Save();
-                }
-
-                var tycoonWorldValue = this.Configuration.TycoonWorld;
-                if (ImGui.Checkbox("Tycoon", ref tycoonWorldValue))
-                {
-                    this.Configuration.TycoonWorld = tycoonWorldValue;
-                    this.Configuration.Save();
-                }
-
-                ImGui.Unindent();
-                ImGui.TreePop();
-
-            }
-        }
 
         // Materia world selection
         if (materiaValue)
@@ -1003,13 +971,20 @@ public class ConfigWindow : Window, IDisposable
                     this.Configuration.Save();
                 }
 
+                var sophiaWorldValue = this.Configuration.SophiaWorld;
+                if (ImGui.Checkbox("Sophia", ref sophiaWorldValue))
+                {
+                    this.Configuration.SophiaWorld = sophiaWorldValue;
+                    this.Configuration.Save();
+                }
+
                 ImGui.Unindent();
                 ImGui.TreePop();
 
             }
         }
 
-        if (currentworldonlyValue || homeworldonlyValue)
+        if (currentworldonlyValue || homeworldonlyValue || currentdatacenteronlyValue)
         {
             ImGui.EndDisabled();
         }
