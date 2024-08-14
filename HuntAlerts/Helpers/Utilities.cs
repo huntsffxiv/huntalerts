@@ -5,6 +5,7 @@ using ECommons.DalamudServices;
 using ECommons.ExcelServices;
 using ECommons.Logging;
 using ECommons.Throttlers;
+using FFXIVClientStructs;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using Lumina.Excel.GeneratedSheets;
 using System;
@@ -87,7 +88,7 @@ namespace HuntAlerts.Helpers
 
         private static CancellationTokenSource _cancellationTokenSource;
         private static bool _isTaskRunning = false;
-        public static async void ExecuteTeleport(string world, string startLocation, string startZone, string locationCoords, bool openmaponArrival, bool teleporterEnabled, bool lifestreamEnabled)
+        public static async void ExecuteTeleport(string world, string startLocation, string startZone, string locationCoords, int instance, bool openmaponArrival, bool teleporterEnabled, bool lifestreamEnabled)
         {
             if (_isTaskRunning)
             {
@@ -185,7 +186,13 @@ namespace HuntAlerts.Helpers
 
                                                         if ((Svc.ClientState.LocalPlayer?.IsTargetable == true) && (territoryName == startZone))
                                                         {
-                                                            await Task.Delay(500, token);
+                                                            //#if (instance > 0 && lifestreamEnabled)
+                                                            //{
+                                                            //    await Task.Delay(500, token); // wait 2 seconds to change instance
+                                                            //    Svc.Commands.ProcessCommand($"/li {instance}");
+                                                            //}
+                                                            
+                                                            await Task.Delay(1000, token);
                                                             PluginLog.Verbose($"Opening map and flagging coordinates");
                                                             Svc.Framework.RunOnFrameworkThread(() =>
                                                             {

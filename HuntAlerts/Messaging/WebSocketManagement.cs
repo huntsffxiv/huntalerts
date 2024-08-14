@@ -283,7 +283,7 @@ namespace HuntAlerts
                                 string startLocation = huntMessage.AetheriteName; //ParseForStartLocation(messageContent);
                                 string startZone = huntMessage.LocationName; //ParseForStartZone(messageContent);
                                 string aetheriteName = huntMessage.AetheriteName;
-                                string formatted_message = $"Kind: Hunt Train{Environment.NewLine}Hunt: {huntMessage.Kind}{Environment.NewLine}Start Zone: {startZone}{Environment.NewLine}World: {huntMessage.World}{Environment.NewLine}Posted: {ConvertTime(huntMessage.Posted_Epoch)}{Environment.NewLine}{Environment.NewLine}" + messageContent;
+                                string formatted_message = $"Kind: Hunt Train{Environment.NewLine}Hunt: {huntMessage.Kind}{Environment.NewLine}Start Zone: {startZone}{Environment.NewLine}Aetherite: {startLocation}{Environment.NewLine}World: {huntMessage.World}{Environment.NewLine}Posted: {ConvertTime(huntMessage.Posted_Epoch)}{Environment.NewLine}{Environment.NewLine}" + messageContent;
 
 
 
@@ -320,11 +320,12 @@ namespace HuntAlerts
                                 }
 
 
+                                int instance = 1;
 
                                 int textColor = this.Configuration.TextColor;
                                 SeString message;
 
-                                var htmessage = new HuntTrainMessage(formatted_message, huntMessage.Type, huntMessage.Kind, huntMessage.World, currentworldName, currentregionName, huntregionName, ConvertTime(huntMessage.Posted_Epoch), startLocation, startZone, locationCoords, openmaponArrival, teleporterEnabled, lifestreamEnabled);
+                                var htmessage = new HuntTrainMessage(formatted_message, huntMessage.Type, huntMessage.Kind, huntMessage.World, currentworldName, currentregionName, huntregionName, ConvertTime(huntMessage.Posted_Epoch), startLocation, startZone, instance, locationCoords, openmaponArrival, teleporterEnabled, lifestreamEnabled);
                                 var link = P.MessageCacheManager.AddMessage(htmessage);
                                 Service.IPCManager.OnHuntTrainMessageReceived(htmessage);
 
@@ -371,6 +372,7 @@ namespace HuntAlerts
                                 string aetheriteName = huntMessage.AetheriteName;
                                 long deathTime = huntMessage.DeathTime;
                                 long postedTime = huntMessage.Posted_Epoch;
+                                int instance = huntMessage.Instance;
                                 string huntdatacenterName = this.Configuration.WorldDatacenterMap[huntMessage.World];
                                 SeString message = "";
                                 string messageContent = "";
@@ -413,19 +415,33 @@ namespace HuntAlerts
                                             {
                                                 int sranktextColor = this.Configuration.SRankTextColor;
                                                 //string headerText = $"Hunt: {huntType}{Environment.NewLine}World: {world}{Environment.NewLine}Posted: {postedTime}{Environment.NewLine}{Environment.NewLine}";
-                                                messageContent = $"Type: S Rank{Environment.NewLine}Hunt: {kind}{Environment.NewLine}World: {world}{Environment.NewLine}Posted: {ConvertTime(postedTime)}{Environment.NewLine}Creature: {creatureName}{Environment.NewLine}{Environment.NewLine}Location: {locationName} ({locationCoords}){Environment.NewLine}Aetherite: {aetheriteName}";
+                                                messageContent = $"Type: S Rank{Environment.NewLine}Hunt: {kind}{Environment.NewLine}World: {world}{Environment.NewLine}Start Zone: {startZone}{Environment.NewLine}Instance: {instance}{Environment.NewLine}Aetherite: {startLocation}{Environment.NewLine}Posted: {ConvertTime(postedTime)}{Environment.NewLine}Creature: {creatureName}{Environment.NewLine}{Environment.NewLine}Location: {locationName} ({locationCoords}){Environment.NewLine}Aetherite: {aetheriteName}";
 
-                                                var htmessage = new HuntTrainMessage(messageContent, huntMessage.Type, huntMessage.Kind, huntMessage.World, currentworldName, currentregionName, huntregionName, ConvertTime(huntMessage.Posted_Epoch), startLocation, startZone, locationCoords, openmaponArrival, teleporterEnabled, lifestreamEnabled);
+                                                var htmessage = new HuntTrainMessage(messageContent, huntMessage.Type, huntMessage.Kind, huntMessage.World, currentworldName, currentregionName, huntregionName, ConvertTime(huntMessage.Posted_Epoch), startLocation, startZone, instance, locationCoords, openmaponArrival, teleporterEnabled, lifestreamEnabled);
                                                 var link = P.MessageCacheManager.AddMessage(htmessage);
                                                 Service.IPCManager.OnHuntTrainMessageReceived(htmessage);
 
                                                 if (sranktextColor != 0)
                                                 {
-                                                    message = new SeStringBuilder().AddUiForeground((ushort)sranktextColor).Add(link).AddText($"{kind} S Rank {creatureName} spawned on {world}! (Click for info)").Add(RawPayload.LinkTerminator).AddUiForegroundOff().Build();
+                                                    if (instance > 1)
+                                                    {
+                                                        message = new SeStringBuilder().AddUiForeground((ushort)sranktextColor).Add(link).AddText($"{kind} S Rank {creatureName} (i{instance}) spawned on {world}! (Click for info)").Add(RawPayload.LinkTerminator).AddUiForegroundOff().Build();
+                                                    }
+                                                    else
+                                                    {
+                                                        message = new SeStringBuilder().AddUiForeground((ushort)sranktextColor).Add(link).AddText($"{kind} S Rank {creatureName} spawned on {world}! (Click for info)").Add(RawPayload.LinkTerminator).AddUiForegroundOff().Build();
+                                                    }
                                                 }
                                                 else
                                                 {
-                                                    message = new SeStringBuilder().Add(link).AddText($"{kind} S Rank {creatureName} spawned on {world}! (Click for info)").Add(RawPayload.LinkTerminator).Build();
+                                                    if (instance > 1)
+                                                    {
+                                                        message = new SeStringBuilder().Add(link).AddText($"{kind} S Rank {creatureName} (i{instance}) spawned on {world}! (Click for info)").Add(RawPayload.LinkTerminator).Build();
+                                                    }
+                                                    else
+                                                    {
+                                                        message = new SeStringBuilder().Add(link).AddText($"{kind} S Rank {creatureName} spawned on {world}! (Click for info)").Add(RawPayload.LinkTerminator).Build();
+                                                    }
                                                 }
 
                                                 PluginLog.Verbose($"deathTime = {deathTime}");

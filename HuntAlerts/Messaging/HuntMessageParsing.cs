@@ -20,6 +20,7 @@ namespace HuntAlerts
             public string LocationName { get; set; }
             public string LocationCoords { get; set; }
             public string AetheriteName { get; set; }
+            public int Instance {  get; set; }
             public long DeathTime { get; set; }
             public Dictionary<string, object> AdditionalData { get; set; }
         }

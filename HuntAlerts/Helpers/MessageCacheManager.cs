@@ -60,10 +60,11 @@ public class MessageCacheManager : IDisposable //IDisposable because we will nee
                 var openmaponArrival = Messages[cmd].openmaponArrival;
                 var teleporterEnabled = Messages[cmd].teleporterEnabled;
                 var lifestreamEnabled = Messages[cmd].lifestreamEnabled;
+                var instance = Messages[cmd].instance;
 
 
                 PluginLog.Verbose("Ctrl key is held down. attempting to teleport");
-                Utilities.ExecuteTeleport(world, startLocation, startZone, locationCoords, openmaponArrival, teleporterEnabled, lifestreamEnabled);
+                Utilities.ExecuteTeleport(world, startLocation, startZone, locationCoords, instance, openmaponArrival, teleporterEnabled, lifestreamEnabled);
 
             }
             else

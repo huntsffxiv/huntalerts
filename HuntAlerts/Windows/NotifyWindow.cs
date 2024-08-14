@@ -45,6 +45,7 @@ public class NotifyWindow : Window
             string huntregionname = entry.huntregionName;
             string startLocation = entry.startLocation;
             string startZone = entry.startZone;
+            int instance = entry.instance;
             string huntType = entry.huntKind;
             string postedTime = entry.Posted_Time;
             bool teleporterEnabled = entry.teleporterEnabled;
@@ -67,7 +68,7 @@ public class NotifyWindow : Window
                             // Code to execute when the button is pressed
                             PluginLog.Verbose($"Attempting to use teleport/lifestream");
                             //Svc.Commands.ProcessCommand($"/li {world}");
-                            Utilities.ExecuteTeleport(world, startLocation, startZone, locationCoords, openmaponArrival, teleporterEnabled, lifestreamEnabled);
+                            Utilities.ExecuteTeleport(world, startLocation, startZone, locationCoords, instance, openmaponArrival, teleporterEnabled, lifestreamEnabled);
                         }
                     });
                 }
