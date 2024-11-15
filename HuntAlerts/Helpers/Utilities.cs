@@ -6,8 +6,9 @@ using ECommons.ExcelServices;
 using ECommons.Logging;
 using ECommons.Throttlers;
 using FFXIVClientStructs;
+using FFXIVClientStructs.FFXIV.Client.Game.UI;
 using FFXIVClientStructs.FFXIV.Component.GUI;
-using Lumina.Excel.GeneratedSheets;
+using Lumina.Excel.Sheets;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -85,6 +86,12 @@ namespace HuntAlerts.Helpers
             }
         }
 
+
+        public unsafe static int GetInstance()
+        {
+            uint instance = UIState.Instance()->PublicInstance.InstanceId;
+            return (int)instance;
+        }
 
         private static CancellationTokenSource _cancellationTokenSource;
         private static bool _isTaskRunning = false;
@@ -186,12 +193,21 @@ namespace HuntAlerts.Helpers
 
                                                         if ((Svc.ClientState.LocalPlayer?.IsTargetable == true) && (territoryName == startZone))
                                                         {
-                                                            //#if (instance > 0 && lifestreamEnabled)
-                                                            //{
-                                                            //    await Task.Delay(500, token); // wait 2 seconds to change instance
-                                                            //    Svc.Commands.ProcessCommand($"/li {instance}");
-                                                            //}
                                                             
+                                                            int currentInstance = GetInstance();
+                                                            PluginLog.Verbose($"Current Instance: {currentInstance}");
+                                                            PluginLog.Verbose($"Destination Instance: {instance}");
+                                                            if(currentInstance != instance)
+                                                            {
+                                                                if (instance > 0 && lifestreamEnabled)
+                                                                {
+                                                                    await Task.Delay(500, token); 
+                                                                    Svc.Commands.ProcessCommand($"/li {instance}");
+                                                                    await Task.Delay(500, token);
+                                                                }
+                                                            }
+
+
                                                             await Task.Delay(1000, token);
                                                             PluginLog.Verbose($"Opening map and flagging coordinates");
                                                             Svc.Framework.RunOnFrameworkThread(() =>
