@@ -9,7 +9,7 @@ using ECommons.Throttlers;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using HuntAlerts.Helpers;
 using ImGuiNET;
-using Lumina.Excel.GeneratedSheets;
+using Lumina.Excel.Sheets;
 using System;
 using System.Collections.Generic;
 using System.Linq;

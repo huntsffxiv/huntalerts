@@ -7,7 +7,7 @@ using ECommons.Logging;
 using ECommons.Throttlers;
 using FFXIVClientStructs;
 using FFXIVClientStructs.FFXIV.Component.GUI;
-using Lumina.Excel.GeneratedSheets;
+using Lumina.Excel.Sheets;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -72,7 +72,7 @@ namespace HuntAlerts.Helpers
                 //var (x, y) = (locationCoords.Split(',').Select(s => float.Parse(s.Trim())).ToArray() is float[] coords) ? (coords[0], coords[1]) : (0f, 0f);
                 var (x, y) = HuntAlerts.ExtractCoordinates(locationCoords);
 
-                if (Svc.Data.GetExcelSheet<TerritoryType>().TryGetFirst(x => x.TerritoryIntendedUse == (uint)TerritoryIntendedUseEnum.Open_World && (x.PlaceName.Value?.Name.ExtractText() ?? "").EqualsIgnoreCase(startZone), out var value))
+                if (Svc.Data.GetExcelSheet<TerritoryType>().TryGetFirst(x => x.TerritoryIntendedUse.RowId == (uint)TerritoryIntendedUseEnum.Open_World && (x.PlaceName.ValueNullable?.Name.ExtractText() ?? "").EqualsIgnoreCase(startZone), out var value))
                 {
                     tt = value.RowId; //is territory id
                     MapManager.OpenMapWithMarker(tt, (float)x, (float)y);
@@ -107,7 +107,7 @@ namespace HuntAlerts.Helpers
                 string currentworldName = "";
                 string currentregionName = "";
                 string huntregionName = "";
-                currentworldName = Svc.ClientState.LocalPlayer.CurrentWorld.GameData.Name;
+                currentworldName = Svc.ClientState.LocalPlayer.CurrentWorld.Value.Name.ToString();
                 currentregionName = HuntAlerts.P.Configuration.DatacenterRegionMap[HuntAlerts.P.Configuration.WorldDatacenterMap[currentworldName]];
                 huntregionName = HuntAlerts.P.Configuration.DatacenterRegionMap[HuntAlerts.P.Configuration.WorldDatacenterMap[world]];
 
@@ -142,7 +142,7 @@ namespace HuntAlerts.Helpers
                             // if condition met, break loop and run another command
                             if (Svc.ClientState.IsLoggedIn && Svc.ClientState.LocalPlayer != null)
                             {
-                                currentworldName = Svc.ClientState.LocalPlayer.CurrentWorld.GameData.Name;
+                                currentworldName = Svc.ClientState.LocalPlayer.CurrentWorld.Value.Name.ToString();
                                 PluginLog.Verbose($"Player is logged in. Currentworld: " + currentworldName);
 
                                 if (currentworldName == world)
@@ -180,7 +180,7 @@ namespace HuntAlerts.Helpers
 
                                                         var territoryType = Svc.ClientState.TerritoryType;
                                                         var territoryName = Svc.Data.GetExcelSheet<TerritoryType>()
-                                                                             .GetRow(territoryType)?.PlaceName.Value?.Name.ToString();
+                                                                             .GetRowOrDefault(territoryType)?.PlaceName.ValueNullable?.Name.ToString();
 
                                                         PluginLog.Verbose($"In Loop waiting on targetable and location match. Current Zone: {territoryName} | Destination Zone: {startZone}");
 
@@ -194,7 +194,7 @@ namespace HuntAlerts.Helpers
                                                             
                                                             await Task.Delay(1000, token);
                                                             PluginLog.Verbose($"Opening map and flagging coordinates");
-                                                            Svc.Framework.RunOnFrameworkThread(() =>
+                                                            _ = Svc.Framework.RunOnFrameworkThread(() =>
                                                             {
                                                                 FlagOnMap(locationCoords, startZone);
                                                             });
