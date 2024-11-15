@@ -281,6 +281,7 @@ namespace HuntAlerts
                                 bool lifestreamEnabled = this.Configuration.LifestreamIntegration && (lifestreamInstalled == true);
                                 bool openmaponArrival = this.Configuration.OpenMapOnArrival;
                                 string startLocation = huntMessage.AetheriteName; //ParseForStartLocation(messageContent);
+                                if(startLocation == "invalid") { startLocation = "Unknown"; }
                                 string startZone = huntMessage.LocationName; //ParseForStartZone(messageContent);
                                 string aetheriteName = huntMessage.AetheriteName;
                                 string formatted_message = $"Kind: Hunt Train{Environment.NewLine}Hunt: {huntMessage.Kind}{Environment.NewLine}Start Zone: {startZone}{Environment.NewLine}Aetherite: {startLocation}{Environment.NewLine}World: {huntMessage.World}{Environment.NewLine}Posted: {ConvertTime(huntMessage.Posted_Epoch)}{Environment.NewLine}{Environment.NewLine}" + messageContent;
