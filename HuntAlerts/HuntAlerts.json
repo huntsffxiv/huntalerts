@@ -4,7 +4,7 @@
     "Punchline": "Notifies you when hunt trains are starting soon",
     "Description": "Notifies you when hunt trains are starting soon",
     "ApplicableVersion": "any",
-    "DalamudApiVersion": 10,
+    "DalamudApiVersion": 11,
     "Tags": [
         "hunt",
         "train",

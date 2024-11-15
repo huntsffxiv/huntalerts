@@ -10,7 +10,7 @@ using FFXIVClientStructs.FFXIV.Client.UI;
 using HuntAlerts.Helpers;
 using HuntAlerts.Services;
 using HuntAlerts.Windows;
-using Lumina.Excel.GeneratedSheets;
+using Lumina.Excel.Sheets;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Concurrent;
@@ -159,8 +159,8 @@ namespace HuntAlerts
 
                                 if (Svc.ClientState.IsLoggedIn && Svc.ClientState.LocalPlayer != null)
                                 {
-                                    homeworldName = Svc.ClientState.LocalPlayer.HomeWorld.GameData.Name;
-                                    currentworldName = Svc.ClientState.LocalPlayer.CurrentWorld.GameData.Name;
+                                    homeworldName = Svc.ClientState.LocalPlayer.HomeWorld.Value.Name.ToString();
+                                    currentworldName = Svc.ClientState.LocalPlayer.CurrentWorld.Value.Name.ToString();
                                     PluginLog.Verbose($"Player is logged in. Homeworld: " + homeworldName + " | Currentworld: " + currentworldName);
                                 }
                                 else
@@ -262,7 +262,7 @@ namespace HuntAlerts
                                 string currentregionName = "";
                                 if (Svc.ClientState.IsLoggedIn && Svc.ClientState.LocalPlayer != null)
                                 {
-                                    currentworldName = Svc.ClientState.LocalPlayer.CurrentWorld.GameData.Name;
+                                    currentworldName = Svc.ClientState.LocalPlayer.CurrentWorld.Value.Name.ToString();
                                     currentregionName = this.Configuration.DatacenterRegionMap[this.Configuration.WorldDatacenterMap[currentworldName]];
                                     currentdatacentername = this.Configuration.WorldDatacenterMap[currentworldName];
 
@@ -295,7 +295,7 @@ namespace HuntAlerts
 
                                     // Get ZoneID
                                     uint tt;
-                                    if (Svc.Data.GetExcelSheet<TerritoryType>().TryGetFirst(x => x.TerritoryIntendedUse == (uint)TerritoryIntendedUseEnum.Open_World && (x.PlaceName.Value?.Name.ExtractText() ?? "").EqualsIgnoreCase(startZone), out var value))
+                                    if (Svc.Data.GetExcelSheet<TerritoryType>().TryGetFirst(x => x.TerritoryIntendedUse.RowId == (uint)TerritoryIntendedUseEnum.Open_World && (x.PlaceName.ValueNullable?.Name.ExtractText() ?? "").EqualsIgnoreCase(startZone), out var value))
                                     {
                                         tt = value.RowId; //is territory id
                                                           // Get Nearest Aetherite from coords
@@ -391,10 +391,10 @@ namespace HuntAlerts
                                         string currentregionName = "";
                                         if (Svc.ClientState.IsLoggedIn && Svc.ClientState.LocalPlayer != null)
                                         {
-                                            currentworldName = Svc.ClientState.LocalPlayer.CurrentWorld.GameData.Name;
+                                            currentworldName = Svc.ClientState.LocalPlayer.CurrentWorld.Value.Name.ToString();
                                             currentdatacentername = this.Configuration.WorldDatacenterMap[currentworldName];
                                             currentregionName = this.Configuration.DatacenterRegionMap[this.Configuration.WorldDatacenterMap[currentworldName]];
-                                            homeworldName = Svc.ClientState.LocalPlayer.HomeWorld.GameData.Name;
+                                            homeworldName = Svc.ClientState.LocalPlayer.HomeWorld.Value.Name.ToString();
                                             PluginLog.Verbose($"Player is logged in. Homeworld: " + homeworldName + " | Currentworld: " + currentworldName + " | Currentregion: " + currentregionName);
                                         }
                                         else
