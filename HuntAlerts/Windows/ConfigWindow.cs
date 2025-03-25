@@ -160,7 +160,7 @@ public class ConfigWindow : Window, IDisposable
 
             if (soundEffectIndex != 0)
             {
-                UIModule.PlayChatSoundEffect((uint)soundEffectIndex); // Play the selected sound effect
+                UIGlobals.PlayChatSoundEffect((uint)soundEffectIndex); // Play the selected sound effect
             }
 
             this.Configuration.Save(); // Save the configuration

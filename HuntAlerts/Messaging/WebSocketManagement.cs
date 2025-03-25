@@ -358,7 +358,7 @@ namespace HuntAlerts
                                 // Play sound effect if one is set
                                 if (this.Configuration.SoundEffect != 0)
                                 {
-                                    UIModule.PlayChatSoundEffect((uint)this.Configuration.SoundEffect); // Play the selected sound effect
+                                    UIGlobals.PlayChatSoundEffect((uint)this.Configuration.SoundEffect); // Play the selected sound effect
                                 }
                             }
                             else if (huntMessage.Type == "srank")
@@ -462,7 +462,7 @@ namespace HuntAlerts
                                                 // Play sound effect if one is set
                                                 if (this.Configuration.SoundEffect != 0)
                                                 {
-                                                    UIModule.PlayChatSoundEffect((uint)this.Configuration.SoundEffect); // Play the selected sound effect
+                                                    UIGlobals.PlayChatSoundEffect((uint)this.Configuration.SoundEffect); // Play the selected sound effect
                                                 }
                                             }
                                             else
