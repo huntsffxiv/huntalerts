@@ -8,6 +8,9 @@
         <IsPackable>false</IsPackable>
         <TargetFramework>net9.0-windows7.0</TargetFramework>
     </PropertyGroup>
+    <ItemGroup>
+      <Content Include="HuntAlerts.json" />
+    </ItemGroup>
 
     <ItemGroup>
         <ProjectReference Include="..\ECommons\ECommons\ECommons.csproj" />
