@@ -107,7 +107,7 @@ namespace HuntAlerts.Helpers
                 string currentworldName = "";
                 string currentregionName = "";
                 string huntregionName = "";
-                currentworldName = Svc.ClientState.LocalPlayer.CurrentWorld.Value.Name.ToString();
+                currentworldName = Svc.Framework.RunOnFrameworkThread(() => Svc.ClientState.LocalPlayer.CurrentWorld.Value.Name.ToString()).Result;
                 currentregionName = HuntAlerts.P.Configuration.DatacenterRegionMap[HuntAlerts.P.Configuration.WorldDatacenterMap[currentworldName]];
                 huntregionName = HuntAlerts.P.Configuration.DatacenterRegionMap[HuntAlerts.P.Configuration.WorldDatacenterMap[world]];
 
@@ -140,9 +140,11 @@ namespace HuntAlerts.Helpers
 
                             // Check character's current world and logged in status here
                             // if condition met, break loop and run another command
-                            if (Svc.ClientState.IsLoggedIn && Svc.ClientState.LocalPlayer != null)
+                            bool isLoggedIn = Svc.Framework.RunOnFrameworkThread(() => Svc.ClientState.IsLoggedIn).Result;
+                            bool localPlayerExists = Svc.Framework.RunOnFrameworkThread(() => Svc.ClientState.LocalPlayer != null).Result;
+                            if (isLoggedIn && localPlayerExists)
                             {
-                                currentworldName = Svc.ClientState.LocalPlayer.CurrentWorld.Value.Name.ToString();
+                                currentworldName = Svc.Framework.RunOnFrameworkThread(() => Svc.ClientState.LocalPlayer.CurrentWorld.Value.Name.ToString()).Result;
                                 PluginLog.Verbose($"Player is logged in. Currentworld: " + currentworldName);
 
                                 if (currentworldName == world)
@@ -152,7 +154,8 @@ namespace HuntAlerts.Helpers
                                     // Loop until the player is targetable or until canceled
                                     while (!token.IsCancellationRequested && (DateTime.Now - targetableStartTime).TotalSeconds <= 60) // Inner loop timeout (e.g., 60 seconds)
                                     {
-                                        if (Svc.ClientState.LocalPlayer?.IsTargetable == true)
+                                        bool isTargetable = Svc.Framework.RunOnFrameworkThread(() => Svc.ClientState.LocalPlayer.IsTargetable).Result;
+                                        if (isTargetable == true)
                                         {
                                             // Player is targetable, execute the command
                                             // Code to execute when the button is pressed
@@ -178,13 +181,13 @@ namespace HuntAlerts.Helpers
                                                     while (!token.IsCancellationRequested && (DateTime.Now - flagtargetableStartTime).TotalSeconds <= 60) // Inner loop timeout (e.g., 60 seconds)
                                                     {
 
-                                                        var territoryType = Svc.ClientState.TerritoryType;
-                                                        var territoryName = Svc.Data.GetExcelSheet<TerritoryType>()
-                                                                             .GetRowOrDefault(territoryType)?.PlaceName.ValueNullable?.Name.ToString();
+                                                        var territoryType = Svc.Framework.RunOnFrameworkThread(() => Svc.ClientState.TerritoryType).Result;
+                                                        var territoryName = Svc.Framework.RunOnFrameworkThread(() =>  Svc.Data.GetExcelSheet<TerritoryType>()
+                                                                             .GetRowOrDefault(territoryType)?.PlaceName.ValueNullable?.Name.ToString()).Result;
 
                                                         PluginLog.Verbose($"In Loop waiting on targetable and location match. Current Zone: {territoryName} | Destination Zone: {startZone}");
-
-                                                        if ((Svc.ClientState.LocalPlayer?.IsTargetable == true) && (territoryName == startZone))
+                                                        isTargetable = Svc.Framework.RunOnFrameworkThread(() => Svc.ClientState.LocalPlayer.IsTargetable).Result;
+                                                        if ((isTargetable == true) && (territoryName == startZone))
                                                         {
                                                             //#if (instance > 0 && lifestreamEnabled)
                                                             //{
