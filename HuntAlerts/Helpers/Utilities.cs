@@ -90,24 +90,29 @@ namespace HuntAlerts.Helpers
         private static bool _isTaskRunning = false;
         public static async void ExecuteTeleport(string world, string startLocation, string startZone, string locationCoords, int instance, bool openmaponArrival, bool teleporterEnabled, bool lifestreamEnabled)
         {
-            if (_isTaskRunning)
-            {
-                _cancellationTokenSource.Cancel(); // Cancel the current task if running
-                _isTaskRunning = false;
-                return;
-            }
-
-            _cancellationTokenSource = new CancellationTokenSource();
-            var token = _cancellationTokenSource.Token;
-            _isTaskRunning = true;
-
             try
             {
+                if (_isTaskRunning)
+                {
+                    _cancellationTokenSource.Cancel(); // Cancel the current task if running
+                    _isTaskRunning = false;
+                    return;
+                }
+
+                _cancellationTokenSource = new CancellationTokenSource();
+                var token = _cancellationTokenSource.Token;
+                _isTaskRunning = true;
                 bool hastoserverTransfer = false;
                 string currentworldName = "";
                 string currentregionName = "";
                 string huntregionName = "";
-                currentworldName = Svc.Framework.RunOnFrameworkThread(() => Svc.ClientState.LocalPlayer.CurrentWorld.Value.Name.ToString()).Result;
+                currentworldName = Svc.Framework.RunOnFrameworkThread(() => Svc.ClientState.LocalPlayer?.CurrentWorld.ValueNullable?.Name.ToString()).Result ?? "";
+                if (currentworldName.IsNullOrEmpty())
+                {
+                    _isTaskRunning = false;
+                    PluginLog.Warning($"Player is not available");
+                    return;
+                }
                 currentregionName = HuntAlerts.P.Configuration.DatacenterRegionMap[HuntAlerts.P.Configuration.WorldDatacenterMap[currentworldName]];
                 huntregionName = HuntAlerts.P.Configuration.DatacenterRegionMap[HuntAlerts.P.Configuration.WorldDatacenterMap[world]];
 
@@ -244,6 +249,10 @@ namespace HuntAlerts.Helpers
             catch (TaskCanceledException)
             {
                 // Handle cancellation
+            }
+            catch(Exception e)
+            {
+                e.Log();
             }
             finally
             {
