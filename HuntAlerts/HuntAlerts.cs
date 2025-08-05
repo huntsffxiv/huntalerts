@@ -96,7 +96,7 @@ namespace HuntAlerts
 
             ConfigWindow.Dispose();
 
-            Svc.PluginInterface.RemoveChatLinkHandler();
+            Svc.Chat.RemoveChatLinkHandler();
 
             Svc.Commands.RemoveHandler(CommandName);
             MessageCacheManager.Dispose();

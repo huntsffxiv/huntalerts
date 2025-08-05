@@ -30,7 +30,7 @@ public class MessageCacheManager : IDisposable //IDisposable because we will nee
     {
         for (var i = 0u; i < 20; i++) 
         {
-            PayloadList[i] = Svc.PluginInterface.AddChatLinkHandler(i, ProcessLinkPayload); //we are registering 20 commands here
+            PayloadList[i] = Svc.Chat.AddChatLinkHandler(i, ProcessLinkPayload); //we are registering 20 commands here
         }
     }
 
@@ -95,6 +95,6 @@ public class MessageCacheManager : IDisposable //IDisposable because we will nee
 
     public void Dispose() 
     {
-        Svc.PluginInterface.RemoveChatLinkHandler(); //We need to remove our registered links. Dalamud provides a method to unregister all at once, so we don't need to go through each one. 
+        Svc.Chat.RemoveChatLinkHandler(); 
     }
 }
