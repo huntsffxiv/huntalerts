@@ -32,7 +32,7 @@ namespace HuntAlerts.Helpers
 
                     if (!GenericHelpers.TryGetAddonByName<AtkUnitBase>("LookingForGroup", out var _))
                     {
-                        TaskManager.Enqueue(() => Chat.Instance.SendMessage("/partyfinder"));
+                        TaskManager.Enqueue(() => Chat.SendMessage("/partyfinder"));
                         TaskManager.DelayNext(500);
                     }
                     TaskManager.Enqueue(() =>
@@ -106,7 +106,7 @@ namespace HuntAlerts.Helpers
                 string currentworldName = "";
                 string currentregionName = "";
                 string huntregionName = "";
-                currentworldName = Svc.Framework.RunOnFrameworkThread(() => Svc.ClientState.LocalPlayer?.CurrentWorld.ValueNullable?.Name.ToString()).Result ?? "";
+                currentworldName = Svc.Framework.RunOnFrameworkThread(() => Svc.Objects.LocalPlayer?.CurrentWorld.ValueNullable?.Name.ToString()).Result ?? "";
                 if (currentworldName.IsNullOrEmpty())
                 {
                     _isTaskRunning = false;
@@ -146,10 +146,10 @@ namespace HuntAlerts.Helpers
                             // Check character's current world and logged in status here
                             // if condition met, break loop and run another command
                             bool isLoggedIn = Svc.Framework.RunOnFrameworkThread(() => Svc.ClientState.IsLoggedIn).Result;
-                            bool localPlayerExists = Svc.Framework.RunOnFrameworkThread(() => Svc.ClientState.LocalPlayer != null).Result;
+                            bool localPlayerExists = Svc.Framework.RunOnFrameworkThread(() => Svc.Objects.LocalPlayer != null).Result;
                             if (isLoggedIn && localPlayerExists)
                             {
-                                currentworldName = Svc.Framework.RunOnFrameworkThread(() => Svc.ClientState.LocalPlayer.CurrentWorld.Value.Name.ToString()).Result;
+                                currentworldName = Svc.Framework.RunOnFrameworkThread(() => Svc.Objects.LocalPlayer.CurrentWorld.Value.Name.ToString()).Result;
                                 PluginLog.Verbose($"Player is logged in. Currentworld: " + currentworldName);
 
                                 if (currentworldName == world)
@@ -159,7 +159,7 @@ namespace HuntAlerts.Helpers
                                     // Loop until the player is targetable or until canceled
                                     while (!token.IsCancellationRequested && (DateTime.Now - targetableStartTime).TotalSeconds <= 60) // Inner loop timeout (e.g., 60 seconds)
                                     {
-                                        bool isTargetable = Svc.Framework.RunOnFrameworkThread(() => Svc.ClientState.LocalPlayer.IsTargetable).Result;
+                                        bool isTargetable = Svc.Framework.RunOnFrameworkThread(() => Svc.Objects.LocalPlayer.IsTargetable).Result;
                                         if (isTargetable == true)
                                         {
                                             // Player is targetable, execute the command
@@ -191,7 +191,7 @@ namespace HuntAlerts.Helpers
                                                                              .GetRowOrDefault(territoryType)?.PlaceName.ValueNullable?.Name.ToString()).Result;
 
                                                         PluginLog.Verbose($"In Loop waiting on targetable and location match. Current Zone: {territoryName} | Destination Zone: {startZone}");
-                                                        isTargetable = Svc.Framework.RunOnFrameworkThread(() => Svc.ClientState.LocalPlayer.IsTargetable).Result;
+                                                        isTargetable = Svc.Framework.RunOnFrameworkThread(() => Svc.Objects.LocalPlayer.IsTargetable).Result;
                                                         if ((isTargetable == true) && (territoryName == startZone))
                                                         {
                                                             //#if (instance > 0 && lifestreamEnabled)

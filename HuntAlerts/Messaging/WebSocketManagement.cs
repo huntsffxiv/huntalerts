@@ -157,10 +157,10 @@ namespace HuntAlerts
                                 bool isHuntEnabled = IsHuntEnabled(huntMessage.Kind);
 
 
-                                if (Svc.ClientState.IsLoggedIn && Svc.ClientState.LocalPlayer != null)
+                                if (Svc.ClientState.IsLoggedIn && Svc.Objects.LocalPlayer != null)
                                 {
-                                    homeworldName = Svc.ClientState.LocalPlayer.HomeWorld.Value.Name.ToString();
-                                    currentworldName = Svc.ClientState.LocalPlayer.CurrentWorld.Value.Name.ToString();
+                                    homeworldName = Svc.Objects.LocalPlayer.HomeWorld.Value.Name.ToString();
+                                    currentworldName = Svc.Objects.LocalPlayer.CurrentWorld.Value.Name.ToString();
                                     PluginLog.Verbose($"Player is logged in. Homeworld: " + homeworldName + " | Currentworld: " + currentworldName);
                                 }
                                 else
@@ -260,9 +260,9 @@ namespace HuntAlerts
 
                                 // Get current region
                                 string currentregionName = "";
-                                if (Svc.ClientState.IsLoggedIn && Svc.ClientState.LocalPlayer != null)
+                                if (Svc.ClientState.IsLoggedIn && Svc.Objects.LocalPlayer != null)
                                 {
-                                    currentworldName = Svc.ClientState.LocalPlayer.CurrentWorld.Value.Name.ToString();
+                                    currentworldName = Svc.Objects.LocalPlayer.CurrentWorld.Value.Name.ToString();
                                     currentregionName = this.Configuration.DatacenterRegionMap[this.Configuration.WorldDatacenterMap[currentworldName]];
                                     currentdatacentername = this.Configuration.WorldDatacenterMap[currentworldName];
 
@@ -390,12 +390,12 @@ namespace HuntAlerts
                                     {
                                         // Get current region
                                         string currentregionName = "";
-                                        if (Svc.ClientState.IsLoggedIn && Svc.ClientState.LocalPlayer != null)
+                                        if (Svc.ClientState.IsLoggedIn && Svc.Objects.LocalPlayer != null)
                                         {
-                                            currentworldName = Svc.ClientState.LocalPlayer.CurrentWorld.Value.Name.ToString();
+                                            currentworldName = Svc.Objects.LocalPlayer.CurrentWorld.Value.Name.ToString();
                                             currentdatacentername = this.Configuration.WorldDatacenterMap[currentworldName];
                                             currentregionName = this.Configuration.DatacenterRegionMap[this.Configuration.WorldDatacenterMap[currentworldName]];
-                                            homeworldName = Svc.ClientState.LocalPlayer.HomeWorld.Value.Name.ToString();
+                                            homeworldName = Svc.Objects.LocalPlayer.HomeWorld.Value.Name.ToString();
                                             PluginLog.Verbose($"Player is logged in. Homeworld: " + homeworldName + " | Currentworld: " + currentworldName + " | Currentregion: " + currentregionName);
                                         }
                                         else
