@@ -4,7 +4,9 @@
     "Punchline": "Notifies you when hunt trains are starting soon",
     "Description": "Notifies you when hunt trains are starting soon",
     "ApplicableVersion": "any",
-    "DalamudApiLevel": 14,
+    "DalamudApiLevel": 15,
+    "IconUrl": "https://cdn.discordapp.com/attachments/1197030696372408382/1197623443814891680/FFXIV_Hunts_logo.png",
+    "RepoUrl": "https://github.com/huntsffxiv",
     "Tags": [
         "hunt",
         "train",
