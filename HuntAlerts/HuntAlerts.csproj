@@ -33,6 +33,7 @@
     </ItemGroup>
 
     <ItemGroup>
+      <PackageReference Include="ECommons.IPC" Version="1.0.0.19" />
       <PackageReference Include="SocketIOClient" Version="3.1.1" />
     </ItemGroup>
 
