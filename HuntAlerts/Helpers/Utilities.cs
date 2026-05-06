@@ -3,6 +3,7 @@ using ECommons.Automation;
 using ECommons.Automation.LegacyTaskManager;
 using ECommons.DalamudServices;
 using ECommons.ExcelServices;
+using ECommons.IPC;
 using ECommons.Logging;
 using ECommons.Throttlers;
 using FFXIVClientStructs;
@@ -87,179 +88,149 @@ namespace HuntAlerts.Helpers
 
 
         private static CancellationTokenSource _cancellationTokenSource;
-        private static bool _isTaskRunning = false;
-        public static async void ExecuteTeleport(string world, string startLocation, string startZone, string locationCoords, int instance, bool openmaponArrival, bool teleporterEnabled, bool lifestreamEnabled)
+        private static int _isTaskRunning = 0; // 0 = idle, 1 = running. Use Interlocked.* only.
+        public static async void ExecuteTeleport(string world, string startLocation, uint startLocationAetheryteId, string startZone, string locationCoords, int instance, bool openmaponArrival, bool lifestreamEnabled)
         {
+            // Atomically claim the running slot. If it was already 1, this is a "click while running" — cancel and return.
+            if (Interlocked.Exchange(ref _isTaskRunning, 1) == 1)
+            {
+                _cancellationTokenSource?.Cancel();
+                Interlocked.Exchange(ref _isTaskRunning, 0);
+                return;
+            }
+
             try
             {
-                if (_isTaskRunning)
+                if (!lifestreamEnabled || !ECommonsIPC.Lifestream.Available)
                 {
-                    _cancellationTokenSource.Cancel(); // Cancel the current task if running
-                    _isTaskRunning = false;
+                    Svc.Chat.Print("Lifestream is required for teleport but is not enabled or installed.");
                     return;
                 }
 
+                _cancellationTokenSource?.Dispose();
                 _cancellationTokenSource = new CancellationTokenSource();
                 var token = _cancellationTokenSource.Token;
-                _isTaskRunning = true;
-                bool hastoserverTransfer = false;
-                string currentworldName = "";
-                string currentregionName = "";
-                string huntregionName = "";
-                currentworldName = Svc.Framework.RunOnFrameworkThread(() => Svc.Objects.LocalPlayer?.CurrentWorld.ValueNullable?.Name.ToString()).Result ?? "";
+
+                string currentworldName = Svc.Framework.RunOnFrameworkThread(() => Svc.Objects.LocalPlayer?.CurrentWorld.ValueNullable?.Name.ToString()).Result ?? "";
                 if (currentworldName.IsNullOrEmpty())
                 {
-                    _isTaskRunning = false;
                     PluginLog.Warning($"Player is not available");
                     return;
                 }
-                currentregionName = HuntAlerts.P.Configuration.DatacenterRegionMap[HuntAlerts.P.Configuration.WorldDatacenterMap[currentworldName]];
-                huntregionName = HuntAlerts.P.Configuration.DatacenterRegionMap[HuntAlerts.P.Configuration.WorldDatacenterMap[world]];
+                string currentregionName = HuntAlerts.P.Configuration.DatacenterRegionMap[HuntAlerts.P.Configuration.WorldDatacenterMap[currentworldName]];
+                string huntregionName = HuntAlerts.P.Configuration.DatacenterRegionMap[HuntAlerts.P.Configuration.WorldDatacenterMap[world]];
 
-                if (huntregionName == currentregionName)
+                if (huntregionName != currentregionName)
                 {
-                    if (lifestreamEnabled && currentworldName != world)
+                    Svc.Chat.Print("You can't teleport there, you are not in the same region as this hunt");
+                    return;
+                }
+
+                bool hasToServerTransfer = currentworldName != world;
+                if (hasToServerTransfer)
+                {
+                    PluginLog.Verbose($"Lifestream ChangeWorld -> {world}");
+                    if (!ECommonsIPC.Lifestream.ChangeWorld(world))
                     {
-                        if (currentworldName != world)
+                        Svc.Chat.Print($"Lifestream rejected the world change to {world} (busy or unreachable).");
+                        return;
+                    }
+                }
+
+                if (startLocationAetheryteId == 0)
+                {
+                    PluginLog.Verbose("No usable aetheryte ID for this hunt; world change done, no teleport will be issued.");
+                    return;
+                }
+
+                var startTime = DateTime.Now;
+                while (!token.IsCancellationRequested && (DateTime.Now - startTime).TotalSeconds <= 720)
+                {
+                    bool isLoggedIn = Svc.Framework.RunOnFrameworkThread(() => Svc.ClientState.IsLoggedIn).Result;
+                    bool localPlayerExists = Svc.Framework.RunOnFrameworkThread(() => Svc.Objects.LocalPlayer != null).Result;
+                    if (isLoggedIn && localPlayerExists)
+                    {
+                        currentworldName = Svc.Framework.RunOnFrameworkThread(() => Svc.Objects.LocalPlayer.CurrentWorld.Value.Name.ToString()).Result;
+                        PluginLog.Verbose($"Player is logged in. Currentworld: {currentworldName}");
+
+                        if (currentworldName == world && !ECommonsIPC.Lifestream.IsBusy())
                         {
-                            hastoserverTransfer = true;
-                            // Execute initial command
-                            Svc.Commands.ProcessCommand($"/li {world}");
+                            var targetableStartTime = DateTime.Now;
+                            while (!token.IsCancellationRequested && (DateTime.Now - targetableStartTime).TotalSeconds <= 60)
+                            {
+                                bool isTargetable = Svc.Framework.RunOnFrameworkThread(() => Svc.Objects.LocalPlayer.IsTargetable).Result;
+                                if (isTargetable)
+                                {
+                                    PluginLog.Verbose($"On hunt world; teleporting to aetheryte {startLocation} (id {startLocationAetheryteId})");
+                                    if (hasToServerTransfer)
+                                    {
+                                        await Task.Delay(2000, token);
+                                    }
+
+                                    // Lifestream may have become busy between the world-change settle and now (e.g.,
+                                    // post-arrival housekeeping). Wait briefly for it to clear before issuing Teleport.
+                                    var teleportIssueStart = DateTime.Now;
+                                    while (!token.IsCancellationRequested && ECommonsIPC.Lifestream.IsBusy() && (DateTime.Now - teleportIssueStart).TotalSeconds <= 10)
+                                    {
+                                        await Task.Delay(500, token);
+                                    }
+                                    if (!ECommonsIPC.Lifestream.Teleport(startLocationAetheryteId, 0))
+                                    {
+                                        Svc.Chat.Print($"Lifestream rejected teleport to {startLocation}.");
+                                        return;
+                                    }
+
+                                    if (openmaponArrival && locationCoords != "")
+                                    {
+                                        PluginLog.Verbose("Open map on arrival is enabled and coords exist");
+                                        var flagStartTime = DateTime.Now;
+                                        while (!token.IsCancellationRequested && (DateTime.Now - flagStartTime).TotalSeconds <= 60)
+                                        {
+                                            var territoryType = Svc.Framework.RunOnFrameworkThread(() => Svc.ClientState.TerritoryType).Result;
+                                            var territoryName = Svc.Framework.RunOnFrameworkThread(() => Svc.Data.GetExcelSheet<TerritoryType>()
+                                                                 .GetRowOrDefault(territoryType)?.PlaceName.ValueNullable?.Name.ToString()).Result;
+
+                                            PluginLog.Verbose($"Waiting on targetable + zone match. Current: {territoryName} | Destination: {startZone}");
+                                            isTargetable = Svc.Framework.RunOnFrameworkThread(() => Svc.Objects.LocalPlayer.IsTargetable).Result;
+                                            if (isTargetable && territoryName == startZone)
+                                            {
+                                                await Task.Delay(1000, token);
+                                                PluginLog.Verbose("Opening map and flagging coordinates");
+                                                _ = Svc.Framework.RunOnFrameworkThread(() =>
+                                                {
+                                                    FlagOnMap(locationCoords, startZone);
+                                                });
+                                                return;
+                                            }
+                                            await Task.Delay(1000, token);
+                                        }
+                                    }
+                                    return;
+                                }
+                                await Task.Delay(1000, token);
+                            }
                         }
                     }
                     else
                     {
-                        if (currentworldName != world)
-                        {
-                            Svc.Chat.Print("Can't teleport to hunt world without the Lifestream plugin being enabled as you are off world.");
-                            return;
-                        }
+                        PluginLog.Verbose($"Player is still transferring");
                     }
 
-                    if (teleporterEnabled)
-                    {
-                        // Start loop
-                        var startTime = DateTime.Now;
-                        while (!token.IsCancellationRequested && (DateTime.Now - startTime).TotalSeconds <= 720)
-                        {
-
-                            // Check character's current world and logged in status here
-                            // if condition met, break loop and run another command
-                            bool isLoggedIn = Svc.Framework.RunOnFrameworkThread(() => Svc.ClientState.IsLoggedIn).Result;
-                            bool localPlayerExists = Svc.Framework.RunOnFrameworkThread(() => Svc.Objects.LocalPlayer != null).Result;
-                            if (isLoggedIn && localPlayerExists)
-                            {
-                                currentworldName = Svc.Framework.RunOnFrameworkThread(() => Svc.Objects.LocalPlayer.CurrentWorld.Value.Name.ToString()).Result;
-                                PluginLog.Verbose($"Player is logged in. Currentworld: " + currentworldName);
-
-                                if (currentworldName == world)
-                                {
-                                    var targetableStartTime = DateTime.Now;
-
-                                    // Loop until the player is targetable or until canceled
-                                    while (!token.IsCancellationRequested && (DateTime.Now - targetableStartTime).TotalSeconds <= 60) // Inner loop timeout (e.g., 60 seconds)
-                                    {
-                                        bool isTargetable = Svc.Framework.RunOnFrameworkThread(() => Svc.Objects.LocalPlayer.IsTargetable).Result;
-                                        if (isTargetable == true)
-                                        {
-                                            // Player is targetable, execute the command
-                                            // Code to execute when the button is pressed
-                                            if (startLocation != "invalid" && startLocation != "")
-                                            {
-                                                PluginLog.Verbose($"Player is on hunt world, starting teleport to hunt location. Currentworld: " + currentworldName + "StartLocation: " + startLocation);
-                                                if (hastoserverTransfer == true)
-                                                {
-                                                    await Task.Delay(2000, token); // wait 2 seconds to start teleport
-                                                }
-
-                                                // Check and replace start location if a city is passed in
-                                                if (startLocation.ToLower().Contains("limsa")) { startLocation = "Limsa"; }
-                                                if (startLocation.ToLower().Contains("gridania")) { startLocation = "gridania"; }
-                                                if (startLocation.ToLower().Contains("ul'dah") || startLocation.ToLower().Contains("uldah")) { startLocation = "ul'dah"; }
-
-                                                Svc.Commands.ProcessCommand($"/tp {startLocation}");
-
-                                                if (openmaponArrival == true && locationCoords != "")
-                                                {
-                                                    PluginLog.Verbose("Open map on arrival is enabled and coords exist");
-                                                    var flagtargetableStartTime = DateTime.Now;
-                                                    while (!token.IsCancellationRequested && (DateTime.Now - flagtargetableStartTime).TotalSeconds <= 60) // Inner loop timeout (e.g., 60 seconds)
-                                                    {
-
-                                                        var territoryType = Svc.Framework.RunOnFrameworkThread(() => Svc.ClientState.TerritoryType).Result;
-                                                        var territoryName = Svc.Framework.RunOnFrameworkThread(() =>  Svc.Data.GetExcelSheet<TerritoryType>()
-                                                                             .GetRowOrDefault(territoryType)?.PlaceName.ValueNullable?.Name.ToString()).Result;
-
-                                                        PluginLog.Verbose($"In Loop waiting on targetable and location match. Current Zone: {territoryName} | Destination Zone: {startZone}");
-                                                        isTargetable = Svc.Framework.RunOnFrameworkThread(() => Svc.Objects.LocalPlayer.IsTargetable).Result;
-                                                        if ((isTargetable == true) && (territoryName == startZone))
-                                                        {
-                                                            //#if (instance > 0 && lifestreamEnabled)
-                                                            //{
-                                                            //    await Task.Delay(500, token); // wait 2 seconds to change instance
-                                                            //    Svc.Commands.ProcessCommand($"/li {instance}");
-                                                            //}
-                                                            
-                                                            await Task.Delay(1000, token);
-                                                            PluginLog.Verbose($"Opening map and flagging coordinates");
-                                                            _ = Svc.Framework.RunOnFrameworkThread(() =>
-                                                            {
-                                                                FlagOnMap(locationCoords, startZone);
-                                                            });
-                                                            return;
-                                                        }
-                                                        await Task.Delay(1000, token); // wait 2 seconds to start teleport
-                                                    }
-                                                }
-                                                else
-                                                {
-                                                    return;
-                                                }
-                                            }
-                                            else if (startZone != "invalid")
-                                            {
-                                                PluginLog.Verbose($"Player is on hunt world, starting teleport to hunt location. Currentworld: " + currentworldName + "StartZone: " + startZone);
-                                                Svc.Commands.ProcessCommand($"/tpm {startZone}");
-                                                return;
-                                            }
-
-                                        }
-
-                                        // Wait a bit before checking again
-                                        await Task.Delay(1000, token); // Check every second, for example
-                                    }
-                                }
-
-                            }
-                            else
-                            {
-                                PluginLog.Verbose($"Player is still transfering");
-                            }
-
-
-
-                            await Task.Delay(5000, token); // Wait for 5 seconds
-                        }
-                    }
-                }else
-                {
-                    Svc.Chat.Print("You can't teleport there, you are not in the same region as this hunt");
+                    await Task.Delay(5000, token);
                 }
             }
             catch (TaskCanceledException)
             {
-                // Handle cancellation
+                // Cancellation is expected when the user clicks the button again to abort.
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 e.Log();
             }
             finally
             {
-                _isTaskRunning = false;
+                Interlocked.Exchange(ref _isTaskRunning, 0);
             }
-
-            // Additional code to execute after loop ends
         }
     }
 }

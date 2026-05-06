@@ -44,33 +44,32 @@ public class MessageCacheManager : IDisposable //IDisposable because we will nee
 
     void ProcessLinkPayload(uint cmd, SeString str)
     {
-        bool? teleporterInstalled = Svc.PluginInterface.InstalledPlugins.FirstOrDefault(x => x.InternalName == "TeleporterPlugin")?.IsLoaded;
         bool? lifestreamInstalled = Svc.PluginInterface.InstalledPlugins.FirstOrDefault(x => x.InternalName == "Lifestream")?.IsLoaded;
-        bool ctrlHeld = (GetKeyState(VK_CONTROL) & 0x8000) != 0; // Check if Ctrl key is held down
-        bool ctrlclickTeleport = HuntAlerts.P.Configuration.ctrlclickTeleport && ((teleporterInstalled == true && HuntAlerts.P.Configuration.TeleporterIntegration ) || (lifestreamInstalled == true && HuntAlerts.P.Configuration.LifestreamIntegration));
+        bool ctrlHeld = (GetKeyState(VK_CONTROL) & 0x8000) != 0;
+        bool ctrlclickTeleport = HuntAlerts.P.Configuration.ctrlclickTeleport
+            && lifestreamInstalled == true
+            && HuntAlerts.P.Configuration.LifestreamIntegration;
 
-        if (Messages[cmd] != null) //if message with this number exists
+        if (Messages[cmd] != null)
         {
             if (ctrlHeld && ctrlclickTeleport)
             {
                 var world = Messages[cmd].huntWorld;
                 var startLocation = Messages[cmd].startLocation;
+                var startLocationAetheryteId = Messages[cmd].startLocationAetheryteId;
                 var startZone = Messages[cmd].startZone;
                 var locationCoords = Messages[cmd].locationCoords;
                 var openmaponArrival = Messages[cmd].openmaponArrival;
-                var teleporterEnabled = Messages[cmd].teleporterEnabled;
                 var lifestreamEnabled = Messages[cmd].lifestreamEnabled;
                 var instance = Messages[cmd].instance;
 
-
                 PluginLog.Verbose("Ctrl key is held down. attempting to teleport");
-                Utilities.ExecuteTeleport(world, startLocation, startZone, locationCoords, instance, openmaponArrival, teleporterEnabled, lifestreamEnabled);
-
+                Utilities.ExecuteTeleport(world, startLocation, startLocationAetheryteId, startZone, locationCoords, instance, openmaponArrival, lifestreamEnabled);
             }
             else
             {
-                HuntAlerts.P.NotifyWindow.IsOpen = true; //open a window
-                HuntAlerts.P.NotifyWindow.CurrentMessage = Messages[cmd]; //set window's message to it
+                HuntAlerts.P.NotifyWindow.IsOpen = true;
+                HuntAlerts.P.NotifyWindow.CurrentMessage = Messages[cmd];
             }
         }
     }

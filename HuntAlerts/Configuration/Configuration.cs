@@ -26,7 +26,6 @@ namespace HuntAlerts
         public bool ShadowbringersSRank { get; set; } = false;
         public bool CenturioSRank { get; set; } = false;
         public int SoundEffect { get; set; } = 0;
-        public bool TeleporterIntegration { get; set; } = false;
         public bool LifestreamIntegration { get; set; } = false;
         public bool ctrlclickTeleport {  get; set; } = false;
         public bool SRankEnabled { get; set; } = false;

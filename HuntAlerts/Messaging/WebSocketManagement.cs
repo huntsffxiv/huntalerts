@@ -106,7 +106,6 @@ namespace HuntAlerts
                 }
 
 
-                bool? teleporterInstalled = Svc.PluginInterface.InstalledPlugins.FirstOrDefault(x => x.InternalName == "TeleporterPlugin")?.IsLoaded;
                 bool? lifestreamInstalled = Svc.PluginInterface.InstalledPlugins.FirstOrDefault(x => x.InternalName == "Lifestream")?.IsLoaded;
 
                 var huntMessage = JsonConvert.DeserializeObject<HuntMessage>(messageString);
@@ -277,56 +276,77 @@ namespace HuntAlerts
 
                                 // Get hunt region
                                 string huntregionName = this.Configuration.DatacenterRegionMap[this.Configuration.WorldDatacenterMap[huntMessage.World]];
-                                bool teleporterEnabled = this.Configuration.TeleporterIntegration && (teleporterInstalled == true);
                                 bool lifestreamEnabled = this.Configuration.LifestreamIntegration && (lifestreamInstalled == true);
                                 bool openmaponArrival = this.Configuration.OpenMapOnArrival;
-                                string startLocation = huntMessage.AetheriteName; //ParseForStartLocation(messageContent);
-                                if(startLocation == "invalid") { startLocation = "Unknown"; }
-                                string startZone = huntMessage.LocationName; //ParseForStartZone(messageContent);
-                                string aetheriteName = huntMessage.AetheriteName;
-                                string formatted_message = $"Kind: Hunt Train{Environment.NewLine}Hunt: {huntMessage.Kind}{Environment.NewLine}Start Zone: {startZone}{Environment.NewLine}Aetherite: {startLocation}{Environment.NewLine}World: {huntMessage.World}{Environment.NewLine}Posted: {ConvertTime(huntMessage.Posted_Epoch)}{Environment.NewLine}{Environment.NewLine}" + messageContent;
 
-
+                                string startLocation = huntMessage.AetheriteName;
+                                uint startLocationAetheryteId = 0;
+                                double? coordX = null, coordY = null;
 
                                 try
                                 {
-                                    // Try extracting coordinates from message for start location
-                                    var (coord_x, coord_y) = ExtractCoordinates(messageContent);
-                                    PluginLog.Verbose($"Extracted Coordinates {coord_x}, {coord_y} from message");
-
-                                    // Get ZoneID
-                                    uint tt;
-                                    if (Svc.Data.GetExcelSheet<TerritoryType>().TryGetFirst(x => x.TerritoryIntendedUse.RowId == (uint)TerritoryIntendedUseEnum.Open_World && (x.PlaceName.ValueNullable?.Name.ExtractText() ?? "").EqualsIgnoreCase(startZone), out var value))
+                                    var (cx, cy) = ExtractCoordinates(messageContent);
+                                    coordX = cx;
+                                    coordY = cy;
+                                    if (cx is not null && cy is not null)
                                     {
-                                        tt = value.RowId; //is territory id
-                                                          // Get Nearest Aetherite from coords
-                                        if (coord_x is not null && coord_y is not null)
-                                        {
-                                            if (startLocation == "invalid")
-                                            {
-                                                startLocation = MapManager.GetNearestAetheryte(tt, (float)coord_x, (float)coord_y);
-                                                PluginLog.Verbose($"Found nearest aetheryte on map id {tt} at {startLocation}");
-
-                                            }
-                                            locationCoords = $"{(float)coord_x}, {(float)coord_y}";
-                                        }
+                                        locationCoords = $"{(float)cx}, {(float)cy}";
                                     }
-
-
+                                    PluginLog.Verbose($"Extracted Coordinates {cx}, {cy} from message");
                                 }
                                 catch (Exception ex)
                                 {
-                                    PluginLog.Error("Error parsing start location aetherite.");
+                                    PluginLog.Error("Error parsing coordinates from message.");
                                     PluginLog.Error(ex.ToString());
                                 }
 
+                                uint tt = 0;
+                                bool haveTerritory = Svc.Data.GetExcelSheet<TerritoryType>().TryGetFirst(
+                                    x => x.TerritoryIntendedUse.RowId == (uint)TerritoryIntendedUseEnum.Open_World
+                                         && (x.PlaceName.ValueNullable?.Name.ExtractText() ?? "").EqualsIgnoreCase(huntMessage.LocationName),
+                                    out var ttRow);
+                                if (haveTerritory) tt = ttRow.RowId;
+
+                                if (startLocation == "invalid")
+                                {
+                                    if (haveTerritory && coordX is not null && coordY is not null)
+                                    {
+                                        var (id, name) = MapManager.GetNearestAetheryte(tt, (float)coordX, (float)coordY);
+                                        startLocationAetheryteId = id;
+                                        startLocation = name;
+                                        PluginLog.Verbose($"Resolved nearest aetheryte from coords on territory {tt}: {name} (id {id})");
+                                    }
+                                    else if (haveTerritory)
+                                    {
+                                        var (id, name) = MapManager.GetZonePrimaryAetheryte(tt);
+                                        startLocationAetheryteId = id;
+                                        startLocation = name;
+                                        PluginLog.Verbose($"No coords; using zone-primary aetheryte on territory {tt}: {name} (id {id})");
+                                    }
+                                }
+                                else if (haveTerritory)
+                                {
+                                    var match = MapManager.LookupAetheryteByName(tt, startLocation);
+                                    if (match is not null)
+                                    {
+                                        startLocationAetheryteId = match.Value.RowId;
+                                    }
+                                }
+
+                                if (string.IsNullOrEmpty(startLocation) || startLocation == "invalid")
+                                {
+                                    startLocation = "Unknown";
+                                }
+
+                                string startZone = huntMessage.LocationName;
+                                string formatted_message = $"Kind: Hunt Train{Environment.NewLine}Hunt: {huntMessage.Kind}{Environment.NewLine}Start Zone: {startZone}{Environment.NewLine}Aetherite: {startLocation}{Environment.NewLine}World: {huntMessage.World}{Environment.NewLine}Posted: {ConvertTime(huntMessage.Posted_Epoch)}{Environment.NewLine}{Environment.NewLine}" + messageContent;
 
                                 int instance = 1;
 
                                 int textColor = this.Configuration.TextColor;
                                 SeString message;
 
-                                var htmessage = new HuntTrainMessage(formatted_message, huntMessage.Type, huntMessage.Kind, huntMessage.World, currentworldName, currentregionName, huntregionName, ConvertTime(huntMessage.Posted_Epoch), startLocation, startZone, instance, locationCoords, openmaponArrival, teleporterEnabled, lifestreamEnabled);
+                                var htmessage = new HuntTrainMessage(formatted_message, huntMessage.Type, huntMessage.Kind, huntMessage.World, currentworldName, currentregionName, huntregionName, ConvertTime(huntMessage.Posted_Epoch), startLocation, startLocationAetheryteId, startZone, instance, locationCoords, openmaponArrival, lifestreamEnabled);
                                 var link = P.MessageCacheManager.AddMessage(htmessage);
                                 Service.IPCManager.OnHuntTrainMessageReceived(htmessage);
 
@@ -353,7 +373,7 @@ namespace HuntAlerts
 
                                 var msg = RemoveSymbolsRegex().Replace(message.ToString(), "");
                                 PluginLog.Debug($"Adding cache entry {msg}");
-                                PluginLog.Verbose($"Teleporter: {teleporterEnabled} | Lifestream: {lifestreamEnabled} | startLocation: {startLocation} | startZone: {startZone}");
+                                PluginLog.Verbose($"Lifestream: {lifestreamEnabled} | startLocation: {startLocation} | startLocationAetheryteId: {startLocationAetheryteId} | startZone: {startZone}");
 
                                 // Play sound effect if one is set
                                 if (this.Configuration.SoundEffect != 0)
@@ -406,11 +426,38 @@ namespace HuntAlerts
                                         {
                                             // Get hunt region
                                             string huntregionName = this.Configuration.DatacenterRegionMap[this.Configuration.WorldDatacenterMap[huntMessage.World]];
-                                            bool teleporterEnabled = this.Configuration.TeleporterIntegration && (teleporterInstalled == true);
                                             bool lifestreamEnabled = this.Configuration.LifestreamIntegration && (lifestreamInstalled == true);
                                             bool openmaponArrival = this.Configuration.OpenMapOnArrival;
                                             string startLocation = aetheriteName;
+                                            uint startLocationAetheryteId = 0;
                                             string startZone = locationName;
+
+                                            uint ttSrank = 0;
+                                            bool haveTerritorySrank = Svc.Data.GetExcelSheet<TerritoryType>().TryGetFirst(
+                                                x => x.TerritoryIntendedUse.RowId == (uint)TerritoryIntendedUseEnum.Open_World
+                                                     && (x.PlaceName.ValueNullable?.Name.ExtractText() ?? "").EqualsIgnoreCase(startZone),
+                                                out var ttRowSrank);
+                                            if (haveTerritorySrank) ttSrank = ttRowSrank.RowId;
+
+                                            if (haveTerritorySrank)
+                                            {
+                                                if (string.IsNullOrEmpty(startLocation) || startLocation == "invalid")
+                                                {
+                                                    var (id, name) = MapManager.GetZonePrimaryAetheryte(ttSrank);
+                                                    startLocationAetheryteId = id;
+                                                    startLocation = name;
+                                                }
+                                                else
+                                                {
+                                                    var match = MapManager.LookupAetheryteByName(ttSrank, startLocation);
+                                                    if (match is not null) startLocationAetheryteId = match.Value.RowId;
+                                                }
+                                            }
+
+                                            if (string.IsNullOrEmpty(startLocation) || startLocation == "invalid")
+                                            {
+                                                startLocation = "Unknown";
+                                            }
 
                                             if (deathTime == 0)
                                             {
@@ -418,7 +465,7 @@ namespace HuntAlerts
                                                 //string headerText = $"Hunt: {huntType}{Environment.NewLine}World: {world}{Environment.NewLine}Posted: {postedTime}{Environment.NewLine}{Environment.NewLine}";
                                                 messageContent = $"Type: S Rank{Environment.NewLine}Hunt: {kind}{Environment.NewLine}World: {world}{Environment.NewLine}Start Zone: {startZone}{Environment.NewLine}Instance: {instance}{Environment.NewLine}Aetherite: {startLocation}{Environment.NewLine}Posted: {ConvertTime(postedTime)}{Environment.NewLine}Creature: {creatureName}{Environment.NewLine}{Environment.NewLine}Location: {locationName} ({locationCoords}){Environment.NewLine}Aetherite: {aetheriteName}";
 
-                                                var htmessage = new HuntTrainMessage(messageContent, huntMessage.Type, huntMessage.Kind, huntMessage.World, currentworldName, currentregionName, huntregionName, ConvertTime(huntMessage.Posted_Epoch), startLocation, startZone, instance, locationCoords, openmaponArrival, teleporterEnabled, lifestreamEnabled);
+                                                var htmessage = new HuntTrainMessage(messageContent, huntMessage.Type, huntMessage.Kind, huntMessage.World, currentworldName, currentregionName, huntregionName, ConvertTime(huntMessage.Posted_Epoch), startLocation, startLocationAetheryteId, startZone, instance, locationCoords, openmaponArrival, lifestreamEnabled);
                                                 var link = P.MessageCacheManager.AddMessage(htmessage);
                                                 Service.IPCManager.OnHuntTrainMessageReceived(htmessage);
 

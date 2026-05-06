@@ -176,26 +176,7 @@ public class ConfigWindow : Window, IDisposable
         // Optional: Draw a separator line
         ImGui.Separator();
 
-        bool? teleporterInstalled = Svc.PluginInterface.InstalledPlugins.FirstOrDefault(x => x.InternalName == "TeleporterPlugin")?.IsLoaded;
         bool? lifestreamInstalled = Svc.PluginInterface.InstalledPlugins.FirstOrDefault(x => x.InternalName == "Lifestream")?.IsLoaded;
-
-        if (teleporterInstalled != true)
-        {
-            ImGui.BeginDisabled();
-        }
-
-        var teleporterIntegration = this.Configuration.TeleporterIntegration;
-        if (ImGui.Checkbox("Enable Teleporter Integration", ref teleporterIntegration))
-        {
-            this.Configuration.TeleporterIntegration = teleporterIntegration;
-            // can save immediately on change, if you don't want to provide a "Save and Close" button
-            this.Configuration.Save();
-        }
-        if (teleporterInstalled != true)
-        {
-            ImGui.EndDisabled();
-        }
-
 
         if (lifestreamInstalled != true)
         {
@@ -206,7 +187,6 @@ public class ConfigWindow : Window, IDisposable
         if (ImGui.Checkbox("Enable Lifestream Integration", ref lifestreamIntegration))
         {
             this.Configuration.LifestreamIntegration = lifestreamIntegration;
-            // can save immediately on change, if you don't want to provide a "Save and Close" button
             this.Configuration.Save();
         }
 
@@ -215,22 +195,19 @@ public class ConfigWindow : Window, IDisposable
             ImGui.EndDisabled();
         }
 
-        if ((teleporterInstalled != true && lifestreamInstalled != true) || (!this.Configuration.TeleporterIntegration && !this.Configuration.LifestreamIntegration))
+        if (lifestreamInstalled != true || !this.Configuration.LifestreamIntegration)
         {
             ImGui.BeginDisabled();
-
         }
 
         var ctrlclickTeleport = this.Configuration.ctrlclickTeleport;
         if (ImGui.Checkbox("Ctrl-Click messages to teleport", ref ctrlclickTeleport))
         {
             this.Configuration.ctrlclickTeleport = ctrlclickTeleport;
-            // can save immediately on change, if you don't want to provide a "Save and Close" button
             this.Configuration.Save();
         }
 
-
-        if ((teleporterInstalled != true && lifestreamInstalled != true) || (!this.Configuration.TeleporterIntegration && !this.Configuration.LifestreamIntegration))
+        if (lifestreamInstalled != true || !this.Configuration.LifestreamIntegration)
         {
             ImGui.EndDisabled();
         }

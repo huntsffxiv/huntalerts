@@ -1,6 +1,7 @@
 
 using ECommons.Logging;
 using System;
+using System.Globalization;
 using System.Text.RegularExpressions;
 
 
@@ -47,7 +48,7 @@ namespace HuntAlerts
 
             // Format the DateTime as needed, e.g., "MM/dd/yyyy HH:mm:ss"
             PluginLog.Verbose($"Posted Time:  {epochTime}");
-            string convertedTime = dateTime.ToString("hh:mm tt"); // or any other format
+            string convertedTime = dateTime.ToString("hh:mm tt", CultureInfo.GetCultureInfo("en-US"));
             PluginLog.Verbose($"converted time: {convertedTime}");
             return convertedTime;
         }

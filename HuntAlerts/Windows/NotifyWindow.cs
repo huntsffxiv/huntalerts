@@ -36,57 +36,41 @@ public class NotifyWindow : Window
     public override void Draw()
     {
         var entry = CurrentMessage;
-        if(entry != null) 
-        { 
+        if (entry != null)
+        {
             string message = entry.Message;
             string world = entry.huntWorld;
             string currentworldName = entry.currentworldName;
             string currentregionName = entry.currentregionName;
             string huntregionname = entry.huntregionName;
             string startLocation = entry.startLocation;
+            uint startLocationAetheryteId = entry.startLocationAetheryteId;
             string startZone = entry.startZone;
             int instance = entry.instance;
-            string huntType = entry.huntKind;
-            string postedTime = entry.Posted_Time;
-            bool teleporterEnabled = entry.teleporterEnabled;
             bool lifestreamEnabled = entry.lifestreamEnabled;
             string locationCoords = entry.locationCoords;
             bool openmaponArrival = entry.openmaponArrival;
 
-            
-            
-            if (currentregionName == huntregionname)
+            if (currentregionName == huntregionname && lifestreamEnabled && startLocationAetheryteId != 0)
             {
-
-                if ((lifestreamEnabled && (currentworldName != world)) || (teleporterEnabled && (currentworldName == world)))
+                ImGuiEx.RightFloat(() =>
                 {
-                        
-                    ImGuiEx.RightFloat(() =>
+                    if (ImGui.Button($"Teleport to Hunt"))
                     {
-                        if (ImGui.Button($"Teleport to Hunt"))
-                        {
-                            // Code to execute when the button is pressed
-                            PluginLog.Verbose($"Attempting to use teleport/lifestream");
-                            //Svc.Commands.ProcessCommand($"/li {world}");
-                            Utilities.ExecuteTeleport(world, startLocation, startZone, locationCoords, instance, openmaponArrival, teleporterEnabled, lifestreamEnabled);
-                        }
-                    });
-                }
+                        PluginLog.Verbose($"Attempting to use lifestream teleport");
+                        Utilities.ExecuteTeleport(world, startLocation, startLocationAetheryteId, startZone, locationCoords, instance, openmaponArrival, lifestreamEnabled);
+                    }
+                });
             }
 
-
-
-            // If you don't set a wrap position, text wraps at the window edge
             ImGui.PushTextWrapPos();
             ImGui.TextUnformatted(message);
-            // Pop the text wrap position so it doesn't affect other elements
             ImGui.PopTextWrapPos();
 
             if (locationCoords != "")
             {
                 if (ImGui.Button($"Flag on Map"))
                 {
-                    // Code to execute when the button is pressed
                     Utilities.FlagOnMap(locationCoords, startZone);
                 }
             }
@@ -95,7 +79,6 @@ public class NotifyWindow : Window
             {
                 Utilities.OpenPartyFinder();
             }
-
         }
         else
         {
