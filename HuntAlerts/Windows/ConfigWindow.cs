@@ -1,8 +1,11 @@
 using Dalamud.Game.Text;
+using Dalamud.Interface;
 using Dalamud.Interface.Windowing;
 using ECommons.DalamudServices;
+using ECommons.IPC;
 using FFXIVClientStructs.FFXIV.Client.UI;
 using Dalamud.Bindings.ImGui;
+using HuntAlerts.Helpers;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,984 +15,600 @@ namespace HuntAlerts.Windows;
 
 public class ConfigWindow : Window, IDisposable
 {
-    private Configuration Configuration;
-    HuntAlerts Plugin;
+    private enum Page { General, Integrations, HuntTrains, TrainWorlds, SRanks, Connection, Debug }
 
-
-    public ConfigWindow(HuntAlerts plugin) : base(
-       "HuntAlerts",
-       ImGuiWindowFlags.NoResize)
+    private static readonly (Page Id, string Label, FontAwesomeIcon Icon)[] TabDefs =
     {
-        this.Plugin = plugin;
-        this.Size = new Vector2(400, 980);
-        this.SizeCondition = ImGuiCond.Always;
+        (Page.HuntTrains,   "Hunt Trains",  FontAwesomeIcon.Train),
+        (Page.TrainWorlds,  "Train Worlds", FontAwesomeIcon.Globe),
+        (Page.SRanks,       "S Ranks",      FontAwesomeIcon.Skull),
+        (Page.General,      "General",      FontAwesomeIcon.Cog),
+        (Page.Integrations, "Integrations", FontAwesomeIcon.Plug),
+        (Page.Connection,   "Connection",   FontAwesomeIcon.Server),
+        (Page.Debug,        "Debug",        FontAwesomeIcon.Bug),
+    };
 
-        this.Configuration = plugin.Configuration;
+    private readonly Configuration Configuration;
+    private readonly HuntAlerts Plugin;
+
+    private Page _current = Page.HuntTrains;
+    private string _worldSearch = "";
+    private bool _debugUnlocked = false;
+
+    private int    _dbgType       = 0;
+    private bool[] _dbgKinds      = { false, false, false, true };
+    private string _dbgWorld      = "";
+    private string _dbgZone       = "";
+    private string _dbgAetheryte  = "";
+    private string _dbgCoords     = "20.0, 20.0";
+    private string _dbgCreature   = "";
+    private int    _dbgInstance   = 1;
+    private string _dbgContent    = "";
+    private string _dbgLastResult = "";
+
+    public ConfigWindow(HuntAlerts plugin) : base("HuntAlerts", ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse)
+    {
+        Plugin = plugin;
+        Configuration = plugin.Configuration;
+        Size          = new Vector2(620, 520);
+        SizeCondition = ImGuiCond.FirstUseEver;
+        SizeConstraints = new WindowSizeConstraints
+        {
+            MinimumSize = new Vector2(520, 360),
+            MaximumSize = new Vector2(1200, 1400),
+        };
     }
 
-    string ttString = "";
     public void Dispose() { }
 
-    public override void Draw()
-    { 
-        // Create a simple header
-        ImGui.Text("General Options");
-
-        // Optional: Draw a separator line
-        ImGui.Separator();
-
-        var suppressDuplicates = this.Configuration.SuppressDuplicates;
-        if(ImGui.Checkbox("Suppress Duplicate Messages", ref suppressDuplicates))
-        {
-            this.Configuration.SuppressDuplicates = suppressDuplicates;
-            // can save immediately on change, if you don't want to provide a "Save and Close" button
-            this.Configuration.Save();
-        }
-
-
-
-
-
-        var openmaponArrival = this.Configuration.OpenMapOnArrival;
-        if (ImGui.Checkbox("Flag Map automatically if possible", ref openmaponArrival))
-        {
-            this.Configuration.OpenMapOnArrival = openmaponArrival;
-            // can save immediately on change, if you don't want to provide a "Save and Close" button
-            this.Configuration.Save();
-        }
-
-        var usedalamudChat = this.Configuration.UseDalamudChat;
-        if (ImGui.Checkbox("Use Dalamud Default Chat", ref usedalamudChat))
-        {
-            this.Configuration.UseDalamudChat = usedalamudChat;
-            // can save immediately on change, if you don't want to provide a "Save and Close" button
-            this.Configuration.Save();
-        }
-
-
-        if (this.Configuration.UseDalamudChat == true)
-        {
-            ImGui.BeginDisabled();
-        }
-
-        // Get all enum values except "None"
-        var enumValues = Enum.GetValues(typeof(XivChatType))
-                             .Cast<XivChatType>()
-                             .Where(value => value != XivChatType.None) // Assuming XivChatType.None is the value you want to exclude
-                             .ToArray();
-
-        // Convert enum values to string array for display, excluding "None"
-        var chatTypes = enumValues.Select(e => e.ToString()).ToArray();
-
-        // Find the current index of OutputChat in the enumValues array (adjusted for exclusion of "None")
-        var currentOutputChat = this.Configuration.OutputChat;
-        int outputChatIndex = Array.IndexOf(enumValues, currentOutputChat);
-
-        if (ImGui.Combo("Chat Channel", ref outputChatIndex, chatTypes, chatTypes.Length))
-        {
-            // Update the Configuration.OutputChat with the new enum value based on the selected index
-            this.Configuration.OutputChat = enumValues[outputChatIndex];
-            this.Configuration.Save();
-        }
-        if (this.Configuration.UseDalamudChat == true)
-        {
-            ImGui.EndDisabled();
-        }
-
-
-        // Local variable for color options
-        Dictionary<string, int> _colorOptions = new Dictionary<string, int>
-        {
-            { "Default", 0 },
-            { "Red", 16 },
-            { "Green", 43 },
-            { "Blue", 57 },
-            { "Yellow", 25 },
-            { "Purple", 48 }
-        };
-
-        string[] items = _colorOptions.Keys.ToArray();
-        var textColor = Array.IndexOf(items, _colorOptions.FirstOrDefault(x => x.Value == this.Configuration.TextColor).Key);
-        if (ImGui.Combo("Train Text Color", ref textColor, items, items.Length))
-        {
-            // Update the configuration when the selection changes
-            this.Configuration.TextColor = _colorOptions[items[textColor]];
-            this.Configuration.Save(); // Method to save your configuration
-        }
-
-        var sranktextColor = Array.IndexOf(items, _colorOptions.FirstOrDefault(x => x.Value == this.Configuration.SRankTextColor).Key);
-        if (ImGui.Combo("S Rank Text Color", ref sranktextColor, items, items.Length))
-        {
-            // Update the configuration when the selection changes
-            this.Configuration.SRankTextColor = _colorOptions[items[sranktextColor]];
-            this.Configuration.Save(); // Method to save your configuration
-        }
-        string[] soundEffects = new string[]
-        {
-            "None",
-            "Sound 1",
-            "Sound 2",
-            "Sound 3",
-            "Sound 4",
-            "Sound 5",
-            "Sound 6",
-            "Sound 7",
-            "Sound 8",
-            "Sound 9",
-            "Sound 10",
-            "Sound 11",
-            "Sound 12",
-            "Sound 13",
-            "Sound 14",
-            "Sound 15",
-            "Sound 16"
-        };
-
-        Dictionary<string, int> soundEffectsDict = new Dictionary<string, int>();
-        for (int i = 0; i < soundEffects.Length; i++)
-        {
-            soundEffectsDict[soundEffects[i]] = i;
-        }
-
-        // Assuming soundEffect in Configuration is an index of the selected sound effect.
-        var soundEffectIndex = this.Configuration.SoundEffect;
-        if (ImGui.Combo("Sound Effect", ref soundEffectIndex, soundEffects, soundEffects.Length))
-        {
-            // soundEffectIndex is the index of the selected item, which corresponds to the sound number.
-            this.Configuration.SoundEffect = soundEffectIndex; // Update the configuration
-
-            if (soundEffectIndex != 0)
-            {
-                UIGlobals.PlayChatSoundEffect((uint)soundEffectIndex); // Play the selected sound effect
-            }
-
-            this.Configuration.Save(); // Save the configuration
-        }
-
-
-        // Add blank line
-        ImGui.NewLine();
-
-        // Create a simple header
-        ImGui.Text("Integrations (Changes take effect next hunt message)");
-
-        // Optional: Draw a separator line
-        ImGui.Separator();
-
-        bool? lifestreamInstalled = Svc.PluginInterface.InstalledPlugins.FirstOrDefault(x => x.InternalName == "Lifestream")?.IsLoaded;
-
-        if (lifestreamInstalled != true)
-        {
-            ImGui.BeginDisabled();
-        }
-
-        var lifestreamIntegration = this.Configuration.LifestreamIntegration;
-        if (ImGui.Checkbox("Enable Lifestream Integration", ref lifestreamIntegration))
-        {
-            this.Configuration.LifestreamIntegration = lifestreamIntegration;
-            this.Configuration.Save();
-        }
-
-        if (lifestreamInstalled != true)
-        {
-            ImGui.EndDisabled();
-        }
-
-        if (lifestreamInstalled != true || !this.Configuration.LifestreamIntegration)
-        {
-            ImGui.BeginDisabled();
-        }
-
-        var ctrlclickTeleport = this.Configuration.ctrlclickTeleport;
-        if (ImGui.Checkbox("Ctrl-Click messages to teleport", ref ctrlclickTeleport))
-        {
-            this.Configuration.ctrlclickTeleport = ctrlclickTeleport;
-            this.Configuration.Save();
-        }
-
-        if (lifestreamInstalled != true || !this.Configuration.LifestreamIntegration)
-        {
-            ImGui.EndDisabled();
-        }
-
-        ImGui.NewLine();
-        ImGui.Text("S Rank Options");
-
-        // Optional: Draw a separator line
-        ImGui.Separator();
-
-        ImGui.Columns(2, "", false); // 2 columns, no border
-
-        var srankEnabledValue = this.Configuration.SRankEnabled;
-        if (ImGui.Checkbox("S Ranks Enabled", ref srankEnabledValue))
-        {
-            this.Configuration.SRankEnabled = srankEnabledValue;
-            // can save immediately on change, if you don't want to provide a "Save and Close" button
-            this.Configuration.Save();
-        }
-
-        ImGui.NextColumn();
-
-        if (!srankEnabledValue)
-        {
-            ImGui.BeginDisabled();
-        }
-        var srankcurrentWorld = this.Configuration.SRankCurrentWorld;
-        if (ImGui.Checkbox("Current World Only##SRank", ref srankcurrentWorld))
-        {
-            this.Configuration.SRankCurrentWorld = srankcurrentWorld;
-            // can save immediately on change, if you don't want to provide a "Save and Close" button
-            this.Configuration.Save();
-        }
-       
-
-        ImGui.Columns(1);
-
-        // Add blank line
-        ImGui.NewLine();
-
-        // Create a simple header
-        ImGui.Text("S Rank Notifications");
-
-        // Optional: Draw a separator line
-        ImGui.Separator();
-
-        // can't ref a property, so use a local copy
-        var dawntrailSRankValue = this.Configuration.DawntrailSRank;
-        if (ImGui.Checkbox("Dawntrail##SRank", ref dawntrailSRankValue))
-        {
-            this.Configuration.DawntrailSRank = dawntrailSRankValue;
-            // can save immediately on change, if you don't want to provide a "Save and Close" button
-            this.Configuration.Save();
-        }
-
-        var endwalkerSRankValue = this.Configuration.EndwalkerSRank;
-        if (ImGui.Checkbox("Endwalker##SRank", ref endwalkerSRankValue))
-        {
-            this.Configuration.EndwalkerSRank = endwalkerSRankValue;
-            // can save immediately on change, if you don't want to provide a "Save and Close" button
-            this.Configuration.Save();
-        }
-
-        var shadowbringersSRankValue = this.Configuration.ShadowbringersSRank;
-        if (ImGui.Checkbox("Shadowbringers##SRank", ref shadowbringersSRankValue))
-        {
-            this.Configuration.ShadowbringersSRank = shadowbringersSRankValue;
-            // can save immediately on change, if you don't want to provide a "Save and Close" button
-            this.Configuration.Save();
-        }
-        var centurioSRankValue = this.Configuration.CenturioSRank;
-        if (ImGui.Checkbox("Centurio##SRank", ref centurioSRankValue))
-        {
-            this.Configuration.CenturioSRank = centurioSRankValue;
-            // can save immediately on change, if you don't want to provide a "Save and Close" button
-            this.Configuration.Save();
-        }
-
-        if (!srankEnabledValue)
-        {
-            ImGui.EndDisabled();
-        }
-
-        // Add blank line
-        ImGui.NewLine();
-
-        // Create a simple header
-        ImGui.Text("Hunt Train Notifications");
-
-        // Optional: Draw a separator line
-        ImGui.Separator();
-
-        // can't ref a property, so use a local copy
-        var dawntrailValue = this.Configuration.DawntrailHunts;
-        if (ImGui.Checkbox("Dawntrail##HuntTrains", ref dawntrailValue))
-        {
-            this.Configuration.DawntrailHunts = dawntrailValue;
-            // can save immediately on change, if you don't want to provide a "Save and Close" button
-            this.Configuration.Save();
-        }
-
-        var endwalkerValue = this.Configuration.EndwalkerHunts;
-        if (ImGui.Checkbox("Endwalker##HuntTrains", ref endwalkerValue))
-        {
-            this.Configuration.EndwalkerHunts = endwalkerValue;
-            // can save immediately on change, if you don't want to provide a "Save and Close" button
-            this.Configuration.Save();
-        }
-
-        var shadowbringersValue = this.Configuration.ShadowbringersHunts;
-        if (ImGui.Checkbox("Shadowbringers##HuntTrains", ref shadowbringersValue))
-        {
-            this.Configuration.ShadowbringersHunts = shadowbringersValue;
-            // can save immediately on change, if you don't want to provide a "Save and Close" button
-            this.Configuration.Save();
-        }
-        var centurioValue = this.Configuration.CenturioHunts;
-        if (ImGui.Checkbox("Centurio##HuntTrains", ref centurioValue))
-        {
-            this.Configuration.CenturioHunts = centurioValue;
-            // can save immediately on change, if you don't want to provide a "Save and Close" button
-            this.Configuration.Save();
-        }
-        
-
-        // Create a simple header
-        ImGui.NewLine();
-        ImGui.Text("Hunt Train Options");
-
-        // Optional: Draw a separator line
-        ImGui.Separator();
-
-        ImGui.Columns(2, "", false); // 2 columns, no border
-
-        var homeworldonlyValue = this.Configuration.HomeWorldOnly;
-        if (ImGui.Checkbox("Homeworld Only", ref homeworldonlyValue))
-        {
-            this.Configuration.HomeWorldOnly = homeworldonlyValue;
-            if(homeworldonlyValue)
-            {
-                this.Configuration.CurrentWorldOnly = false;
-                this.Configuration.CurrentDatacenterOnly = false;
-            }
-
-            // can save immediately on change, if you don't want to provide a "Save and Close" button
-            this.Configuration.Save();
-        }
-
-        ImGui.NextColumn();
-
-        var currentworldonlyValue = this.Configuration.CurrentWorldOnly;
-        if (ImGui.Checkbox("Current World Only##HuntTrains", ref currentworldonlyValue))
-        {
-            this.Configuration.CurrentWorldOnly = currentworldonlyValue;
-            if(currentworldonlyValue)
-            {
-                this.Configuration.HomeWorldOnly = false;
-                this.Configuration.CurrentDatacenterOnly = false;
-
-            }
-            // can save immediately on change, if you don't want to provide a "Save and Close" button
-
-            this.Configuration.Save();
-        }
-
-        ImGui.Columns(1);
-
-        var currentdatacenteronlyValue = this.Configuration.CurrentDatacenterOnly;
-        if (ImGui.Checkbox("Current Datacenter Only##HuntTrainsDatacenterOnly", ref currentdatacenteronlyValue))
-        {
-            this.Configuration.CurrentDatacenterOnly = currentdatacenteronlyValue;
-
-            if (currentdatacenteronlyValue)
-            {
-                this.Configuration.HomeWorldOnly = false;
-                this.Configuration.CurrentWorldOnly = false;
-            }
-
-            this.Configuration.Save();
-        }
-
-        
-
-        // Create a simple header
-        ImGui.NewLine();
-        ImGui.Text("Hunt Train Datacenter");
-
-        // Optional: Draw a separator line
-        ImGui.Separator();
-
-        if(currentworldonlyValue || homeworldonlyValue || currentdatacenteronlyValue)
-        {
-            ImGui.BeginDisabled();
-        }
-
-        // Start the columns
-        ImGui.Columns(3, "", false); // 2 columns, no border
-
-        var aetherValue = this.Configuration.Aether;
-        if (ImGui.Checkbox("Aether", ref aetherValue))
-        {
-            this.Configuration.Aether = aetherValue;
-            // can save immediately on change, if you don't want to provide a "Save and Close" button
-            this.Configuration.Save();
-        }
-
-        ImGui.NextColumn();
-
-        var crystalValue = this.Configuration.Crystal;
-        if (ImGui.Checkbox("Crystal", ref crystalValue))
-        {
-            this.Configuration.Crystal = crystalValue;
-            // can save immediately on change, if you don't want to provide a "Save and Close" button
-            this.Configuration.Save();
-        }
-
-        ImGui.NextColumn();
-
-        var primalValue = this.Configuration.Primal;
-        if (ImGui.Checkbox("Primal", ref primalValue))
-        {
-            this.Configuration.Primal = primalValue;
-            // can save immediately on change, if you don't want to provide a "Save and Close" button
-            this.Configuration.Save();
-        }
-
-        ImGui.NextColumn();
-
-        var dynamisValue = this.Configuration.Dynamis;
-        if (ImGui.Checkbox("Dynamis", ref dynamisValue))
-        {
-            this.Configuration.Dynamis = dynamisValue;
-            // can save immediately on change, if you don't want to provide a "Save and Close" button
-            this.Configuration.Save();
-        }
-
-        ImGui.NextColumn();
-
-        var lightValue = this.Configuration.Light;
-        if (ImGui.Checkbox("Light", ref lightValue))
-        {
-            this.Configuration.Light = lightValue;
-            // can save immediately on change, if you don't want to provide a "Save and Close" button
-            this.Configuration.Save();
-        }
-
-        ImGui.NextColumn();
-
-
-        var chaosValue = this.Configuration.Chaos;
-        if (ImGui.Checkbox("Chaos", ref chaosValue))
-        {
-            this.Configuration.Chaos = chaosValue;
-            // can save immediately on change, if you don't want to provide a "Save and Close" button
-            this.Configuration.Save();
-        }
-
-        ImGui.NextColumn();
-
-        var materiaValue = this.Configuration.Materia;
-        if (ImGui.Checkbox("Materia", ref materiaValue))
-        {
-            this.Configuration.Materia = materiaValue;
-            // can save immediately on change, if you don't want to provide a "Save and Close" button
-            this.Configuration.Save();
-        }
-
-        ImGui.Columns(1);
-
-
-        if (currentworldonlyValue || homeworldonlyValue || currentdatacenteronlyValue)
-        {
-            ImGui.EndDisabled();
-        }
-
-        ImGui.NewLine();
-        ImGui.Text("Hunt Train World Selection");
-        ImGui.Separator();
-
-
-
-        if (!aetherValue && !crystalValue && !primalValue && !dynamisValue && !lightValue && !chaosValue & !materiaValue)
-        {
-            ImGui.Text("No Datacenters selected, please choose a datacenter");
-        }
-
-        if (currentworldonlyValue || homeworldonlyValue || currentdatacenteronlyValue)
-        {
-            ImGui.BeginDisabled();
-        }
-        // Aether world selection
-        if (aetherValue)
-        {
-
-            if (ImGui.TreeNode("Aether World Selection"))
-            {
-                ImGui.Indent();
-
-                var adamantoiseWorldValue = this.Configuration.AdamantoiseWorld;
-                if (ImGui.Checkbox("Adamantoise", ref adamantoiseWorldValue))
-                {
-                    this.Configuration.AdamantoiseWorld = adamantoiseWorldValue;
-                    this.Configuration.Save();
-                }
-
-                var cactuarWorldValue = this.Configuration.CactuarWorld;
-                if (ImGui.Checkbox("Cactuar", ref cactuarWorldValue))
-                {
-                    this.Configuration.CactuarWorld = cactuarWorldValue;
-                    this.Configuration.Save();
-                }
-
-                var faerieWorldValue = this.Configuration.FaerieWorld;
-                if (ImGui.Checkbox("Faerie", ref faerieWorldValue))
-                {
-                    this.Configuration.FaerieWorld = faerieWorldValue;
-                    this.Configuration.Save();
-                }
-
-                var gilgameshWorldValue = this.Configuration.GilgameshWorld;
-                if (ImGui.Checkbox("Gilgamesh", ref gilgameshWorldValue))
-                {
-                    this.Configuration.GilgameshWorld = gilgameshWorldValue;
-                    this.Configuration.Save();
-                }
-
-                var jenovaWorldValue = this.Configuration.JenovaWorld;
-                if (ImGui.Checkbox("Jenova", ref jenovaWorldValue))
-                {
-                    this.Configuration.JenovaWorld = jenovaWorldValue;
-                    this.Configuration.Save();
-                }
-
-                var midgardsormrWorldValue = this.Configuration.MidgardsormrWorld;
-                if (ImGui.Checkbox("Midgardsormr", ref midgardsormrWorldValue))
-                {
-                    this.Configuration.MidgardsormrWorld = midgardsormrWorldValue;
-                    this.Configuration.Save();
-                }
-
-                var sargatanasWorldValue = this.Configuration.SargatanasWorld;
-                if (ImGui.Checkbox("Sargatanas", ref sargatanasWorldValue))
-                {
-                    this.Configuration.SargatanasWorld = sargatanasWorldValue;
-                    this.Configuration.Save();
-                }
-
-                var sirenWorldValue = this.Configuration.SirenWorld;
-                if (ImGui.Checkbox("Siren", ref sirenWorldValue))
-                {
-                    this.Configuration.SirenWorld = sirenWorldValue;
-                    this.Configuration.Save();
-                }
-
-                ImGui.Unindent();
-                ImGui.TreePop();
-
-            }
-        }
-
-        // Crystal world selection
-        if (crystalValue)
-        {
-
-            if (ImGui.TreeNode("Crystal World Selection"))
-            {
-                ImGui.Indent();
-
-                var balmungWorldValue = this.Configuration.BalmungWorld;
-                if (ImGui.Checkbox("Balmung", ref balmungWorldValue))
-                {
-                    this.Configuration.BalmungWorld = balmungWorldValue;
-                    this.Configuration.Save();
-                }
-
-                var brynhildrWorldValue = this.Configuration.BrynhildrWorld;
-                if (ImGui.Checkbox("Brynhildr", ref brynhildrWorldValue))
-                {
-                    this.Configuration.BrynhildrWorld = brynhildrWorldValue;
-                    this.Configuration.Save();
-                }
-
-                var coeurlWorldValue = this.Configuration.CoeurlWorld;
-                if (ImGui.Checkbox("Coeurl", ref coeurlWorldValue))
-                {
-                    this.Configuration.CoeurlWorld = coeurlWorldValue;
-                    this.Configuration.Save();
-                }
-
-                var diabolosWorldValue = this.Configuration.DiabolosWorld;
-                if (ImGui.Checkbox("Diabolos", ref diabolosWorldValue))
-                {
-                    this.Configuration.DiabolosWorld = diabolosWorldValue;
-                    this.Configuration.Save();
-                }
-
-                var goblinWorldValue = this.Configuration.GoblinWorld;
-                if (ImGui.Checkbox("Goblin", ref goblinWorldValue))
-                {
-                    this.Configuration.GoblinWorld = goblinWorldValue;
-                    this.Configuration.Save();
-                }
-
-                var malboroWorldValue = this.Configuration.MalboroWorld;
-                if (ImGui.Checkbox("Malboro", ref malboroWorldValue))
-                {
-                    this.Configuration.MalboroWorld = malboroWorldValue;
-                    this.Configuration.Save();
-                }
-
-                var mateusWorldValue = this.Configuration.MateusWorld;
-                if (ImGui.Checkbox("Mateus", ref mateusWorldValue))
-                {
-                    this.Configuration.MateusWorld = mateusWorldValue;
-                    this.Configuration.Save();
-                }
-
-                var zaleraWorldValue = this.Configuration.ZaleraWorld;
-                if (ImGui.Checkbox("Zalera", ref zaleraWorldValue))
-                {
-                    this.Configuration.ZaleraWorld = zaleraWorldValue;
-                    this.Configuration.Save();
-                }
-
-                ImGui.Unindent();
-                ImGui.TreePop();
-
-            }
-        }
-
-        // Primal world selection
-        if (primalValue)
-        {
-
-            if (ImGui.TreeNode("Primal World Selection"))
-            {
-                ImGui.Indent();
-
-                var behemothWorldValue = this.Configuration.BehemothWorld;
-                if (ImGui.Checkbox("Behemoth", ref behemothWorldValue))
-                {
-                    this.Configuration.BehemothWorld = behemothWorldValue;
-                    this.Configuration.Save();
-                }
-
-                var excaliburWorldValue = this.Configuration.ExcaliburWorld;
-                if (ImGui.Checkbox("Excalibur", ref excaliburWorldValue))
-                {
-                    this.Configuration.ExcaliburWorld = excaliburWorldValue;
-                    this.Configuration.Save();
-                }
-
-                var exodusWorldValue = this.Configuration.ExodusWorld;
-                if (ImGui.Checkbox("Exodus", ref exodusWorldValue))
-                {
-                    this.Configuration.ExodusWorld = exodusWorldValue;
-                    this.Configuration.Save();
-                }
-
-                var famfritWorldValue = this.Configuration.FamfritWorld;
-                if (ImGui.Checkbox("Famfrit", ref famfritWorldValue))
-                {
-                    this.Configuration.FamfritWorld = famfritWorldValue;
-                    this.Configuration.Save();
-                }
-
-                var hyperionWorldValue = this.Configuration.HyperionWorld;
-                if (ImGui.Checkbox("Hyperion", ref hyperionWorldValue))
-                {
-                    this.Configuration.HyperionWorld = hyperionWorldValue;
-                    this.Configuration.Save();
-                }
-
-                var lamiaWorldValue = this.Configuration.LamiaWorld;
-                if (ImGui.Checkbox("Lamia", ref lamiaWorldValue))
-                {
-                    this.Configuration.LamiaWorld = lamiaWorldValue;
-                    this.Configuration.Save();
-                }
-
-                var leviathanWorldValue = this.Configuration.LeviathanWorld;
-                if (ImGui.Checkbox("Leviathan", ref leviathanWorldValue))
-                {
-                    this.Configuration.LeviathanWorld = leviathanWorldValue;
-                    this.Configuration.Save();
-                }
-
-                var ultrosWorldValue = this.Configuration.UltrosWorld;
-                if (ImGui.Checkbox("Ultros", ref ultrosWorldValue))
-                {
-                    this.Configuration.UltrosWorld = ultrosWorldValue;
-                    this.Configuration.Save();
-                }
-
-                ImGui.Unindent();
-                ImGui.TreePop();
-
-            }
-        }
-
-        // Dynamis world selection
-        if (dynamisValue)
-        {
-
-            if (ImGui.TreeNode("Dynamis World Selection"))
-            {
-                ImGui.Indent();
-
-                var halicarnassusWorldValue = this.Configuration.HalicarnassusWorld;
-                if (ImGui.Checkbox("Halicarnassus", ref halicarnassusWorldValue))
-                {
-                    this.Configuration.HalicarnassusWorld = halicarnassusWorldValue;
-                    this.Configuration.Save();
-                }
-
-                var maduinWorldValue = this.Configuration.MaduinWorld;
-                if (ImGui.Checkbox("Maduin", ref maduinWorldValue))
-                {
-                    this.Configuration.MaduinWorld = maduinWorldValue;
-                    this.Configuration.Save();
-                }
-
-                var seraphWorldValue = this.Configuration.SeraphWorld;
-                if (ImGui.Checkbox("Seraph", ref seraphWorldValue))
-                {
-                    this.Configuration.SeraphWorld = seraphWorldValue;
-                    this.Configuration.Save();
-                }
-
-                var cuchulainnWorldValue = this.Configuration.CuchulainnWorld;
-                if (ImGui.Checkbox("Cuchulainn", ref cuchulainnWorldValue))
-                {
-                    this.Configuration.CuchulainnWorld = cuchulainnWorldValue;
-                    this.Configuration.Save();
-                }
-
-                var golemWorldValue = this.Configuration.GolemWorld;
-                if (ImGui.Checkbox("Golem", ref golemWorldValue))
-                {
-                    this.Configuration.GolemWorld = golemWorldValue;
-                    this.Configuration.Save();
-                }
-
-                var krakenWorldValue = this.Configuration.KrakenWorld;
-                if (ImGui.Checkbox("Kraken", ref krakenWorldValue))
-                {
-                    this.Configuration.KrakenWorld = krakenWorldValue;
-                    this.Configuration.Save();
-                }
-
-                var rafflesiaWorldValue = this.Configuration.RafflesiaWorld;
-                if (ImGui.Checkbox("Rafflesia", ref rafflesiaWorldValue))
-                {
-                    this.Configuration.RafflesiaWorld = rafflesiaWorldValue;
-                    this.Configuration.Save();
-                }
-
-                ImGui.Unindent();
-                ImGui.TreePop();
-
-            }
-        }
-
-        // Light world selection
-        if (lightValue)
-        {
-
-            if (ImGui.TreeNode("Light World Selection"))
-            {
-                ImGui.Indent();
-
-                var alphaWorldValue = this.Configuration.AlphaWorld;
-                if (ImGui.Checkbox("Alpha", ref alphaWorldValue))
-                {
-                    this.Configuration.AlphaWorld = alphaWorldValue;
-                    this.Configuration.Save();
-                }
-
-                var lichWorldValue = this.Configuration.LichWorld;
-                if (ImGui.Checkbox("Lich", ref lichWorldValue))
-                {
-                    this.Configuration.LichWorld = lichWorldValue;
-                    this.Configuration.Save();
-                }
-
-                var odinWorldValue = this.Configuration.OdinWorld;
-                if (ImGui.Checkbox("Odin", ref odinWorldValue))
-                {
-                    this.Configuration.OdinWorld = odinWorldValue;
-                    this.Configuration.Save();
-                }
-
-                var phoenixWorldValue = this.Configuration.PhoenixWorld;
-                if (ImGui.Checkbox("Phoenix", ref phoenixWorldValue))
-                {
-                    this.Configuration.PhoenixWorld = phoenixWorldValue;
-                    this.Configuration.Save();
-                }
-
-                var raidenWorldValue = this.Configuration.RaidenWorld;
-                if (ImGui.Checkbox("Raiden", ref raidenWorldValue))
-                {
-                    this.Configuration.RaidenWorld = raidenWorldValue;
-                    this.Configuration.Save();
-                }
-
-                var shivaWorldValue = this.Configuration.ShivaWorld;
-                if (ImGui.Checkbox("Shiva", ref shivaWorldValue))
-                {
-                    this.Configuration.ShivaWorld = shivaWorldValue;
-                    this.Configuration.Save();
-                }
-
-                var twintaniaWorldValue = this.Configuration.TwintaniaWorld;
-                if (ImGui.Checkbox("Twintania", ref twintaniaWorldValue))
-                {
-                    this.Configuration.TwintaniaWorld = twintaniaWorldValue;
-                    this.Configuration.Save();
-                }
-
-                var zodiarkWorldValue = this.Configuration.ZodiarkWorld;
-                if (ImGui.Checkbox("Zodiark", ref zodiarkWorldValue))
-                {
-                    this.Configuration.ZodiarkWorld = zodiarkWorldValue;
-                    this.Configuration.Save();
-                }
-
-                ImGui.Unindent();
-                ImGui.TreePop();
-
-            }
-        }
-
-        // Chaos world selection
-        if (chaosValue)
-        {
-
-            if (ImGui.TreeNode("Chaos World Selection"))
-            {
-                ImGui.Indent();
-
-                var cerberusWorldValue = this.Configuration.CerberusWorld;
-                if (ImGui.Checkbox("Cerberus", ref cerberusWorldValue))
-                {
-                    this.Configuration.CerberusWorld = cerberusWorldValue;
-                    this.Configuration.Save();
-                }
-
-                var louisoixWorldValue = this.Configuration.LouisoixWorld;
-                if (ImGui.Checkbox("Louisoix", ref louisoixWorldValue))
-                {
-                    this.Configuration.LouisoixWorld = louisoixWorldValue;
-                    this.Configuration.Save();
-                }
-
-                var moogleWorldValue = this.Configuration.MoogleWorld;
-                if (ImGui.Checkbox("Moogle", ref moogleWorldValue))
-                {
-                    this.Configuration.MoogleWorld = moogleWorldValue;
-                    this.Configuration.Save();
-                }
-
-                var omegaWorldValue = this.Configuration.OmegaWorld;
-                if (ImGui.Checkbox("Omega", ref omegaWorldValue))
-                {
-                    this.Configuration.OmegaWorld = omegaWorldValue;
-                    this.Configuration.Save();
-                }
-
-                var phantomWorldValue = this.Configuration.PhantomWorld;
-                if (ImGui.Checkbox("Phantom", ref phantomWorldValue))
-                {
-                    this.Configuration.PhantomWorld = phantomWorldValue;
-                    this.Configuration.Save();
-                }
-
-                var ragnarokWorldValue = this.Configuration.RagnarokWorld;
-                if (ImGui.Checkbox("Ragnarok", ref ragnarokWorldValue))
-                {
-                    this.Configuration.RagnarokWorld = ragnarokWorldValue;
-                    this.Configuration.Save();
-                }
-
-                var sagittariusWorldValue = this.Configuration.SagittariusWorld;
-                if (ImGui.Checkbox("Sagittarius", ref sagittariusWorldValue))
-                {
-                    this.Configuration.SagittariusWorld = sagittariusWorldValue;
-                    this.Configuration.Save();
-                }
-
-                var sprigganWorldValue = this.Configuration.SprigganWorld;
-                if (ImGui.Checkbox("Spriggan", ref sprigganWorldValue))
-                {
-                    this.Configuration.SprigganWorld = sprigganWorldValue;
-                    this.Configuration.Save();
-                }
-
-                ImGui.Unindent();
-                ImGui.TreePop();
-
-            }
-        }
-
-
-        // Materia world selection
-        if (materiaValue)
-        {
-
-            if (ImGui.TreeNode("Materia World Selection"))
-            {
-                ImGui.Indent();
-
-                var bismarckWorldValue = this.Configuration.BismarckWorld;
-                if (ImGui.Checkbox("Bismarck", ref bismarckWorldValue))
-                {
-                    this.Configuration.BismarckWorld = bismarckWorldValue;
-                    this.Configuration.Save();
-                }
-
-                var ravanaWorldValue = this.Configuration.RavanaWorld;
-                if (ImGui.Checkbox("Ravana", ref ravanaWorldValue))
-                {
-                    this.Configuration.RavanaWorld = ravanaWorldValue;
-                    this.Configuration.Save();
-                }
-
-                var sephirotWorldValue = this.Configuration.SephirotWorld;
-                if (ImGui.Checkbox("Sephirot", ref sephirotWorldValue))
-                {
-                    this.Configuration.SephirotWorld = sephirotWorldValue;
-                    this.Configuration.Save();
-                }
-
-                var zurvanWorldValue = this.Configuration.ZurvanWorld;
-                if (ImGui.Checkbox("Zurvan", ref zurvanWorldValue))
-                {
-                    this.Configuration.ZurvanWorld = zurvanWorldValue;
-                    this.Configuration.Save();
-                }
-
-                var sophiaWorldValue = this.Configuration.SophiaWorld;
-                if (ImGui.Checkbox("Sophia", ref sophiaWorldValue))
-                {
-                    this.Configuration.SophiaWorld = sophiaWorldValue;
-                    this.Configuration.Save();
-                }
-
-                ImGui.Unindent();
-                ImGui.TreePop();
-
-            }
-        }
-
-        if (currentworldonlyValue || homeworldonlyValue || currentdatacenteronlyValue)
-        {
-            ImGui.EndDisabled();
-        }
-        
-        /*if (ImGui.CollapsingHeader("Debug"))
-        {
-            ImGui.InputFloat("x", ref x);
-            ImGui.InputFloat("y", ref y);
-            ImGui.InputText("tt", ref ttString, 20);
-            if (ImGui.Button("Test link"))
-            {
-                uint tt;
-                PluginLog.Verbose($"Zone: {ttString}");
-                
-                if (Svc.Data.GetExcelSheet<TerritoryType>().TryGetFirst(x => x.TerritoryIntendedUse == (uint)TerritoryIntendedUseEnum.Open_World && (x.PlaceName.Value?.Name.ExtractText() ?? "").EqualsIgnoreCase(ttString), out var value))
-                {
-                    //string ttString = System.Text.Encoding.UTF8.GetString(ttBuffer).TrimEnd('\0');
-                    PluginLog.Verbose($"Zone string: {ttString}");
-                    tt = value.RowId; //is territory id
-                    MapManager.OpenMapWithMarker(tt, x, y);
-                }
-            }
-        }*/
-
-        //if (ImGui.Button("Test")) Plugin.Test();
+    public void OpenDebug()
+    {
+        _debugUnlocked = true;
+        _current       = Page.Debug;
+        IsOpen         = true;
     }
 
-    float x, y;
-    int tt;
+    public override void Draw()
+    {
+        if (ImGui.BeginTable("##cfgRoot", 2, ImGuiTableFlags.BordersInnerV))
+        {
+            ImGui.TableSetupColumn("##nav",  ImGuiTableColumnFlags.WidthFixed, 140);
+            ImGui.TableSetupColumn("##body", ImGuiTableColumnFlags.WidthStretch);
+            ImGui.TableNextRow();
 
+            ImGui.TableNextColumn();
+            DrawSidebar();
+
+            ImGui.TableNextColumn();
+            ImGui.BeginChild("##pageBody", new Vector2(0, 0), false);
+            DrawCurrentPage();
+            ImGui.EndChild();
+
+            ImGui.EndTable();
+        }
+    }
+
+    private void DrawSidebar()
+    {
+        foreach (var (id, label, icon) in TabDefs)
+        {
+            if (id == Page.Debug && !_debugUnlocked) continue;
+
+            var selected = _current == id;
+            if (ImGui.Selectable($"##nav-{id}", selected, ImGuiSelectableFlags.AllowItemOverlap, new Vector2(0, 24)))
+                _current = id;
+
+            ImGui.SameLine(8);
+            Components.Icon(icon, selected ? Theme.Accent : Theme.Text);
+            ImGui.SameLine();
+            ImGui.TextUnformatted(label);
+        }
+    }
+
+    private void DrawCurrentPage()
+    {
+        if (_current == Page.Debug && !_debugUnlocked) _current = Page.HuntTrains;
+
+        switch (_current)
+        {
+            case Page.General:      DrawGeneralSection();      break;
+            case Page.Integrations: DrawIntegrationsSection(); break;
+            case Page.HuntTrains:   DrawTrainsSection();       break;
+            case Page.TrainWorlds:  DrawWorldsSection();       break;
+            case Page.SRanks:       DrawSRankSection();        break;
+            case Page.Connection:   DrawConnectionSection();   break;
+            case Page.Debug:        DrawDebugSection();        break;
+        }
+    }
+
+    private void DrawGeneralSection()
+    {
+        Components.SectionHeader("General Options");
+
+        var sup = Configuration.SuppressDuplicates;
+        if (ImGui.Checkbox("Suppress Duplicate Messages", ref sup))
+        { Configuration.SuppressDuplicates = sup; Configuration.Save(); }
+
+        var flag = Configuration.OpenMapOnArrival;
+        if (ImGui.Checkbox("Flag Map automatically on arrival", ref flag))
+        { Configuration.OpenMapOnArrival = flag; Configuration.Save(); }
+
+        var useDalamud = Configuration.UseDalamudChat;
+        if (ImGui.Checkbox("Use Dalamud Default Chat", ref useDalamud))
+        { Configuration.UseDalamudChat = useDalamud; Configuration.Save(); }
+
+        ImGui.BeginDisabled(Configuration.UseDalamudChat);
+        var chatTypes = Enum.GetValues<XivChatType>().Where(v => v != XivChatType.None).ToArray();
+        var chatNames = chatTypes.Select(c => c.ToString()).ToArray();
+        var chatIdx   = Array.IndexOf(chatTypes, Configuration.OutputChat);
+        if (ImGui.Combo("Chat Channel", ref chatIdx, chatNames, chatNames.Length))
+        { Configuration.OutputChat = chatTypes[chatIdx]; Configuration.Save(); }
+        ImGui.EndDisabled();
+
+        var colorOpts = new (string Name, int Value)[]
+        {
+            ("Default", 0), ("Red", 16), ("Green", 43), ("Blue", 57), ("Yellow", 25), ("Purple", 48),
+        };
+        var colorNames = colorOpts.Select(o => o.Name).ToArray();
+
+        var textIdx = Array.FindIndex(colorOpts, o => o.Value == Configuration.TextColor);
+        if (textIdx < 0) textIdx = 0;
+        if (ImGui.Combo("Train Text Color", ref textIdx, colorNames, colorNames.Length))
+        { Configuration.TextColor = colorOpts[textIdx].Value; Configuration.Save(); }
+
+        var sIdx = Array.FindIndex(colorOpts, o => o.Value == Configuration.SRankTextColor);
+        if (sIdx < 0) sIdx = 0;
+        if (ImGui.Combo("S Rank Text Color", ref sIdx, colorNames, colorNames.Length))
+        { Configuration.SRankTextColor = colorOpts[sIdx].Value; Configuration.Save(); }
+
+        var soundNames = Enumerable.Range(0, 17)
+            .Select(i => i == 0 ? "None" : $"Sound {i}").ToArray();
+        var sound = Configuration.SoundEffect;
+        if (ImGui.Combo("Sound Effect", ref sound, soundNames, soundNames.Length))
+        {
+            Configuration.SoundEffect = sound;
+            if (sound != 0) UIGlobals.PlayChatSoundEffect((uint)sound);
+            Configuration.Save();
+        }
+
+        var snoozeOpts  = new (string Name, int Value)[] { ("5 min", 5), ("15 min", 15), ("30 min", 30), ("60 min", 60), ("2 hours", 120) };
+        var snoozeNames = snoozeOpts.Select(o => o.Name).ToArray();
+        var snoozeIdx   = Array.FindIndex(snoozeOpts, o => o.Value == Configuration.SnoozeDefaultMinutes);
+        if (snoozeIdx < 0) snoozeIdx = 2;
+        if (ImGui.Combo("Snooze Duration", ref snoozeIdx, snoozeNames, snoozeNames.Length))
+        { Configuration.SnoozeDefaultMinutes = snoozeOpts[snoozeIdx].Value; Configuration.Save(); }
+        ImGui.SameLine();
+        if (HuntAlerts.P.IsSnoozed)
+        {
+            var rem = (int)Math.Ceiling(HuntAlerts.P.SnoozeRemaining.TotalMinutes);
+            if (Components.ActionButton(FontAwesomeIcon.Sun, $"Wake ({rem}m left)", ButtonRole.Accent))
+                HuntAlerts.P.ClearSnooze();
+        }
+        else
+        {
+            if (Components.ActionButton(FontAwesomeIcon.Moon, $"Snooze {Configuration.SnoozeDefaultMinutes}m", ButtonRole.Warn))
+                HuntAlerts.P.SnoozeDefault();
+        }
+    }
+
+    private void DrawIntegrationsSection()
+    {
+        Components.SectionHeader("Integrations (Changes take effect next hunt message)");
+
+        var lifestreamInstalled = ECommonsIPC.Lifestream.Available;
+        ImGui.BeginDisabled(!lifestreamInstalled);
+        var ls = Configuration.LifestreamIntegration;
+        if (ImGui.Checkbox("Enable Lifestream Integration", ref ls))
+        { Configuration.LifestreamIntegration = ls; Configuration.Save(); }
+        ImGui.EndDisabled();
+
+        ImGui.BeginDisabled(!lifestreamInstalled || !Configuration.LifestreamIntegration);
+        var ctrl = Configuration.ctrlclickTeleport;
+        if (ImGui.Checkbox("Ctrl-Click messages to teleport", ref ctrl))
+        { Configuration.ctrlclickTeleport = ctrl; Configuration.Save(); }
+        ImGui.EndDisabled();
+    }
+
+    private void DrawSRankSection()
+    {
+        Components.SectionHeader("S Rank Options");
+
+        ImGui.Columns(2, "", false);
+
+        var srankOn = Configuration.SRankEnabled;
+        if (ImGui.Checkbox("S Ranks Enabled", ref srankOn))
+        { Configuration.SRankEnabled = srankOn; Configuration.Save(); }
+
+        ImGui.NextColumn();
+
+        ImGui.BeginDisabled(!srankOn);
+        var cwOnly = Configuration.SRankCurrentWorld;
+        if (ImGui.Checkbox("Current World Only##SRank", ref cwOnly))
+        { Configuration.SRankCurrentWorld = cwOnly; Configuration.Save(); }
+        ImGui.EndDisabled();
+
+        ImGui.Columns(1);
+
+        ImGui.BeginDisabled(!srankOn);
+        ImGui.PushStyleColor(ImGuiCol.Text, Theme.Subtle);
+        ImGui.TextWrapped("S Ranks are always limited to your current datacenter.");
+        ImGui.PopStyleColor();
+        ImGui.Spacing();
+
+        ImGui.TextUnformatted("S Rank Notifications");
+        ImGui.Separator();
+        DrawHuntGroupCheckboxes(Configuration.EnabledSRankGroups, "SRank");
+        ImGui.EndDisabled();
+    }
+
+    private void DrawTrainsSection()
+    {
+        Components.SectionHeader("Hunt Train Notifications");
+        DrawHuntGroupCheckboxes(Configuration.EnabledTrainGroups, "Train");
+
+        ImGui.Spacing();
+        Components.SectionHeader("Hunt Train Scope");
+
+        DrawScopeRadio(ScopeMode.AllConfigured,         "All configured datacenters/worlds");
+        DrawScopeRadio(ScopeMode.CurrentDatacenterOnly, "Current datacenter only");
+        DrawScopeRadio(ScopeMode.CurrentWorldOnly,      "Current world only");
+        DrawScopeRadio(ScopeMode.HomeWorldOnly,         "Home world only");
+    }
+
+    private void DrawHuntGroupCheckboxes(HashSet<string> set, string idSuffix)
+    {
+        foreach (var group in HuntGroups.All)
+        {
+            var label = group switch
+            {
+                HuntGroups.Centurio => "Centurio (ARR / HW / SB)",
+                _                    => group,
+            };
+            var enabled = set.Contains(group);
+            if (ImGui.Checkbox($"{label}##{idSuffix}-{group}", ref enabled))
+            {
+                if (enabled) set.Add(group); else set.Remove(group);
+                Configuration.Save();
+            }
+        }
+    }
+
+    private void DrawScopeRadio(ScopeMode target, string label)
+    {
+        var sel = Configuration.Scope == target;
+        if (ImGui.RadioButton(label, sel) && !sel)
+        {
+            Configuration.Scope = target;
+            Configuration.Save();
+        }
+    }
+
+    private void DrawWorldsSection()
+    {
+        Components.SectionHeader("Hunt Train Worlds");
+
+        var dcs = WorldData.DatacentersInOrder;
+        if (dcs.Count == 0)
+        {
+            ImGui.PushStyleColor(ImGuiCol.Text, Theme.Subtle);
+            ImGui.TextWrapped("No world data available. (Lumina sheets may not be loaded yet — try reopening the window after the game finishes loading.)");
+            ImGui.PopStyleColor();
+            return;
+        }
+
+        var scopeBlocks = Configuration.Scope != ScopeMode.AllConfigured;
+        if (scopeBlocks)
+        {
+            ImGui.PushStyleColor(ImGuiCol.Text, Theme.Subtle);
+            ImGui.TextWrapped("World selection is ignored because the Hunt Train scope is set to one of the override modes above. Switch to \"All configured datacenters/worlds\" to use this list.");
+            ImGui.PopStyleColor();
+            return;
+        }
+
+        ImGui.PushItemWidth(220);
+        ImGui.InputTextWithHint("##worldSearch", "Filter worlds...", ref _worldSearch, 64);
+        ImGui.PopItemWidth();
+        ImGui.Spacing();
+
+        var search = _worldSearch.Trim();
+
+        foreach (var dc in dcs)
+        {
+            var matching = string.IsNullOrEmpty(search)
+                ? dc.Worlds
+                : dc.Worlds.Where(w => w.Contains(search, StringComparison.OrdinalIgnoreCase)).ToList();
+            if (matching.Count == 0) continue;
+
+            DrawDcBlock(dc, matching);
+            ImGui.Spacing();
+        }
+    }
+
+    private void DrawDcBlock(WorldData.DatacenterInfo dc, IReadOnlyList<string> shownWorlds)
+    {
+        var dcOn   = Configuration.EnabledDatacenters.Contains(dc.Name);
+        // When the DC itself is off, the effective enabled count is zero — none
+        // of those worlds will fire an alert regardless of their tick state.
+        var on     = dcOn ? dc.Worlds.Count(w => Configuration.EnabledWorlds.Contains(w)) : 0;
+        var region = WorldData.RegionLabel(dc.Region);
+
+        ImGui.PushStyleColor(ImGuiCol.Text, Theme.Accent);
+        ImGui.TextUnformatted(dc.Name);
+        ImGui.PopStyleColor();
+        ImGui.SameLine();
+        ImGui.PushStyleColor(ImGuiCol.Text, Theme.Subtle);
+        ImGui.TextUnformatted($"({region})  {on}/{dc.Worlds.Count} enabled");
+        ImGui.PopStyleColor();
+
+        ImGui.SameLine(ImGui.GetContentRegionAvail().X - 150);
+        if (Components.DcToggleButton(dcOn, dc.Name))
+        {
+            if (dcOn) Configuration.EnabledDatacenters.Remove(dc.Name);
+            else      Configuration.EnabledDatacenters.Add(dc.Name);
+            Configuration.Save();
+        }
+        ImGui.SameLine();
+        if (ImGui.SmallButton($"All##{dc.Name}"))
+        {
+            foreach (var w in dc.Worlds) Configuration.EnabledWorlds.Add(w);
+            Configuration.Save();
+        }
+        ImGui.SameLine();
+        if (ImGui.SmallButton($"None##{dc.Name}"))
+        {
+            foreach (var w in dc.Worlds) Configuration.EnabledWorlds.Remove(w);
+            Configuration.Save();
+        }
+        ImGui.Separator();
+
+        ImGui.BeginDisabled(!dcOn);
+        if (ImGui.BeginTable($"worlds-{dc.Name}", 3, ImGuiTableFlags.NoBordersInBody))
+        {
+            foreach (var w in shownWorlds)
+            {
+                ImGui.TableNextColumn();
+                var ticked = Configuration.EnabledWorlds.Contains(w);
+                if (ImGui.Checkbox($"{w}##{dc.Name}-{w}", ref ticked))
+                {
+                    if (ticked) Configuration.EnabledWorlds.Add(w);
+                    else        Configuration.EnabledWorlds.Remove(w);
+                    Configuration.Save();
+                }
+            }
+            ImGui.EndTable();
+        }
+        ImGui.EndDisabled();
+    }
+
+    private void DrawConnectionSection()
+    {
+        Components.SectionHeader("Connection");
+
+        var state = Plugin.SocketState;
+        var (pillBg, pillBorder, pillFg, pillText) = state switch
+        {
+            HuntAlerts.ConnectionState.Connected    => (0xFF1E5C3A, 0xFF40A080, 0xFF8AFFD5, "CONNECTED"),
+            HuntAlerts.ConnectionState.Connecting   => (0xFF3A3A5C, 0xFF7070C0, 0xFFB8B8FF, "CONNECTING"),
+            HuntAlerts.ConnectionState.Reconnecting => (0xFF5C4A1E, 0xFFC0A040, 0xFFFFD68A, "RECONNECTING"),
+            HuntAlerts.ConnectionState.Disconnected => (0xFF5C1E1E, 0xFFC04040, 0xFFFF8A8A, "DISCONNECTED"),
+            HuntAlerts.ConnectionState.Error        => (0xFF5C1E1E, 0xFFC04040, 0xFFFF8A8A, "ERROR"),
+            _                                       => (0xFF2A2A2A, 0xFF4A4A4A, 0xFFB8B8B8, "UNKNOWN"),
+        };
+        DrawPill(pillText, pillBg, pillBorder, pillFg);
+
+        ImGui.SameLine();
+        if (state == HuntAlerts.ConnectionState.Reconnecting)
+        {
+            ImGui.PushStyleColor(ImGuiCol.Text, Theme.Subtle);
+            ImGui.TextUnformatted($"  attempt {Plugin.ReconnectAttemptCount}");
+            ImGui.PopStyleColor();
+        }
+        if (Plugin.LastStateChangeUtc.HasValue)
+        {
+            ImGui.SameLine();
+            ImGui.PushStyleColor(ImGuiCol.Text, Theme.Subtle);
+            var ago = DateTime.UtcNow - Plugin.LastStateChangeUtc.Value;
+            ImGui.TextUnformatted($"  ·  {FormatAgo(ago)} ago");
+            ImGui.PopStyleColor();
+        }
+
+        ImGui.Spacing();
+        Components.FieldRow("Server", Plugin.ServerUri);
+
+        if (!string.IsNullOrEmpty(Plugin.LastConnectionError))
+        {
+            ImGui.Spacing();
+            ImGui.PushStyleColor(ImGuiCol.Text, 0xFFFF8A8A);
+            ImGui.TextWrapped($"Last error: {Plugin.LastConnectionError}");
+            ImGui.PopStyleColor();
+        }
+
+        ImGui.Spacing();
+        var busy = state == HuntAlerts.ConnectionState.Connecting || state == HuntAlerts.ConnectionState.Reconnecting;
+        ImGui.BeginDisabled(busy);
+        if (Components.ActionButton(FontAwesomeIcon.Sync, busy ? "Reconnecting..." : "Reconnect", ButtonRole.Accent))
+            _ = Plugin.ReconnectAsync();
+        ImGui.EndDisabled();
+
+        ImGui.Spacing();
+        Components.SectionHeader("Recent Activity");
+
+        var log = Plugin.ConnectionLog;
+        if (log.Count == 0)
+        {
+            ImGui.PushStyleColor(ImGuiCol.Text, Theme.Subtle);
+            ImGui.TextWrapped("No connection events captured yet.");
+            ImGui.PopStyleColor();
+            return;
+        }
+
+        if (ImGui.BeginChild("##connLog", new Vector2(0, 0), true))
+        {
+            for (var i = log.Count - 1; i >= 0; i--)
+            {
+                var entry = log[i];
+                var localTime = entry.TimestampUtc.ToLocalTime().ToString("HH:mm:ss");
+                var levelColor = entry.Level switch
+                {
+                    "OK"    => 0xFF90D080u,
+                    "WARN"  => 0xFFFFC68Au,
+                    "ERROR" => 0xFFFF8A8Au,
+                    _       => Theme.Subtle,
+                };
+                ImGui.PushStyleColor(ImGuiCol.Text, Theme.Subtle);
+                ImGui.TextUnformatted(localTime);
+                ImGui.PopStyleColor();
+                ImGui.SameLine();
+                ImGui.PushStyleColor(ImGuiCol.Text, levelColor);
+                ImGui.TextUnformatted($"[{entry.Level}]");
+                ImGui.PopStyleColor();
+                ImGui.SameLine();
+                ImGui.PushStyleColor(ImGuiCol.Text, Theme.Text);
+                ImGui.TextWrapped(entry.Message);
+                ImGui.PopStyleColor();
+            }
+        }
+        ImGui.EndChild();
+    }
+
+    private static void DrawPill(string text, uint bg, uint border, uint fg)
+    {
+        var draw  = ImGui.GetWindowDrawList();
+        var pad   = new Vector2(10, 3);
+        var size  = ImGui.CalcTextSize(text);
+        var start = ImGui.GetCursorScreenPos();
+        var end   = new Vector2(start.X + size.X + pad.X * 2, start.Y + size.Y + pad.Y * 2);
+        draw.AddRectFilled(start, end, bg, 10f);
+        draw.AddRect(start, end, border, 10f, ImDrawFlags.None, 1.5f);
+        draw.AddText(new Vector2(start.X + pad.X, start.Y + pad.Y), fg, text);
+        ImGui.Dummy(new Vector2(size.X + pad.X * 2, size.Y + pad.Y * 2));
+    }
+
+    private static string FormatAgo(TimeSpan t)
+    {
+        if (t.TotalSeconds < 60) return $"{(int)t.TotalSeconds}s";
+        if (t.TotalMinutes < 60) return $"{(int)t.TotalMinutes}m";
+        if (t.TotalHours   < 24) return $"{(int)t.TotalHours}h";
+        return $"{(int)t.TotalDays}d";
+    }
+
+    private void DrawDebugSection()
+    {
+        Components.SectionHeader("Simulate Hunt Message");
+
+        ImGui.PushStyleColor(ImGuiCol.Text, Theme.Subtle);
+        ImGui.TextWrapped("Inject a fake server message through the same pipeline as a real one. Use this to test scope, kind filters, aetheryte resolution and the notification UI without waiting on the live feed.");
+        ImGui.PopStyleColor();
+        ImGui.Spacing();
+
+        var typeLabels = new[] { "Hunt Train", "S Rank" };
+        ImGui.PushItemWidth(220);
+        ImGui.Combo("Type", ref _dbgType, typeLabels, typeLabels.Length);
+        ImGui.PopItemWidth();
+
+        ImGui.TextUnformatted("Kinds");
+        for (var i = 0; i < HuntGroups.All.Length; i++)
+        {
+            if (i > 0) ImGui.SameLine();
+            var on = _dbgKinds[i];
+            if (ImGui.Checkbox($"{HuntGroups.All[i]}##dbgKind{i}", ref on))
+                _dbgKinds[i] = on;
+        }
+
+        ImGui.PushItemWidth(220);
+        ImGui.InputTextWithHint("World##dbg",     "e.g. Sargatanas",          ref _dbgWorld,     32);
+        ImGui.SameLine();
+        if (ImGui.SmallButton("Current##dbgWorld"))
+        {
+            var cw = Svc.Objects.LocalPlayer?.CurrentWorld.ValueNullable?.Name.ToString();
+            if (!string.IsNullOrEmpty(cw)) _dbgWorld = cw;
+        }
+
+        ImGui.InputTextWithHint("Start Zone##dbg", "e.g. Yak T'el",            ref _dbgZone,      64);
+        ImGui.InputTextWithHint("Aetheryte##dbg",  "Iq Br'aax or 'invalid'",   ref _dbgAetheryte, 64);
+        ImGui.InputTextWithHint("Coords##dbg",     "23.1, 23.5",               ref _dbgCoords,    32);
+        ImGui.PopItemWidth();
+
+        if (_dbgType == 1)
+        {
+            ImGui.PushItemWidth(220);
+            ImGui.InputTextWithHint("Creature##dbg", "Optional creature name", ref _dbgCreature, 64);
+            ImGui.InputInt("Instance##dbg", ref _dbgInstance);
+            if (_dbgInstance < 1) _dbgInstance = 1;
+            ImGui.PopItemWidth();
+        }
+        else
+        {
+            ImGui.PushItemWidth(420);
+            ImGui.InputTextMultiline("Content##dbg", ref _dbgContent, 512, new Vector2(420, 60));
+            ImGui.PopItemWidth();
+        }
+
+        ImGui.Spacing();
+
+        if (Components.ActionButton(FontAwesomeIcon.PaperPlane, "Send Test Hunt", ButtonRole.Accent))
+            SendDebugHunt();
+        ImGui.SameLine();
+        if (Components.ActionButton(FontAwesomeIcon.Eraser, "Reset Fields", ButtonRole.Warn))
+            ResetDebugFields();
+
+        if (!string.IsNullOrEmpty(_dbgLastResult))
+        {
+            ImGui.Spacing();
+            ImGui.PushStyleColor(ImGuiCol.Text, Theme.Subtle);
+            ImGui.TextWrapped(_dbgLastResult);
+            ImGui.PopStyleColor();
+        }
+    }
+
+    private void SendDebugHunt()
+    {
+        var selected = HuntGroups.All.Where((_, i) => _dbgKinds[i]).ToArray();
+        if (selected.Length == 0)
+        {
+            _dbgLastResult = "No kinds selected — tick at least one expansion checkbox.";
+            return;
+        }
+        var kind = string.Join(", ", selected);
+        var isTrain = _dbgType == 0;
+
+        var content = !string.IsNullOrEmpty(_dbgContent)
+            ? _dbgContent
+            : (isTrain
+                ? $"{kind} train starting at {_dbgZone} ({_dbgCoords}) — simulated"
+                : $"{kind} S Rank spotted at {_dbgZone} ({_dbgCoords}) — simulated");
+
+        var hm = new HuntAlerts.HuntMessage
+        {
+            Type           = isTrain ? "new_hunt" : "srank",
+            Content        = content,
+            World          = _dbgWorld,
+            Kind           = kind,
+            Posted_Epoch   = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+            CreatureName   = _dbgCreature,
+            LocationName   = _dbgZone,
+            LocationCoords = _dbgCoords,
+            AetheriteName  = string.IsNullOrEmpty(_dbgAetheryte) ? "invalid" : _dbgAetheryte,
+            Instance       = isTrain ? 0 : _dbgInstance,
+            DeathTime      = 0,
+            AdditionalData = new Dictionary<string, object>(),
+        };
+
+        Plugin.SimulateHuntMessage(hm);
+        _dbgLastResult = $"Dispatched {(isTrain ? "train" : "S Rank")} for {kind} on '{_dbgWorld}'. Check chat / popup; verbose log captures any scope-filtering reason.";
+    }
+
+    private void ResetDebugFields()
+    {
+        _dbgType       = 0;
+        _dbgKinds      = new[] { false, false, false, true };
+        _dbgWorld      = "";
+        _dbgZone       = "";
+        _dbgAetheryte  = "";
+        _dbgCoords     = "20.0, 20.0";
+        _dbgCreature   = "";
+        _dbgInstance   = 1;
+        _dbgContent    = "";
+        _dbgLastResult = "";
+    }
 }

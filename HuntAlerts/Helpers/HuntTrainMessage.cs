@@ -9,6 +9,7 @@ public class HuntTrainMessage
     public string currentregionName;
     public string huntregionName;
     public string Posted_Time;
+    public long   PostedEpoch;
     public string startLocation;
     public uint startLocationAetheryteId;
     public string startZone;
@@ -19,7 +20,7 @@ public class HuntTrainMessage
 
     public HuntTrainMessage(string message, string huntType, string huntKind, string huntWorld,
         string currentworldName, string currentregionName, string huntregionName, string posted_Time,
-        string startLocation, uint startLocationAetheryteId, string startZone, int instance,
+        long postedEpoch, string startLocation, uint startLocationAetheryteId, string startZone, int instance,
         string locationCoords, bool openmaponArrival, bool lifestreamEnabled)
     {
         this.Message = message;
@@ -30,6 +31,7 @@ public class HuntTrainMessage
         this.currentregionName = currentregionName;
         this.huntregionName = huntregionName;
         this.Posted_Time = posted_Time;
+        this.PostedEpoch = postedEpoch;
         this.startLocation = startLocation;
         this.startLocationAetheryteId = startLocationAetheryteId;
         this.startZone = startZone;

@@ -1,126 +1,57 @@
 using System.Linq;
+using HuntAlerts.Helpers;
 
 namespace HuntAlerts
 {
     public sealed partial class HuntAlerts
     {
         public Configuration Configuration { get; init; }
-        private bool IsDataCenterEnabled(string dataCenter)
+
+        private bool IsDataCenterEnabled(string dataCenter) =>
+            !string.IsNullOrEmpty(dataCenter) && Configuration.EnabledDatacenters.Contains(dataCenter);
+
+        private bool IsWorldEnabled(string world) =>
+            !string.IsNullOrEmpty(world) && Configuration.EnabledWorlds.Contains(world);
+
+        private bool IsTrainGroupEnabled(string huntKinds)
         {
-            return dataCenter switch
+            if (string.IsNullOrEmpty(huntKinds)) return false;
+            foreach (var raw in huntKinds.Split(','))
             {
-                "Aether" => this.Configuration.Aether,
-                "Primal" => this.Configuration.Primal,
-                "Crystal" => this.Configuration.Crystal,
-                "Dynamis" => this.Configuration.Dynamis,
-                "Light" => this.Configuration.Light,
-                "Chaos" => this.Configuration.Chaos,
-                "Materia" => this.Configuration.Materia,
-                _ => false,
-            };
-        }
-        private bool IsWorldEnabled(string world)
-        {
-            return world switch
-            {
-                // Aether
-                "Midgardsormr" => this.Configuration.MidgardsormrWorld,
-                "Faerie" => this.Configuration.FaerieWorld,
-                "Jenova" => this.Configuration.JenovaWorld,
-                "Cactuar" => this.Configuration.CactuarWorld,
-                "Sargatanas" => this.Configuration.SargatanasWorld,
-                "Adamantoise" => this.Configuration.AdamantoiseWorld,
-                "Siren" => this.Configuration.SirenWorld,
-                "Gilgamesh" => this.Configuration.GilgameshWorld,
-
-                // Primal
-                "Behemoth" => this.Configuration.BehemothWorld,
-                "Excalibur" => this.Configuration.ExcaliburWorld,
-                "Exodus" => this.Configuration.ExodusWorld,
-                "Famfrit" => this.Configuration.FamfritWorld,
-                "Hyperion" => this.Configuration.HyperionWorld,
-                "Lamia" => this.Configuration.LamiaWorld,
-                "Leviathan" => this.Configuration.LeviathanWorld,
-                "Ultros" => this.Configuration.UltrosWorld,
-
-                // Crystal
-                "Balmung" => this.Configuration.BalmungWorld,
-                "Brynhildr" => this.Configuration.BrynhildrWorld,
-                "Coeurl" => this.Configuration.CoeurlWorld,
-                "Diabolos" => this.Configuration.DiabolosWorld,
-                "Goblin" => this.Configuration.GoblinWorld,
-                "Malboro" => this.Configuration.MalboroWorld,
-                "Mateus" => this.Configuration.MateusWorld,
-                "Zalera" => this.Configuration.ZaleraWorld,
-
-                // Dynamis
-                "Halicarnassus" => this.Configuration.HalicarnassusWorld,
-                "Maduin" => this.Configuration.MaduinWorld,
-                "Marilith" => this.Configuration.MarilithWorld,
-                "Seraph" => this.Configuration.SeraphWorld,
-                "Cuchulainn" => this.Configuration.CuchulainnWorld,
-                "Golem" => this.Configuration.GolemWorld,
-                "Rafflesia" => this.Configuration.RafflesiaWorld,
-                "Kraken" => this.Configuration.KrakenWorld,
-
-                // Chaos
-                "Cerberus" => this.Configuration.CerberusWorld,
-                "Louisoix" => this.Configuration.LouisoixWorld,
-                "Moogle" => this.Configuration.MoogleWorld,
-                "Omega" => this.Configuration.OmegaWorld,
-                "Phantom" => this.Configuration.PhantomWorld,
-                "Ragnarok" => this.Configuration.RagnarokWorld,
-                "Sagittarius" => this.Configuration.SagittariusWorld,
-                "Spriggan" => this.Configuration.SprigganWorld,
-
-                // Light
-                "Alpha" => this.Configuration.AlphaWorld,
-                "Lich" => this.Configuration.LichWorld,
-                "Odin" => this.Configuration.OdinWorld,
-                "Phoenix" => this.Configuration.PhoenixWorld,
-                "Raiden" => this.Configuration.RaidenWorld,
-                "Shiva" => this.Configuration.ShivaWorld,
-                "Twintania" => this.Configuration.TwintaniaWorld,
-                "Zodiark" => this.Configuration.ZodiarkWorld,
-
-                // Materia
-                "Bismarck" => this.Configuration.BismarckWorld,
-                "Ravana" => this.Configuration.RavanaWorld,
-                "Sephirot" => this.Configuration.SephirotWorld,
-                "Sophia" => this.Configuration.SophiaWorld,
-                "Zurvan" => this.Configuration.ZurvanWorld,
-
-                _ => false,
-            };
-        }
-        private bool IsHuntEnabled(string huntKinds)
-        {
-            // Split the huntKinds string by comma and trim any whitespace
-            var huntTypes = huntKinds.Split(',').Select(h => h.Trim());
-
-            // Check if any of the hunt types are enabled in the configuration
-            foreach (var huntType in huntTypes)
-            {
-                switch (huntType)
-                {
-                    case "Dawntrail":
-                        if (this.Configuration.DawntrailHunts) return true;
-                        break;
-                    case "Endwalker":
-                        if (this.Configuration.EndwalkerHunts) return true;
-                        break;
-                    case "Shadowbringers":
-                        if (this.Configuration.ShadowbringersHunts) return true;
-                        break;
-                    case "Centurio":
-                        if (this.Configuration.CenturioHunts) return true;
-                        break;
-                        // Add cases for other hunt types as necessary
-                }
+                var name = NormalizeGroup(raw.Trim());
+                if (name != null && Configuration.EnabledTrainGroups.Contains(name)) return true;
             }
-
-            // Return false if none of the hunt types are enabled
             return false;
         }
+
+        private bool IsSRankGroupEnabled(string huntKinds)
+        {
+            if (string.IsNullOrEmpty(huntKinds)) return false;
+            foreach (var raw in huntKinds.Split(','))
+            {
+                var name = NormalizeGroup(raw.Trim());
+                if (name != null && Configuration.EnabledSRankGroups.Contains(name)) return true;
+            }
+            return false;
+        }
+
+        public static string? NormalizeGroup(string s)
+        {
+            if (string.IsNullOrWhiteSpace(s)) return null;
+            return s.Trim().ToUpperInvariant() switch
+            {
+                "DAWNTRAIL" or "DT"                          => HuntGroups.Dawntrail,
+                "ENDWALKER" or "EW"                          => HuntGroups.Endwalker,
+                "SHADOWBRINGERS" or "SHB"                    => HuntGroups.Shadowbringers,
+                "CENTURIO"                                    => HuntGroups.Centurio,
+                "STORMBLOOD" or "SB"                         => HuntGroups.Centurio,
+                "HEAVENSWARD" or "HW"                        => HuntGroups.Centurio,
+                "ARR" or "A REALM REBORN" or "REALM REBORN"  => HuntGroups.Centurio,
+                _ => null,
+            };
+        }
+
+        public static string? DatacenterOf(string worldName) =>
+            WorldData.TryGetWorld(worldName, out var info) ? info.Datacenter : null;
     }
 }

@@ -91,9 +91,12 @@ namespace HuntAlerts.Helpers
         private static int _isTaskRunning = 0; // 0 = idle, 1 = running. Use Interlocked.* only.
         public static async void ExecuteTeleport(string world, string startLocation, uint startLocationAetheryteId, string startZone, string locationCoords, int instance, bool openmaponArrival, bool lifestreamEnabled)
         {
+            PluginLog.Information($"[Teleport] ENTER world={world} aetheryte={startLocation}(id={startLocationAetheryteId}) zone={startZone} lifestreamEnabled={lifestreamEnabled} coords={locationCoords}");
+
             // Atomically claim the running slot. If it was already 1, this is a "click while running" — cancel and return.
             if (Interlocked.Exchange(ref _isTaskRunning, 1) == 1)
             {
+                PluginLog.Information("[Teleport] click-while-running detected; cancelling in-flight teleport.");
                 _cancellationTokenSource?.Cancel();
                 Interlocked.Exchange(ref _isTaskRunning, 0);
                 return;
@@ -103,6 +106,7 @@ namespace HuntAlerts.Helpers
             {
                 if (!lifestreamEnabled || !ECommonsIPC.Lifestream.Available)
                 {
+                    PluginLog.Warning($"[Teleport] aborting: lifestreamEnabled={lifestreamEnabled} lifestreamAvailable={ECommonsIPC.Lifestream.Available}");
                     Svc.Chat.Print("Lifestream is required for teleport but is not enabled or installed.");
                     return;
                 }
@@ -117,8 +121,8 @@ namespace HuntAlerts.Helpers
                     PluginLog.Warning($"Player is not available");
                     return;
                 }
-                string currentregionName = HuntAlerts.P.Configuration.DatacenterRegionMap[HuntAlerts.P.Configuration.WorldDatacenterMap[currentworldName]];
-                string huntregionName = HuntAlerts.P.Configuration.DatacenterRegionMap[HuntAlerts.P.Configuration.WorldDatacenterMap[world]];
+                string currentregionName = WorldData.TryGetWorld(currentworldName, out var cwInfo) ? WorldData.RegionLabel(cwInfo.Region) : "";
+                string huntregionName    = WorldData.TryGetWorld(world,            out var hwInfo) ? WorldData.RegionLabel(hwInfo.Region) : "";
 
                 if (huntregionName != currentregionName)
                 {
@@ -127,11 +131,13 @@ namespace HuntAlerts.Helpers
                 }
 
                 bool hasToServerTransfer = currentworldName != world;
+                PluginLog.Information($"[Teleport] currentworld={currentworldName} target={world} hasToServerTransfer={hasToServerTransfer} region={currentregionName}");
                 if (hasToServerTransfer)
                 {
-                    PluginLog.Verbose($"Lifestream ChangeWorld -> {world}");
+                    PluginLog.Information($"[Teleport] calling Lifestream.ChangeWorld('{world}')");
                     if (!ECommonsIPC.Lifestream.ChangeWorld(world))
                     {
+                        PluginLog.Warning($"[Teleport] ChangeWorld rejected by Lifestream.");
                         Svc.Chat.Print($"Lifestream rejected the world change to {world} (busy or unreachable).");
                         return;
                     }
@@ -139,9 +145,11 @@ namespace HuntAlerts.Helpers
 
                 if (startLocationAetheryteId == 0)
                 {
-                    PluginLog.Verbose("No usable aetheryte ID for this hunt; world change done, no teleport will be issued.");
+                    PluginLog.Warning("[Teleport] no aetheryte id; world change done, returning without issuing teleport.");
                     return;
                 }
+
+                PluginLog.Information("[Teleport] entering wait loop for target world arrival + Lifestream not-busy.");
 
                 var startTime = DateTime.Now;
                 while (!token.IsCancellationRequested && (DateTime.Now - startTime).TotalSeconds <= 720)
@@ -153,17 +161,21 @@ namespace HuntAlerts.Helpers
                         currentworldName = Svc.Framework.RunOnFrameworkThread(() => Svc.Objects.LocalPlayer.CurrentWorld.Value.Name.ToString()).Result;
                         PluginLog.Verbose($"Player is logged in. Currentworld: {currentworldName}");
 
-                        if (currentworldName == world && !ECommonsIPC.Lifestream.IsBusy())
+                        var lifestreamBusy = ECommonsIPC.Lifestream.IsBusy();
+                        PluginLog.Information($"[Teleport] poll: currentworld={currentworldName} (need {world}) lifestreamBusy={lifestreamBusy}");
+                        if (currentworldName == world && !lifestreamBusy)
                         {
+                            PluginLog.Information("[Teleport] on target world + Lifestream idle. Waiting for IsTargetable.");
                             var targetableStartTime = DateTime.Now;
                             while (!token.IsCancellationRequested && (DateTime.Now - targetableStartTime).TotalSeconds <= 60)
                             {
                                 bool isTargetable = Svc.Framework.RunOnFrameworkThread(() => Svc.Objects.LocalPlayer.IsTargetable).Result;
                                 if (isTargetable)
                                 {
-                                    PluginLog.Verbose($"On hunt world; teleporting to aetheryte {startLocation} (id {startLocationAetheryteId})");
+                                    PluginLog.Information($"[Teleport] player targetable. Will teleport to aetheryte '{startLocation}' (id {startLocationAetheryteId}).");
                                     if (hasToServerTransfer)
                                     {
+                                        PluginLog.Information("[Teleport] post-transfer settle: sleeping 2s.");
                                         await Task.Delay(2000, token);
                                     }
 
@@ -172,9 +184,15 @@ namespace HuntAlerts.Helpers
                                     var teleportIssueStart = DateTime.Now;
                                     while (!token.IsCancellationRequested && ECommonsIPC.Lifestream.IsBusy() && (DateTime.Now - teleportIssueStart).TotalSeconds <= 10)
                                     {
+                                        PluginLog.Information("[Teleport] waiting for Lifestream to clear (IsBusy)...");
                                         await Task.Delay(500, token);
                                     }
-                                    if (!ECommonsIPC.Lifestream.Teleport(startLocationAetheryteId, 0))
+                                    var stillBusy = ECommonsIPC.Lifestream.IsBusy();
+                                    PluginLog.Information($"[Teleport] calling Lifestream.Teleport({startLocationAetheryteId}, 0). IsBusy at call time = {stillBusy}");
+                                    var teleportResult = await Svc.Framework.RunOnFrameworkThread(
+                                        () => ECommonsIPC.Lifestream.Teleport(startLocationAetheryteId, 0));
+                                    PluginLog.Information($"[Teleport] Lifestream.Teleport returned {teleportResult}.");
+                                    if (!teleportResult)
                                     {
                                         Svc.Chat.Print($"Lifestream rejected teleport to {startLocation}.");
                                         return;
