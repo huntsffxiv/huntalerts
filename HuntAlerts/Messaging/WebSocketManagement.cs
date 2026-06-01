@@ -478,7 +478,7 @@ namespace HuntAlerts
                     detail, hm.Type, hm.Kind, hm.World,
                     playerCtx.CurrentWorld ?? "", currentRegion, huntRegion,
                     postedLocal, hm.Posted_Epoch, startLocation, aetheryteId, locationName, instance,
-                    coordsStr, openMapOnArrival, lifestreamHooked);
+                    coordsStr, openMapOnArrival, lifestreamHooked, creatureName);
 
                 var link = P.MessageCacheManager.AddMessage(htMessage);
                 Service.IPCManager.OnHuntTrainMessageReceived(htMessage);

@@ -1,5 +1,6 @@
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
+using Dalamud.Interface.Components;
 using Dalamud.Interface.Windowing;
 using ECommons.Logging;
 using HuntAlerts.Helpers;
@@ -23,6 +24,13 @@ public class NotifyWindow : Window
             MinimumSize = new Vector2(360, 240),
             MaximumSize = new Vector2(900, 1400),
         };
+        TitleBarButtons.Add(new TitleBarButton
+        {
+            Icon        = FontAwesomeIcon.Cog,
+            IconOffset  = new Vector2(2, 1),
+            Click       = _ => HuntAlerts.P.DrawConfigUI(),
+            ShowTooltip = () => ImGui.SetTooltip("Open settings"),
+        });
         _snoozeButton = new TitleBarButton
         {
             Icon        = FontAwesomeIcon.Bell,
@@ -48,7 +56,7 @@ public class NotifyWindow : Window
     private static string SnoozeTooltipText()
     {
         if (HuntAlerts.P.IsSnoozed)
-            return $"Snoozed — {Math.Ceiling(HuntAlerts.P.SnoozeRemaining.TotalMinutes)}m remaining. Click to wake.";
+            return $"Snoozed -{Math.Ceiling(HuntAlerts.P.SnoozeRemaining.TotalMinutes)}m remaining. Click to wake.";
         var d = HuntAlerts.P.Configuration?.SnoozeDefaultMinutes ?? 30;
         return $"Snooze alerts for {d}m";
     }
@@ -121,6 +129,8 @@ public class NotifyWindow : Window
 
     private static void DrawStructuredFields(HuntTrainMessage entry)
     {
+        if (!string.IsNullOrEmpty(entry.creatureName))
+            Components.FieldRow("Creature",  entry.creatureName);
         if (!string.IsNullOrEmpty(entry.startZone))
             Components.FieldRow("Zone",      entry.startZone);
         if (!string.IsNullOrEmpty(entry.locationCoords))
@@ -173,5 +183,41 @@ public class NotifyWindow : Window
         if (!first) ImGui.SameLine();
         if (Components.ActionButton(FontAwesomeIcon.Users, "Party Finder", ButtonRole.Info))
             Utilities.OpenPartyFinder();
+
+        ImGui.SameLine();
+        var defaultChannel = string.IsNullOrEmpty(HuntAlerts.P.Configuration.DefaultRelayChannel)
+            ? "/p"
+            : HuntAlerts.P.Configuration.DefaultRelayChannel;
+        var defaultDisplay = RelayChannels.DisplayFor(defaultChannel);
+        if (Components.ActionButton(FontAwesomeIcon.Bullhorn, "Relay", ButtonRole.Success))
+            RelayChannels.RelayMessage(entry, defaultChannel);
+        if (ImGui.IsItemHovered())
+            ImGui.SetTooltip($"Relay to {defaultDisplay}");
+
+        ImGui.SameLine(0, 2);
+        ImGui.PushStyleColor(ImGuiCol.Button,        Theme.SuccessBtn);
+        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, Theme.SuccessBtnHover);
+        ImGui.PushStyleColor(ImGuiCol.ButtonActive,  Theme.SuccessBtnActive);
+        if (ImGuiComponents.IconButton("##relayChevron", FontAwesomeIcon.ChevronUp))
+            ImGui.OpenPopup("##relayPicker");
+        ImGui.PopStyleColor(3);
+        if (ImGui.IsItemHovered())
+            ImGui.SetTooltip("Pick a one-off relay channel");
+
+        if (ImGui.BeginPopup("##relayPicker"))
+        {
+            ImGui.PushStyleColor(ImGuiCol.Text, Theme.Subtle);
+            ImGui.TextUnformatted($"Default: {defaultDisplay}");
+            ImGui.PopStyleColor();
+            ImGui.Separator();
+            foreach (var ch in RelayChannels.All)
+            {
+                if (ImGui.MenuItem($"{ch.Display}  {ch.Command}"))
+                {
+                    RelayChannels.RelayMessage(entry, ch.Command);
+                }
+            }
+            ImGui.EndPopup();
+        }
     }
 }

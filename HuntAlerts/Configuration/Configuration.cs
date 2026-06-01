@@ -57,6 +57,7 @@ namespace HuntAlerts
         public HashSet<string> EnabledSRankWorlds       { get; set; } = new();
 
         public int SnoozeDefaultMinutes { get; set; } = 30;
+        public string DefaultRelayChannel { get; set; } = "/p";
 
         [NonSerialized]
         private IDalamudPluginInterface? PluginInterface;

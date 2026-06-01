@@ -51,11 +51,12 @@ internal static class Components
     {
         var (b, h, a) = role switch
         {
-            ButtonRole.Accent => (Theme.AccentBtn, Theme.AccentBtnHover, Theme.AccentBtnActive),
-            ButtonRole.Warn   => (Theme.WarnBtn,   Theme.WarnBtnHover,   Theme.WarnBtnActive),
-            ButtonRole.Info   => (Theme.InfoBtn,   Theme.InfoBtnHover,   Theme.InfoBtnActive),
-            ButtonRole.Danger => (Theme.DangerBtn, Theme.DangerBtnHover, Theme.DangerBtnActive),
-            _                 => (Theme.AccentBtn, Theme.AccentBtnHover, Theme.AccentBtnActive),
+            ButtonRole.Accent  => (Theme.AccentBtn,  Theme.AccentBtnHover,  Theme.AccentBtnActive),
+            ButtonRole.Warn    => (Theme.WarnBtn,    Theme.WarnBtnHover,    Theme.WarnBtnActive),
+            ButtonRole.Info    => (Theme.InfoBtn,    Theme.InfoBtnHover,    Theme.InfoBtnActive),
+            ButtonRole.Danger  => (Theme.DangerBtn,  Theme.DangerBtnHover,  Theme.DangerBtnActive),
+            ButtonRole.Success => (Theme.SuccessBtn, Theme.SuccessBtnHover, Theme.SuccessBtnActive),
+            _                  => (Theme.AccentBtn,  Theme.AccentBtnHover,  Theme.AccentBtnActive),
         };
         ImGui.PushStyleColor(ImGuiCol.Button,        b);
         ImGui.PushStyleColor(ImGuiCol.ButtonHovered, h);

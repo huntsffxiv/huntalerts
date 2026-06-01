@@ -17,11 +17,12 @@ public class HuntTrainMessage
     public string locationCoords;
     public bool openmaponArrival;
     public bool lifestreamEnabled;
+    public string creatureName;
 
     public HuntTrainMessage(string message, string huntType, string huntKind, string huntWorld,
         string currentworldName, string currentregionName, string huntregionName, string posted_Time,
         long postedEpoch, string startLocation, uint startLocationAetheryteId, string startZone, int instance,
-        string locationCoords, bool openmaponArrival, bool lifestreamEnabled)
+        string locationCoords, bool openmaponArrival, bool lifestreamEnabled, string creatureName = "")
     {
         this.Message = message;
         this.huntType = huntType;
@@ -39,5 +40,6 @@ public class HuntTrainMessage
         this.locationCoords = locationCoords;
         this.openmaponArrival = openmaponArrival;
         this.lifestreamEnabled = lifestreamEnabled;
+        this.creatureName = creatureName ?? "";
     }
 }
