@@ -58,8 +58,10 @@ namespace HuntAlerts
             _socket = new SocketIOClient.SocketIO(serverURI, new SocketIOOptions
             {
                 Reconnection = true,
-                ReconnectionAttempts = 5,
-                ReconnectionDelay = 5000,
+                ReconnectionAttempts = int.MaxValue,
+                ReconnectionDelay = 1000,
+                ReconnectionDelayMax = 300000,
+                RandomizationFactor = 0.5,
             });
 
             _socket.OnConnected         += (_, _) =>
