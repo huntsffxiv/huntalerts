@@ -103,6 +103,17 @@ public class ConfigWindow : Window, IDisposable
             ImGui.SameLine();
             ImGui.TextUnformatted(label);
         }
+
+        var btnHeight = ImGui.GetFrameHeight() + 4f;
+        var avail = ImGui.GetContentRegionAvail();
+        if (avail.Y > btnHeight + 8f)
+            ImGui.Dummy(new Vector2(0, avail.Y - btnHeight - 4f));
+
+        ImGui.Separator();
+        if (Components.ActionButton(FontAwesomeIcon.Comments, "Discord", ButtonRole.Accent))
+            Dalamud.Utility.Util.OpenLink("https://discord.gg/punishxiv");
+        if (ImGui.IsItemHovered())
+            ImGui.SetTooltip("Open the PunishXIV Discord — ask in #Asuna-plugins for HuntAlerts support");
     }
 
     private void DrawCurrentPage()

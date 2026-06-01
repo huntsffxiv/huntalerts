@@ -62,6 +62,7 @@ namespace HuntAlerts
                 ReconnectionDelay = 1000,
                 ReconnectionDelayMax = 300000,
                 RandomizationFactor = 0.5,
+                Transport = SocketIOClient.Transport.TransportProtocol.WebSocket,
             });
 
             _socket.OnConnected         += (_, _) =>
