@@ -115,7 +115,7 @@ public class ConfigWindow : Window, IDisposable
         if (Components.ActionButton(FontAwesomeIcon.Comments, "Discord", ButtonRole.Accent))
             Dalamud.Utility.Util.OpenLink("https://discord.gg/punishxiv");
         if (ImGui.IsItemHovered())
-            ImGui.SetTooltip("Open the PunishXIV Discord — ask in #Asuna-plugins for HuntAlerts support");
+            ImGui.SetTooltip("Open the PunishXIV Discord - ask in #Asuna-plugins for HuntAlerts support");
     }
 
     private void DrawCurrentPage()
@@ -158,6 +158,11 @@ public class ConfigWindow : Window, IDisposable
         if (ImGui.Combo("Chat Channel", ref chatIdx, chatNames, chatNames.Length))
         { Configuration.OutputChat = chatTypes[chatIdx]; Configuration.Save(); }
         ImGui.EndDisabled();
+
+        var relayNames = RelayChannels.All.Select(c => $"{c.Display}  {c.Command}").ToArray();
+        var relayIdx   = RelayChannels.IndexOfCommand(Configuration.DefaultRelayChannel);
+        if (ImGui.Combo("Default Relay Channel", ref relayIdx, relayNames, relayNames.Length))
+        { Configuration.DefaultRelayChannel = RelayChannels.All[relayIdx].Command; Configuration.Save(); }
 
         var colorOpts = new (string Name, int Value)[]
         {
@@ -344,7 +349,7 @@ public class ConfigWindow : Window, IDisposable
         if (dcs.Count == 0)
         {
             ImGui.PushStyleColor(ImGuiCol.Text, Theme.Subtle);
-            ImGui.TextWrapped("No world data available. (Lumina sheets may not be loaded yet — try reopening the window after the game finishes loading.)");
+            ImGui.TextWrapped("No world data available. (Lumina sheets may not be loaded yet - try reopening the window after the game finishes loading.)");
             ImGui.PopStyleColor();
             return;
         }
@@ -618,7 +623,7 @@ public class ConfigWindow : Window, IDisposable
         var selected = HuntGroups.All.Where((_, i) => _dbgKinds[i]).ToArray();
         if (selected.Length == 0)
         {
-            _dbgLastResult = "No kinds selected — tick at least one expansion checkbox.";
+            _dbgLastResult = "No kinds selected - tick at least one expansion checkbox.";
             return;
         }
         var kind = string.Join(", ", selected);
@@ -627,8 +632,8 @@ public class ConfigWindow : Window, IDisposable
         var content = !string.IsNullOrEmpty(_dbgContent)
             ? _dbgContent
             : (isTrain
-                ? $"{kind} train starting at {_dbgZone} ({_dbgCoords}) — simulated"
-                : $"{kind} S Rank spotted at {_dbgZone} ({_dbgCoords}) — simulated");
+                ? $"{kind} train starting at {_dbgZone} ({_dbgCoords}) - simulated"
+                : $"{kind} S Rank spotted at {_dbgZone} ({_dbgCoords}) - simulated");
 
         var hm = new HuntAlerts.HuntMessage
         {

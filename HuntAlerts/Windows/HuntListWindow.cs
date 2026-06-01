@@ -22,6 +22,13 @@ public class HuntListWindow : Window
             MinimumSize = new Vector2(380, 260),
             MaximumSize = new Vector2(1200, 1600),
         };
+        TitleBarButtons.Add(new TitleBarButton
+        {
+            Icon        = FontAwesomeIcon.Cog,
+            IconOffset  = new Vector2(2, 1),
+            Click       = _ => HuntAlerts.P.DrawConfigUI(),
+            ShowTooltip = () => ImGui.SetTooltip("Open settings"),
+        });
         _snoozeButton = new TitleBarButton
         {
             Icon        = FontAwesomeIcon.Bell,
@@ -40,7 +47,7 @@ public class HuntListWindow : Window
     private static string SnoozeTooltipText()
     {
         if (HuntAlerts.P.IsSnoozed)
-            return $"Snoozed — {Math.Ceiling(HuntAlerts.P.SnoozeRemaining.TotalMinutes)}m remaining. Click to wake.";
+            return $"Snoozed -{Math.Ceiling(HuntAlerts.P.SnoozeRemaining.TotalMinutes)}m remaining. Click to wake.";
         var d = HuntAlerts.P.Configuration?.SnoozeDefaultMinutes ?? 30;
         return $"Snooze alerts for {d}m";
     }
@@ -114,7 +121,7 @@ public class HuntListWindow : Window
             ImGui.PopFont();
             ImGui.SameLine();
             ImGui.PushStyleColor(ImGuiCol.Text, Theme.AccentBtn);
-            ImGui.TextUnformatted($" Snoozed — {remainingMin}m left");
+            ImGui.TextUnformatted($" Snoozed -{remainingMin}m left");
             ImGui.PopStyleColor();
             ImGui.SameLine();
             if (Components.ActionButton(FontAwesomeIcon.Sun, "Wake", ButtonRole.Accent))

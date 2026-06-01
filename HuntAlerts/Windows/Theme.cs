@@ -47,6 +47,10 @@ internal static class Theme
     public static readonly uint DangerBtnHover    = 0xFF5D5DD5;
     public static readonly uint DangerBtnActive   = 0xFF2D2D8D;
 
+    public static readonly uint SuccessBtn        = 0xFF3CA63C;
+    public static readonly uint SuccessBtnHover   = 0xFF5CC65C;
+    public static readonly uint SuccessBtnActive  = 0xFF2C862C;
+
     public static Vector2 BadgePadding => new(6, 1);
 
     public static readonly uint CardBg        = 0x18FFFFFF;
@@ -56,4 +60,4 @@ internal static class Theme
 
 internal enum BadgeStyle { SRank, Train, Kind, World }
 
-internal enum ButtonRole { Accent, Warn, Info, Danger }
+internal enum ButtonRole { Accent, Warn, Info, Danger, Success }
