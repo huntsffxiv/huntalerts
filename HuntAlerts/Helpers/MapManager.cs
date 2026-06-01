@@ -80,6 +80,23 @@ public static class MapManager
         return null;
     }
 
+    public static (uint RowId, string Name, string ZoneName)? LookupAetheryteByNameAnywhere(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return null;
+        foreach (var data in Svc.Data.GetExcelSheet<Aetheryte>())
+        {
+            if (!data.IsAetheryte) continue;
+            if (data.PlaceName.ValueNullable == null) continue;
+            var n = data.PlaceName.ValueNullable?.Name.ToString() ?? "";
+            if (n.EqualsIgnoreCase(name))
+            {
+                var zoneName = data.Territory.ValueNullable?.PlaceName.ValueNullable?.Name.ToString() ?? "";
+                return (data.RowId, n, zoneName);
+            }
+        }
+        return null;
+    }
+
     public static float ConvertMapMarkerToMapCoordinate(int pos, float scale)
     {
         var num = scale / 100f;

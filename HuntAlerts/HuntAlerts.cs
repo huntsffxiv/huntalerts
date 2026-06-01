@@ -40,7 +40,7 @@ namespace HuntAlerts
         {
             P = this;
             ECommonsMain.Init(pluginInterface, this);
-            this.Configuration = Svc.PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
+            this.Configuration = ConfigMigrator.LoadOrMigrate();
             this.Configuration.Initialize(Svc.PluginInterface);
 
 
@@ -109,10 +109,13 @@ namespace HuntAlerts
             {
                 ConfigWindow.IsOpen = true;
             }
+            else if(args.EqualsIgnoreCaseAny("debug", "d"))
+            {
+                ConfigWindow.OpenDebug();
+            }
             else
             {
                 HuntListWindow.IsOpen = true;
-                //DisplayMessagesNewestToOldest();
             }
             // in response to the slash command, just display our main ui
             

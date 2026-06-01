@@ -1,91 +1,177 @@
-using Dalamud.Interface.Windowing;
-using ECommons;
-using ECommons.Automation;
-using ECommons.DalamudServices;
-using ECommons.ExcelServices;
-using ECommons.ImGuiMethods;
-using ECommons.Logging;
-using ECommons.Throttlers;
-using FFXIVClientStructs.FFXIV.Component.GUI;
-using HuntAlerts.Helpers;
 using Dalamud.Bindings.ImGui;
-using Lumina.Excel.Sheets;
+using Dalamud.Interface;
+using Dalamud.Interface.Windowing;
+using ECommons.Logging;
+using HuntAlerts.Helpers;
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Numerics;
-using System.Threading;
-using System.Threading.Tasks;
-
-
 
 namespace HuntAlerts.Windows;
+
 public class NotifyWindow : Window
 {
     public HuntTrainMessage CurrentMessage;
 
-    public NotifyWindow() : base("HuntAlerts Notification", ImGuiWindowFlags.None)
+    private readonly TitleBarButton _snoozeButton;
+
+    public NotifyWindow() : base("HuntAlerts Notification", ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse)
     {
+        Size          = new Vector2(440, 360);
+        SizeCondition = ImGuiCond.FirstUseEver;
+        SizeConstraints = new WindowSizeConstraints
+        {
+            MinimumSize = new Vector2(360, 240),
+            MaximumSize = new Vector2(900, 1400),
+        };
+        _snoozeButton = new TitleBarButton
+        {
+            Icon        = FontAwesomeIcon.Bell,
+            IconOffset  = new Vector2(2, 1),
+            Click       = _ => HuntAlerts.P.ToggleSnooze(),
+            ShowTooltip = () => ImGui.SetTooltip(SnoozeTooltipText()),
+        };
+        TitleBarButtons.Add(_snoozeButton);
+        TitleBarButtons.Add(new TitleBarButton
+        {
+            Icon        = FontAwesomeIcon.History,
+            IconOffset  = new Vector2(2, 1),
+            Click       = _ => HuntAlerts.P.HuntListWindow.IsOpen = true,
+            ShowTooltip = () => ImGui.SetTooltip("Recent Hunts"),
+        });
     }
 
     public override void PreDraw()
     {
-        ImGui.SetNextWindowSize(new(400, 200), ImGuiCond.FirstUseEver);
+        _snoozeButton.Icon = HuntAlerts.P.IsSnoozed ? FontAwesomeIcon.BellSlash : FontAwesomeIcon.Bell;
+    }
+
+    private static string SnoozeTooltipText()
+    {
+        if (HuntAlerts.P.IsSnoozed)
+            return $"Snoozed — {Math.Ceiling(HuntAlerts.P.SnoozeRemaining.TotalMinutes)}m remaining. Click to wake.";
+        var d = HuntAlerts.P.Configuration?.SnoozeDefaultMinutes ?? 30;
+        return $"Snooze alerts for {d}m";
     }
 
     public override void Draw()
     {
         var entry = CurrentMessage;
-        if (entry != null)
+        if (entry == null)
         {
-            string message = entry.Message;
-            string world = entry.huntWorld;
-            string currentworldName = entry.currentworldName;
-            string currentregionName = entry.currentregionName;
-            string huntregionname = entry.huntregionName;
-            string startLocation = entry.startLocation;
-            uint startLocationAetheryteId = entry.startLocationAetheryteId;
-            string startZone = entry.startZone;
-            int instance = entry.instance;
-            bool lifestreamEnabled = entry.lifestreamEnabled;
-            string locationCoords = entry.locationCoords;
-            bool openmaponArrival = entry.openmaponArrival;
+            ImGui.PushStyleColor(ImGuiCol.Text, Theme.Subtle);
+            ImGui.TextWrapped("Could not find requested entry.");
+            ImGui.PopStyleColor();
+            return;
+        }
 
-            if (currentregionName == huntregionname && lifestreamEnabled && startLocationAetheryteId != 0)
+        var isTrain = entry.huntType == "new_hunt";
+
+        DrawHero(entry, isTrain);
+        ImGui.Spacing();
+        DrawTagStrip(entry);
+        ImGui.Spacing();
+
+        var footerHeight = ImGui.GetFrameHeightWithSpacing() + ImGui.GetStyle().ItemSpacing.Y * 2;
+        var midHeight    = Math.Max(40f, ImGui.GetContentRegionAvail().Y - footerHeight);
+
+        if (ImGui.BeginChild("##notifyMid", new Vector2(0, midHeight), false))
+        {
+            if (isTrain)
             {
-                ImGuiEx.RightFloat(() =>
-                {
-                    if (ImGui.Button($"Teleport to Hunt"))
-                    {
-                        PluginLog.Verbose($"Attempting to use lifestream teleport");
-                        Utilities.ExecuteTeleport(world, startLocation, startLocationAetheryteId, startZone, locationCoords, instance, openmaponArrival, lifestreamEnabled);
-                    }
-                });
+                ImGui.PushStyleColor(ImGuiCol.Text, Theme.Text);
+                ImGui.PushTextWrapPos();
+                ImGui.TextUnformatted(entry.Message);
+                ImGui.PopTextWrapPos();
+                ImGui.PopStyleColor();
             }
-
-            ImGui.PushTextWrapPos();
-            ImGui.TextUnformatted(message);
-            ImGui.PopTextWrapPos();
-
-            if (locationCoords != "")
+            else
             {
-                if (ImGui.Button($"Flag on Map"))
-                {
-                    Utilities.FlagOnMap(locationCoords, startZone);
-                }
-            }
-
-            if (ImGui.Button("Open PartyFinder"))
-            {
-                Utilities.OpenPartyFinder();
+                DrawStructuredFields(entry);
             }
         }
-        else
+        ImGui.EndChild();
+
+        ImGui.Separator();
+        DrawActions(entry);
+    }
+
+    private static void DrawHero(HuntTrainMessage entry, bool isTrain)
+    {
+        var (badgeText, style, title) = isTrain
+            ? ("TRAIN",  BadgeStyle.Train, $"{entry.huntKind} train")
+            : ("S RANK", BadgeStyle.SRank, $"{entry.huntKind} S Rank");
+        Components.Badge(badgeText, style);
+        ImGui.SameLine();
+        ImGui.PushFont(UiBuilder.DefaultFont);
+        ImGui.TextUnformatted(title);
+        ImGui.PopFont();
+    }
+
+    private static void DrawTagStrip(HuntTrainMessage entry)
+    {
+        Components.Badge(entry.huntKind ?? "", BadgeStyle.Kind);
+        ImGui.SameLine();
+        Components.Badge(entry.huntWorld ?? "", BadgeStyle.World);
+        if (entry.instance > 1)
         {
-            ImGui.Text($"Could not find requested entry");
+            ImGui.SameLine();
+            Components.Badge($"i{entry.instance}", BadgeStyle.Kind);
         }
     }
 
+    private static void DrawStructuredFields(HuntTrainMessage entry)
+    {
+        if (!string.IsNullOrEmpty(entry.startZone))
+            Components.FieldRow("Zone",      entry.startZone);
+        if (!string.IsNullOrEmpty(entry.locationCoords))
+            Components.FieldRow("Coords",    entry.locationCoords);
+        if (!string.IsNullOrEmpty(entry.startLocation))
+            Components.FieldRow("Aetheryte", entry.startLocation);
+        if (!string.IsNullOrEmpty(entry.Posted_Time))
+            Components.FieldRow("Posted",    entry.Posted_Time);
 
+        ImGui.Spacing();
+        ImGui.PushStyleColor(ImGuiCol.Text, Theme.Subtle);
+        ImGui.PushTextWrapPos();
+        ImGui.TextUnformatted(entry.Message);
+        ImGui.PopTextWrapPos();
+        ImGui.PopStyleColor();
+    }
 
+    private static void DrawActions(HuntTrainMessage entry)
+    {
+        var canTeleport =
+            entry.lifestreamEnabled &&
+            !string.IsNullOrEmpty(entry.huntWorld) &&
+            !string.IsNullOrEmpty(entry.currentregionName) &&
+            entry.currentregionName == entry.huntregionName;
+
+        var first = true;
+
+        if (canTeleport)
+        {
+            var label = entry.startLocationAetheryteId != 0 ? "Teleport" : "Change World";
+            if (Components.ActionButton(FontAwesomeIcon.Rocket, label, ButtonRole.Accent))
+            {
+                PluginLog.Verbose("Attempting Lifestream teleport / world change from NotifyWindow");
+                Utilities.ExecuteTeleport(
+                    entry.huntWorld, entry.startLocation, entry.startLocationAetheryteId,
+                    entry.startZone, entry.locationCoords, entry.instance,
+                    entry.openmaponArrival, entry.lifestreamEnabled);
+            }
+            first = false;
+        }
+
+        if (!string.IsNullOrEmpty(entry.locationCoords))
+        {
+            if (!first) ImGui.SameLine();
+            if (Components.ActionButton(FontAwesomeIcon.MapMarkerAlt, "Flag on Map", ButtonRole.Warn))
+                Utilities.FlagOnMap(entry.locationCoords, entry.startZone);
+            first = false;
+        }
+
+        if (!first) ImGui.SameLine();
+        if (Components.ActionButton(FontAwesomeIcon.Users, "Party Finder", ButtonRole.Info))
+            Utilities.OpenPartyFinder();
+    }
 }

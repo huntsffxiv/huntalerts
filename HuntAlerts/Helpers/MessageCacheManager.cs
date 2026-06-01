@@ -1,99 +1,111 @@
 using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Game.Text.SeStringHandling.Payloads;
-using ECommons.CircularBuffers;
 using ECommons.DalamudServices;
+using ECommons.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
-using ECommons.Logging;
-using System.Security.Cryptography.X509Certificates;
-using FFXIVClientStructs.FFXIV.Client.Graphics.Scene;
 
 namespace HuntAlerts.Helpers;
-#pragma warning disable IDE1006,IDE0040,IDE0044
-public class MessageCacheManager : IDisposable //IDisposable because we will need to indicate that this class is to be manually disposed, it's not required but considered good to add
-{
 
+#pragma warning disable IDE1006, IDE0040, IDE0044
+public class MessageCacheManager : IDisposable
+{
     [DllImport("user32.dll")]
     private static extern short GetKeyState(int nVirtKey);
 
-    private const int VK_CONTROL = 0x11; // Virtual-Key Code for the Control key
+    private const int VK_CONTROL = 0x11;
+    private const int Capacity   = 50;
 
-    DalamudLinkPayload[] PayloadList = new DalamudLinkPayload[20]; //initialize 20 cache entries
-    HuntTrainMessage[] Messages = new HuntTrainMessage[20]; //initialize 20 cache entries
-    int CommandCount = 0; // track command count
+    private readonly DalamudLinkPayload[] PayloadList = new DalamudLinkPayload[Capacity];
+    private readonly HuntTrainMessage?[]  Messages    = new HuntTrainMessage?[Capacity];
+    private int CommandCount = 0;
 
     public MessageCacheManager()
     {
-        for (var i = 0u; i < 20; i++) 
+        for (var i = 0u; i < Capacity; i++)
         {
-            PayloadList[i] = Svc.Chat.AddChatLinkHandler(i, ProcessLinkPayload); //we are registering 20 commands here
+            PayloadList[i] = Svc.Chat.AddChatLinkHandler(i, ProcessLinkPayload);
         }
+        LoadFromDisk();
+    }
+
+    private void LoadFromDisk()
+    {
+        var saved = HistoryStore.TryLoad();
+        if (saved == null) return;
+
+        var slots = saved.Slots;
+        var copy  = Math.Min(slots.Length, Capacity);
+        for (var i = 0; i < copy; i++)
+        {
+            Messages[i] = slots[i];
+        }
+
+        CommandCount = saved.Capacity == Capacity ? saved.CommandCount : copy;
+        PluginLog.Verbose($"HistoryStore: restored {Messages.Count(m => m != null)} events; CommandCount={CommandCount}.");
+    }
+
+    private void SaveToDisk()
+    {
+        HistoryStore.Save(Capacity, CommandCount, Messages);
     }
 
     public DalamudLinkPayload AddMessage(HuntTrainMessage message)
     {
-        var nextCommand = CommandCount % 20; //real counter will reset every 20 messages
-        CommandCount++; //increase counter to indicate which slot should be used next time
-        Messages[nextCommand] = message; //store the message
-        return PayloadList[nextCommand]; //return link payload to the caller
+        var nextCommand = CommandCount % Capacity;
+        CommandCount++;
+        Messages[nextCommand] = message;
+        SaveToDisk();
+        return PayloadList[nextCommand];
     }
 
     void ProcessLinkPayload(uint cmd, SeString str)
     {
-        bool? lifestreamInstalled = Svc.PluginInterface.InstalledPlugins.FirstOrDefault(x => x.InternalName == "Lifestream")?.IsLoaded;
-        bool ctrlHeld = (GetKeyState(VK_CONTROL) & 0x8000) != 0;
-        bool ctrlclickTeleport = HuntAlerts.P.Configuration.ctrlclickTeleport
-            && lifestreamInstalled == true
-            && HuntAlerts.P.Configuration.LifestreamIntegration;
+        if (cmd >= Capacity || Messages[cmd] == null) return;
 
-        if (Messages[cmd] != null)
+        var lifestreamInstalled = Svc.PluginInterface.InstalledPlugins.FirstOrDefault(x => x.InternalName == "Lifestream")?.IsLoaded == true;
+        var ctrlHeld = (GetKeyState(VK_CONTROL) & 0x8000) != 0;
+        var ctrlClickTeleport = HuntAlerts.P.Configuration.ctrlclickTeleport
+                             && lifestreamInstalled
+                             && HuntAlerts.P.Configuration.LifestreamIntegration;
+
+        var msg = Messages[cmd]!;
+
+        if (ctrlHeld && ctrlClickTeleport)
         {
-            if (ctrlHeld && ctrlclickTeleport)
-            {
-                var world = Messages[cmd].huntWorld;
-                var startLocation = Messages[cmd].startLocation;
-                var startLocationAetheryteId = Messages[cmd].startLocationAetheryteId;
-                var startZone = Messages[cmd].startZone;
-                var locationCoords = Messages[cmd].locationCoords;
-                var openmaponArrival = Messages[cmd].openmaponArrival;
-                var lifestreamEnabled = Messages[cmd].lifestreamEnabled;
-                var instance = Messages[cmd].instance;
-
-                PluginLog.Verbose("Ctrl key is held down. attempting to teleport");
-                Utilities.ExecuteTeleport(world, startLocation, startLocationAetheryteId, startZone, locationCoords, instance, openmaponArrival, lifestreamEnabled);
-            }
-            else
-            {
-                HuntAlerts.P.NotifyWindow.IsOpen = true;
-                HuntAlerts.P.NotifyWindow.CurrentMessage = Messages[cmd];
-            }
+            PluginLog.Verbose("Ctrl-click teleport from chat link.");
+            Utilities.ExecuteTeleport(
+                msg.huntWorld, msg.startLocation, msg.startLocationAetheryteId,
+                msg.startZone, msg.locationCoords, msg.instance,
+                msg.openmaponArrival, msg.lifestreamEnabled);
+        }
+        else
+        {
+            HuntAlerts.P.NotifyWindow.IsOpen        = true;
+            HuntAlerts.P.NotifyWindow.CurrentMessage = msg;
         }
     }
 
     public List<HuntTrainMessage> GetOrderedMessages()
     {
-        List<HuntTrainMessage> orderedMessages = new List<HuntTrainMessage>();
-        int oldestIndex = CommandCount % 20; // Index of the oldest message
+        var ordered = new List<HuntTrainMessage>();
+        var stored  = Math.Min(CommandCount, Capacity);
 
-        // Iterate over the Messages array starting from the oldest message
-        for (int i = 0; i < 20; i++)
+        for (var i = 1; i <= stored; i++)
         {
-            int currentIndex = (oldestIndex + i) % 20; // Calculate the current index based on the oldest index
-            if (Messages[currentIndex] != null)
-            {
-                orderedMessages.Add(Messages[currentIndex]);
-            }
+            var idx = (CommandCount - i) % Capacity;
+            if (idx < 0) idx += Capacity;
+            var msg = Messages[idx];
+            if (msg != null) ordered.Add(msg);
         }
-
-        return orderedMessages;
+        ordered.Reverse();
+        return ordered;
     }
 
-    public void Dispose() 
+    public void Dispose()
     {
-        Svc.Chat.RemoveChatLinkHandler(); 
+        Svc.Chat.RemoveChatLinkHandler();
     }
 }
