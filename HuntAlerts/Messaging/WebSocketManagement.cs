@@ -371,15 +371,42 @@ namespace HuntAlerts
 
             var playerCtx = SnapshotPlayer();
             var huntDc    = DatacenterOf(hm.World);
-            if (playerCtx.CurrentDatacenter == null || playerCtx.CurrentDatacenter != huntDc)
+
+            switch (Configuration.SRankScope)
             {
-                PluginLog.Verbose("S Rank not on player's current DC; suppressed.");
-                return;
-            }
-            if (Configuration.SRankCurrentWorld && playerCtx.CurrentWorld != hm.World)
-            {
-                PluginLog.Verbose("S Rank: SRankCurrentWorld true, not on player's world.");
-                return;
+                case ScopeMode.AllConfigured:
+                    if (huntDc == null || !IsSRankDataCenterEnabled(huntDc))
+                    {
+                        PluginLog.Verbose($"S Rank DC '{huntDc}' not enabled.");
+                        return;
+                    }
+                    if (!IsSRankWorldEnabled(hm.World))
+                    {
+                        PluginLog.Verbose($"S Rank world '{hm.World}' not enabled.");
+                        return;
+                    }
+                    break;
+                case ScopeMode.CurrentDatacenterOnly:
+                    if (playerCtx.CurrentDatacenter == null || playerCtx.CurrentDatacenter != huntDc)
+                    {
+                        PluginLog.Verbose("S Rank not on player's current DC.");
+                        return;
+                    }
+                    break;
+                case ScopeMode.CurrentWorldOnly:
+                    if (playerCtx.CurrentWorld != hm.World)
+                    {
+                        PluginLog.Verbose("S Rank not on player's current world.");
+                        return;
+                    }
+                    break;
+                case ScopeMode.HomeWorldOnly:
+                    if (playerCtx.HomeWorld != hm.World)
+                    {
+                        PluginLog.Verbose("S Rank not on player's home world.");
+                        return;
+                    }
+                    break;
             }
 
             var creatureName = hm.CreatureName ?? "";

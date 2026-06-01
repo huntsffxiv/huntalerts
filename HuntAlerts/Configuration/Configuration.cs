@@ -31,7 +31,7 @@ namespace HuntAlerts
     [Serializable]
     public class Configuration : IPluginConfiguration
     {
-        public int Version { get; set; } = 2;
+        public int Version { get; set; } = 3;
 
         public bool SuppressDuplicates { get; set; } = true;
         public int TextColor { get; set; } = 57;
@@ -51,8 +51,10 @@ namespace HuntAlerts
         public HashSet<string> EnabledWorlds      { get; set; } = new();
 
         public bool SRankEnabled { get; set; } = true;
-        public bool SRankCurrentWorld { get; set; } = false;
-        public HashSet<string> EnabledSRankGroups { get; set; } = new();
+        public ScopeMode SRankScope { get; set; } = ScopeMode.CurrentDatacenterOnly;
+        public HashSet<string> EnabledSRankGroups       { get; set; } = new();
+        public HashSet<string> EnabledSRankDatacenters  { get; set; } = new();
+        public HashSet<string> EnabledSRankWorlds       { get; set; } = new();
 
         public int SnoozeDefaultMinutes { get; set; } = 30;
 

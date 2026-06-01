@@ -15,17 +15,18 @@ namespace HuntAlerts.Windows;
 
 public class ConfigWindow : Window, IDisposable
 {
-    private enum Page { General, Integrations, HuntTrains, TrainWorlds, SRanks, Connection, Debug }
+    private enum Page { General, Integrations, HuntTrains, TrainWorlds, SRanks, SRankWorlds, Connection, Debug }
 
     private static readonly (Page Id, string Label, FontAwesomeIcon Icon)[] TabDefs =
     {
-        (Page.HuntTrains,   "Hunt Trains",  FontAwesomeIcon.Train),
-        (Page.TrainWorlds,  "Train Worlds", FontAwesomeIcon.Globe),
-        (Page.SRanks,       "S Ranks",      FontAwesomeIcon.Skull),
-        (Page.General,      "General",      FontAwesomeIcon.Cog),
-        (Page.Integrations, "Integrations", FontAwesomeIcon.Plug),
-        (Page.Connection,   "Connection",   FontAwesomeIcon.Server),
-        (Page.Debug,        "Debug",        FontAwesomeIcon.Bug),
+        (Page.HuntTrains,   "Hunt Trains",   FontAwesomeIcon.Train),
+        (Page.TrainWorlds,  "Train Worlds",  FontAwesomeIcon.Globe),
+        (Page.SRanks,       "S Ranks",       FontAwesomeIcon.Skull),
+        (Page.SRankWorlds,  "S Rank Worlds", FontAwesomeIcon.MapMarkedAlt),
+        (Page.General,      "General",       FontAwesomeIcon.Cog),
+        (Page.Integrations, "Integrations",  FontAwesomeIcon.Plug),
+        (Page.Connection,   "Connection",    FontAwesomeIcon.Server),
+        (Page.Debug,        "Debug",         FontAwesomeIcon.Bug),
     };
 
     private readonly Configuration Configuration;
@@ -33,6 +34,7 @@ public class ConfigWindow : Window, IDisposable
 
     private Page _current = Page.HuntTrains;
     private string _worldSearch = "";
+    private string _srankWorldSearch = "";
     private bool _debugUnlocked = false;
 
     private int    _dbgType       = 0;
@@ -127,6 +129,7 @@ public class ConfigWindow : Window, IDisposable
             case Page.HuntTrains:   DrawTrainsSection();       break;
             case Page.TrainWorlds:  DrawWorldsSection();       break;
             case Page.SRanks:       DrawSRankSection();        break;
+            case Page.SRankWorlds:  DrawSRankWorldsSection();  break;
             case Page.Connection:   DrawConnectionSection();   break;
             case Page.Debug:        DrawDebugSection();        break;
         }
@@ -224,32 +227,37 @@ public class ConfigWindow : Window, IDisposable
     {
         Components.SectionHeader("S Rank Options");
 
-        ImGui.Columns(2, "", false);
-
         var srankOn = Configuration.SRankEnabled;
         if (ImGui.Checkbox("S Ranks Enabled", ref srankOn))
         { Configuration.SRankEnabled = srankOn; Configuration.Save(); }
 
-        ImGui.NextColumn();
-
-        ImGui.BeginDisabled(!srankOn);
-        var cwOnly = Configuration.SRankCurrentWorld;
-        if (ImGui.Checkbox("Current World Only##SRank", ref cwOnly))
-        { Configuration.SRankCurrentWorld = cwOnly; Configuration.Save(); }
-        ImGui.EndDisabled();
-
-        ImGui.Columns(1);
-
-        ImGui.BeginDisabled(!srankOn);
-        ImGui.PushStyleColor(ImGuiCol.Text, Theme.Subtle);
-        ImGui.TextWrapped("S Ranks are always limited to your current datacenter.");
-        ImGui.PopStyleColor();
         ImGui.Spacing();
+
+        ImGui.BeginDisabled(!srankOn);
 
         ImGui.TextUnformatted("S Rank Notifications");
         ImGui.Separator();
         DrawHuntGroupCheckboxes(Configuration.EnabledSRankGroups, "SRank");
+
+        ImGui.Spacing();
+        Components.SectionHeader("S Rank Scope");
+
+        DrawSRankScopeRadio(ScopeMode.AllConfigured,         "All configured datacenters/worlds (use the S Rank Worlds tab)");
+        DrawSRankScopeRadio(ScopeMode.CurrentDatacenterOnly, "Current datacenter only");
+        DrawSRankScopeRadio(ScopeMode.CurrentWorldOnly,      "Current world only");
+        DrawSRankScopeRadio(ScopeMode.HomeWorldOnly,         "Home world only");
+
         ImGui.EndDisabled();
+    }
+
+    private void DrawSRankScopeRadio(ScopeMode target, string label)
+    {
+        var sel = Configuration.SRankScope == target;
+        if (ImGui.RadioButton($"{label}##SRankScope", sel) && !sel)
+        {
+            Configuration.SRankScope = target;
+            Configuration.Save();
+        }
     }
 
     private void DrawTrainsSection()
@@ -296,7 +304,41 @@ public class ConfigWindow : Window, IDisposable
 
     private void DrawWorldsSection()
     {
-        Components.SectionHeader("Hunt Train Worlds");
+        DrawWorldsList(
+            title: "Hunt Train Worlds",
+            scopeBlocks: Configuration.Scope != ScopeMode.AllConfigured,
+            scopeBlockedMessage: "World selection is ignored because the Hunt Train scope is set to one of the override modes. Switch to \"All configured datacenters/worlds\" to use this list.",
+            enabledDcs: Configuration.EnabledDatacenters,
+            enabledWorlds: Configuration.EnabledWorlds,
+            searchRef: () => _worldSearch,
+            setSearch: v => _worldSearch = v,
+            idScope: "train");
+    }
+
+    private void DrawSRankWorldsSection()
+    {
+        DrawWorldsList(
+            title: "S Rank Worlds",
+            scopeBlocks: Configuration.SRankScope != ScopeMode.AllConfigured,
+            scopeBlockedMessage: "World selection is ignored because the S Rank scope is not \"All configured datacenters/worlds\". Switch on the S Ranks tab to use this list.",
+            enabledDcs: Configuration.EnabledSRankDatacenters,
+            enabledWorlds: Configuration.EnabledSRankWorlds,
+            searchRef: () => _srankWorldSearch,
+            setSearch: v => _srankWorldSearch = v,
+            idScope: "srank");
+    }
+
+    private void DrawWorldsList(
+        string title,
+        bool scopeBlocks,
+        string scopeBlockedMessage,
+        HashSet<string> enabledDcs,
+        HashSet<string> enabledWorlds,
+        Func<string> searchRef,
+        Action<string> setSearch,
+        string idScope)
+    {
+        Components.SectionHeader(title);
 
         var dcs = WorldData.DatacentersInOrder;
         if (dcs.Count == 0)
@@ -307,21 +349,22 @@ public class ConfigWindow : Window, IDisposable
             return;
         }
 
-        var scopeBlocks = Configuration.Scope != ScopeMode.AllConfigured;
         if (scopeBlocks)
         {
             ImGui.PushStyleColor(ImGuiCol.Text, Theme.Subtle);
-            ImGui.TextWrapped("World selection is ignored because the Hunt Train scope is set to one of the override modes above. Switch to \"All configured datacenters/worlds\" to use this list.");
+            ImGui.TextWrapped(scopeBlockedMessage);
             ImGui.PopStyleColor();
             return;
         }
 
+        var current = searchRef();
         ImGui.PushItemWidth(220);
-        ImGui.InputTextWithHint("##worldSearch", "Filter worlds...", ref _worldSearch, 64);
+        if (ImGui.InputTextWithHint($"##worldSearch-{idScope}", "Filter worlds...", ref current, 64))
+            setSearch(current);
         ImGui.PopItemWidth();
         ImGui.Spacing();
 
-        var search = _worldSearch.Trim();
+        var search = current.Trim();
 
         foreach (var dc in dcs)
         {
@@ -330,17 +373,15 @@ public class ConfigWindow : Window, IDisposable
                 : dc.Worlds.Where(w => w.Contains(search, StringComparison.OrdinalIgnoreCase)).ToList();
             if (matching.Count == 0) continue;
 
-            DrawDcBlock(dc, matching);
+            DrawDcBlock(dc, matching, enabledDcs, enabledWorlds, idScope);
             ImGui.Spacing();
         }
     }
 
-    private void DrawDcBlock(WorldData.DatacenterInfo dc, IReadOnlyList<string> shownWorlds)
+    private void DrawDcBlock(WorldData.DatacenterInfo dc, IReadOnlyList<string> shownWorlds, HashSet<string> enabledDcs, HashSet<string> enabledWorlds, string idScope)
     {
-        var dcOn   = Configuration.EnabledDatacenters.Contains(dc.Name);
-        // When the DC itself is off, the effective enabled count is zero — none
-        // of those worlds will fire an alert regardless of their tick state.
-        var on     = dcOn ? dc.Worlds.Count(w => Configuration.EnabledWorlds.Contains(w)) : 0;
+        var dcOn   = enabledDcs.Contains(dc.Name);
+        var on     = dcOn ? dc.Worlds.Count(w => enabledWorlds.Contains(w)) : 0;
         var region = WorldData.RegionLabel(dc.Region);
 
         ImGui.PushStyleColor(ImGuiCol.Text, Theme.Accent);
@@ -352,37 +393,37 @@ public class ConfigWindow : Window, IDisposable
         ImGui.PopStyleColor();
 
         ImGui.SameLine(ImGui.GetContentRegionAvail().X - 150);
-        if (Components.DcToggleButton(dcOn, dc.Name))
+        if (Components.DcToggleButton(dcOn, $"{idScope}-{dc.Name}"))
         {
-            if (dcOn) Configuration.EnabledDatacenters.Remove(dc.Name);
-            else      Configuration.EnabledDatacenters.Add(dc.Name);
+            if (dcOn) enabledDcs.Remove(dc.Name);
+            else      enabledDcs.Add(dc.Name);
             Configuration.Save();
         }
         ImGui.SameLine();
-        if (ImGui.SmallButton($"All##{dc.Name}"))
+        if (ImGui.SmallButton($"All##{idScope}-{dc.Name}"))
         {
-            foreach (var w in dc.Worlds) Configuration.EnabledWorlds.Add(w);
+            foreach (var w in dc.Worlds) enabledWorlds.Add(w);
             Configuration.Save();
         }
         ImGui.SameLine();
-        if (ImGui.SmallButton($"None##{dc.Name}"))
+        if (ImGui.SmallButton($"None##{idScope}-{dc.Name}"))
         {
-            foreach (var w in dc.Worlds) Configuration.EnabledWorlds.Remove(w);
+            foreach (var w in dc.Worlds) enabledWorlds.Remove(w);
             Configuration.Save();
         }
         ImGui.Separator();
 
         ImGui.BeginDisabled(!dcOn);
-        if (ImGui.BeginTable($"worlds-{dc.Name}", 3, ImGuiTableFlags.NoBordersInBody))
+        if (ImGui.BeginTable($"worlds-{idScope}-{dc.Name}", 3, ImGuiTableFlags.NoBordersInBody))
         {
             foreach (var w in shownWorlds)
             {
                 ImGui.TableNextColumn();
-                var ticked = Configuration.EnabledWorlds.Contains(w);
-                if (ImGui.Checkbox($"{w}##{dc.Name}-{w}", ref ticked))
+                var ticked = enabledWorlds.Contains(w);
+                if (ImGui.Checkbox($"{w}##{idScope}-{dc.Name}-{w}", ref ticked))
                 {
-                    if (ticked) Configuration.EnabledWorlds.Add(w);
-                    else        Configuration.EnabledWorlds.Remove(w);
+                    if (ticked) enabledWorlds.Add(w);
+                    else        enabledWorlds.Remove(w);
                     Configuration.Save();
                 }
             }

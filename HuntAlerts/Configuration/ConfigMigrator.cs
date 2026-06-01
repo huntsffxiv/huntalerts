@@ -16,8 +16,17 @@ namespace HuntAlerts
             try
             {
                 var existing = Svc.PluginInterface.GetPluginConfig() as Configuration;
-                if (existing != null && existing.Version >= 2)
-                    return existing;
+                if (existing != null)
+                {
+                    if (existing.Version >= 3) return existing;
+
+                    if (existing.Version == 2)
+                    {
+                        MigrateV2ToV3(existing);
+                        existing.Save();
+                        return existing;
+                    }
+                }
             }
             catch (Exception ex)
             {
@@ -32,6 +41,22 @@ namespace HuntAlerts
             return fresh;
         }
 
+        private static void MigrateV2ToV3(Configuration c)
+        {
+            c.EnabledSRankDatacenters ??= new System.Collections.Generic.HashSet<string>();
+            c.EnabledSRankWorlds      ??= new System.Collections.Generic.HashSet<string>();
+
+            foreach (var dc in WorldData.DatacentersInOrder)
+            {
+                c.EnabledSRankDatacenters.Add(dc.Name);
+                foreach (var w in dc.Worlds) c.EnabledSRankWorlds.Add(w);
+            }
+
+            c.SRankScope = ScopeMode.CurrentDatacenterOnly;
+            c.Version    = 3;
+            PluginLog.Information("HuntAlerts: migrated config v2 → v3 (S Rank world/DC selection added; train and general settings preserved).");
+        }
+
         private static void ApplyDefaults(Configuration c)
         {
             foreach (var g in HuntGroups.All)
@@ -43,7 +68,12 @@ namespace HuntAlerts
             foreach (var dc in WorldData.DatacentersInOrder)
             {
                 c.EnabledDatacenters.Add(dc.Name);
-                foreach (var w in dc.Worlds) c.EnabledWorlds.Add(w);
+                c.EnabledSRankDatacenters.Add(dc.Name);
+                foreach (var w in dc.Worlds)
+                {
+                    c.EnabledWorlds.Add(w);
+                    c.EnabledSRankWorlds.Add(w);
+                }
             }
 
             if (ECommonsIPC.Lifestream.Available)

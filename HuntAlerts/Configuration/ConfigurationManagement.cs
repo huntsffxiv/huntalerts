@@ -13,6 +13,12 @@ namespace HuntAlerts
         private bool IsWorldEnabled(string world) =>
             !string.IsNullOrEmpty(world) && Configuration.EnabledWorlds.Contains(world);
 
+        private bool IsSRankDataCenterEnabled(string dataCenter) =>
+            !string.IsNullOrEmpty(dataCenter) && Configuration.EnabledSRankDatacenters.Contains(dataCenter);
+
+        private bool IsSRankWorldEnabled(string world) =>
+            !string.IsNullOrEmpty(world) && Configuration.EnabledSRankWorlds.Contains(world);
+
         private bool IsTrainGroupEnabled(string huntKinds)
         {
             if (string.IsNullOrEmpty(huntKinds)) return false;
