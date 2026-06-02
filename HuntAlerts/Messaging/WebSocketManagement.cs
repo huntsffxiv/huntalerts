@@ -496,9 +496,9 @@ namespace HuntAlerts
             {
                 var label = $"{hm.Kind} S Rank {creatureName} on {hm.World} was killed at {ConvertTime(deathTime)}.";
                 var b = new SeStringBuilder();
-                if (Configuration.SRankTextColor != 0) b.AddUiForeground((ushort)Configuration.SRankTextColor);
+                if (Configuration.SRankKillTextColor != 0) b.AddUiForeground((ushort)Configuration.SRankKillTextColor);
                 b.AddText(label);
-                if (Configuration.SRankTextColor != 0) b.AddUiForegroundOff();
+                if (Configuration.SRankKillTextColor != 0) b.AddUiForegroundOff();
                 PrintChat(b.Build());
             }
         }
