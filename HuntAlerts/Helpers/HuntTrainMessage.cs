@@ -1,45 +1,47 @@
-namespace HuntAlerts.Helpers;
-public class HuntTrainMessage
-{
-    public string Message;
-    public string huntType;
-    public string huntKind;
-    public string huntWorld;
-    public string currentworldName;
-    public string currentregionName;
-    public string huntregionName;
-    public string Posted_Time;
-    public long   PostedEpoch;
-    public string startLocation;
-    public uint startLocationAetheryteId;
-    public string startZone;
-    public int instance;
-    public string locationCoords;
-    public bool openmaponArrival;
-    public bool lifestreamEnabled;
-    public string creatureName;
+using System;
+using System.Numerics;
 
-    public HuntTrainMessage(string message, string huntType, string huntKind, string huntWorld,
-        string currentworldName, string currentregionName, string huntregionName, string posted_Time,
-        long postedEpoch, string startLocation, uint startLocationAetheryteId, string startZone, int instance,
-        string locationCoords, bool openmaponArrival, bool lifestreamEnabled, string creatureName = "")
-    {
-        this.Message = message;
-        this.huntType = huntType;
-        this.huntKind = huntKind;
-        this.huntWorld = huntWorld;
-        this.currentworldName = currentworldName;
-        this.currentregionName = currentregionName;
-        this.huntregionName = huntregionName;
-        this.Posted_Time = posted_Time;
-        this.PostedEpoch = postedEpoch;
-        this.startLocation = startLocation;
-        this.startLocationAetheryteId = startLocationAetheryteId;
-        this.startZone = startZone;
-        this.instance = instance;
-        this.locationCoords = locationCoords;
-        this.openmaponArrival = openmaponArrival;
-        this.lifestreamEnabled = lifestreamEnabled;
-        this.creatureName = creatureName ?? "";
-    }
+namespace HuntAlerts.Helpers;
+
+public class HuntTrainMessage(string message, string huntType, string huntKind, string huntWorld,
+    string currentworldName, string currentregionName, string huntregionName, string posted_Time,
+    long postedEpoch, string startLocation, uint startLocationAetheryteId, string startZone, int instance,
+    string locationCoords, bool openmaponArrival, bool lifestreamEnabled, string creatureName = "")
+{
+    public string Message = message;
+    public string huntType = huntType;
+    public string huntKind = huntKind;
+    public string huntWorld = huntWorld;
+    public string currentworldName = currentworldName;
+    public string currentregionName = currentregionName;
+    public string huntregionName = huntregionName;
+    public string Posted_Time = posted_Time;
+    public long PostedEpoch = postedEpoch;
+    public string startLocation = startLocation;
+    public uint startLocationAetheryteId = startLocationAetheryteId;
+    public string startZone = startZone;
+    public int instance = instance;
+    public string locationCoords = locationCoords;
+    public bool openmaponArrival = openmaponArrival;
+    public bool lifestreamEnabled = lifestreamEnabled;
+    public string creatureName = creatureName ?? "";
 }
+
+public record struct HuntAlertMessage(
+    string Message,
+    string HuntType,
+    string HuntKind,
+    uint HuntWorldId,
+    uint CurrentWorldId,
+    uint CurrentWorldRegionGroupId,
+    uint HuntWorldRegionGroupId,
+    DateTimeOffset PostedTime,
+    long PostedEpoch,
+    uint StartingAetheryteId,
+    uint StartingTerritoryTypeId,
+    int Instance,
+    Vector2? MapLocationCoords,
+    bool OpenMapOnArrival,
+    bool LifestreamEnabled,
+    string CreatureName
+);

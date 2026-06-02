@@ -15,4 +15,5 @@ public class IPCManager
     }
 
     [EzIPCEvent] public Action<HuntTrainMessage> OnHuntTrainMessageReceived;
+    [EzIPCEvent] public Action<HuntAlertMessage> OnHuntAlertMessageReceived;
 }

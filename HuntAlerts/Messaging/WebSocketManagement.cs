@@ -1,3 +1,10 @@
+using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Linq;
+using System.Numerics;
+using System.Threading;
+using System.Threading.Tasks;
 using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Game.Text.SeStringHandling.Payloads;
 using ECommons;
@@ -10,13 +17,7 @@ using HuntAlerts.Helpers;
 using HuntAlerts.Services;
 using Lumina.Excel.Sheets;
 using Newtonsoft.Json;
-using System;
-using System.Collections.Concurrent;
-using System.Linq;
 using SocketIOClient;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace HuntAlerts
 {
@@ -239,21 +240,21 @@ namespace HuntAlerts
                     }
                     break;
                 case ScopeMode.CurrentDatacenterOnly:
-                    if (playerCtx.CurrentDatacenter == null || playerCtx.CurrentDatacenter != huntDc)
+                    if (playerCtx.CurrentDatacenter == null || playerCtx.CurrentDatacenterName != huntDc)
                     {
                         PluginLog.Verbose("Train not on player's current DC.");
                         return;
                     }
                     break;
                 case ScopeMode.CurrentWorldOnly:
-                    if (playerCtx.CurrentWorld != hm.World)
+                    if (playerCtx.CurrentWorldName != hm.World)
                     {
                         PluginLog.Verbose("Train not on player's current world.");
                         return;
                     }
                     break;
                 case ScopeMode.HomeWorldOnly:
-                    if (playerCtx.HomeWorld != hm.World)
+                    if (playerCtx.HomeWorldName != hm.World)
                     {
                         PluginLog.Verbose("Train not on player's home world.");
                         return;
@@ -265,17 +266,24 @@ namespace HuntAlerts
             content     = RemoveDiscordEmojis(content);
 
             var aetheryteName = hm.AetheriteName;
-            uint aetheryteId  = 0;
-            string coordsStr  = "";
-            var startZone     = hm.LocationName ?? "";
+            uint aetheryteId = 0;
+            uint startTerritoryTypeId = 0;
+            string coordsStr = "";
+            Vector2? mapLocationCoords = null;
+            var startZone = hm.LocationName ?? "";
 
             try
             {
                 var (cx, cy) = ExtractCoordinates(content);
-                if (cx is not null && cy is not null) coordsStr = $"{(float)cx}, {(float)cy}";
+                if (cx is not null && cy is not null)
+                {
+                    coordsStr = $"{(float)cx}, {(float)cy}";
+                    mapLocationCoords = new Vector2((float)cx, (float)cy);
+                }
 
                 if (TryGetOpenWorldTerritory(hm.LocationName, out var tt))
                 {
+                    startTerritoryTypeId = tt;
                     if (aetheryteName == "invalid" || string.IsNullOrEmpty(aetheryteName))
                     {
                         var (id, name) = (cx, cy) is (float ccx, float ccy)
@@ -326,7 +334,7 @@ namespace HuntAlerts
             var openMapOnArrival = Configuration.OpenMapOnArrival;
             var postedLocal      = ConvertTime(hm.Posted_Epoch);
             var huntRegion       = huntDc != null && WorldData.TryGetWorld(hm.World, out var hwInfo) ? WorldData.RegionLabel(hwInfo.Region) : "";
-            var currentRegion    = playerCtx.CurrentRegion ?? "";
+            var currentRegion    = playerCtx.CurrentRegionName;
 
             var formattedDetail =
                 $"Kind: Hunt Train{Environment.NewLine}Hunt: {hm.Kind}{Environment.NewLine}" +
@@ -336,12 +344,32 @@ namespace HuntAlerts
 
             var htMessage = new HuntTrainMessage(
                 formattedDetail, hm.Type, hm.Kind, hm.World,
-                playerCtx.CurrentWorld ?? "", currentRegion, huntRegion,
+                playerCtx.CurrentWorldName, currentRegion, huntRegion,
                 postedLocal, hm.Posted_Epoch, aetheryteName, aetheryteId, startZone, instance: 1,
                 coordsStr, openMapOnArrival, lifestreamHooked);
 
+            var huntWorldId = TryGetWorld(hm.World, out var huntWorld) ? huntWorld.RowId : 0u;
+            var typedAlert = new HuntAlertMessage(
+                formattedDetail,
+                hm.Type ?? "",
+                hm.Kind ?? "",
+                huntWorldId,
+                playerCtx.CurrentWorld?.RowId ?? 0,
+                playerCtx.CurrentRegion?.RowId ?? 0,
+                huntWorld.DataCenter.ValueNullable?.Region.RowId ?? 0,
+                DateTimeOffset.FromUnixTimeSeconds(hm.Posted_Epoch),
+                hm.Posted_Epoch,
+                aetheryteId,
+                startTerritoryTypeId,
+                1,
+                mapLocationCoords,
+                openMapOnArrival,
+                lifestreamHooked,
+                "");
+
             var link = P.MessageCacheManager.AddMessage(htMessage);
             Service.IPCManager.OnHuntTrainMessageReceived(htMessage);
+            Service.IPCManager.OnHuntAlertMessageReceived(typedAlert);
 
             PrintChat(BuildLinkedLine(link, $"{hm.Kind} train starting on {hm.World}! (Click for info)", Configuration.TextColor));
 
@@ -387,21 +415,21 @@ namespace HuntAlerts
                     }
                     break;
                 case ScopeMode.CurrentDatacenterOnly:
-                    if (playerCtx.CurrentDatacenter == null || playerCtx.CurrentDatacenter != huntDc)
+                    if (playerCtx.CurrentDatacenter == null || playerCtx.CurrentDatacenterName != huntDc)
                     {
                         PluginLog.Verbose("S Rank not on player's current DC.");
                         return;
                     }
                     break;
                 case ScopeMode.CurrentWorldOnly:
-                    if (playerCtx.CurrentWorld != hm.World)
+                    if (playerCtx.CurrentWorldName != hm.World)
                     {
                         PluginLog.Verbose("S Rank not on player's current world.");
                         return;
                     }
                     break;
                 case ScopeMode.HomeWorldOnly:
-                    if (playerCtx.HomeWorld != hm.World)
+                    if (playerCtx.HomeWorldName != hm.World)
                     {
                         PluginLog.Verbose("S Rank not on player's home world.");
                         return;
@@ -409,25 +437,31 @@ namespace HuntAlerts
                     break;
             }
 
-            var creatureName = hm.CreatureName ?? "";
-            var locationName = hm.LocationName ?? "";
-            var coordsStr    = hm.LocationCoords ?? "";
-            var aetheryteName= hm.AetheriteName ?? "";
-            var instance     = hm.Instance < 1 ? 1 : hm.Instance;
-            var deathTime    = hm.DeathTime;
-            var postedLocal  = ConvertTime(hm.Posted_Epoch);
+            var creatureName  = hm.CreatureName ?? "";
+            var locationName  = hm.LocationName ?? "";
+            var coordsStr     = hm.LocationCoords ?? "";
+            var aetheryteName = hm.AetheriteName ?? "";
+            var instance      = hm.Instance < 1 ? 1 : hm.Instance;
+            var deathTime     = hm.DeathTime;
+            var postedLocal   = ConvertTime(hm.Posted_Epoch);
 
-            var huntRegion = WorldData.TryGetWorld(hm.World, out var hwInfo) ? WorldData.RegionLabel(hwInfo.Region) : "";
-            var currentRegion = playerCtx.CurrentRegion ?? "";
+            var huntRegion       = WorldData.TryGetWorld(hm.World, out var hwInfo) ? WorldData.RegionLabel(hwInfo.Region) : "";
+            var currentRegion    = playerCtx.CurrentRegionName;
             var lifestreamHooked = Configuration.LifestreamIntegration && IsLifestreamLoaded();
             var openMapOnArrival = Configuration.OpenMapOnArrival;
 
             uint aetheryteId = 0;
+            uint startTerritoryTypeId = 0;
+            Vector2? mapLocationCoords = null;
             string startLocation = aetheryteName;
+            var (mx, my) = ExtractCoordinates(coordsStr);
+            if (mx is not null && my is not null)
+                mapLocationCoords = new Vector2((float)mx, (float)my);
             if (deathTime == 0)
             {
                 if (TryGetOpenWorldTerritory(locationName, out var tt))
                 {
+                    startTerritoryTypeId = tt;
                     if (string.IsNullOrEmpty(startLocation) || startLocation == "invalid")
                     {
                         var (id, name) = MapManager.GetZonePrimaryAetheryte(tt);
@@ -444,7 +478,7 @@ namespace HuntAlerts
                         else
                         {
                             var (id, name) = MapManager.GetZonePrimaryAetheryte(tt);
-                            aetheryteId   = id;
+                            aetheryteId = id;
                             startLocation = name;
                         }
                     }
@@ -454,7 +488,7 @@ namespace HuntAlerts
                     var anywhere = MapManager.LookupAetheryteByNameAnywhere(startLocation);
                     if (anywhere is not null)
                     {
-                        aetheryteId   = anywhere.Value.RowId;
+                        aetheryteId = anywhere.Value.RowId;
                         startLocation = anywhere.Value.Name;
                         if (!string.IsNullOrEmpty(anywhere.Value.ZoneName))
                             locationName = anywhere.Value.ZoneName;
@@ -476,12 +510,32 @@ namespace HuntAlerts
 
                 var htMessage = new HuntTrainMessage(
                     detail, hm.Type, hm.Kind, hm.World,
-                    playerCtx.CurrentWorld ?? "", currentRegion, huntRegion,
+                    playerCtx.CurrentWorldName ?? "", currentRegion, huntRegion,
                     postedLocal, hm.Posted_Epoch, startLocation, aetheryteId, locationName, instance,
                     coordsStr, openMapOnArrival, lifestreamHooked, creatureName);
 
+                var huntWorldId = TryGetWorld(hm.World, out var huntWorld) ? huntWorld.RowId : 0u;
+                var typedAlert = new HuntAlertMessage(
+                    detail,
+                    hm.Type ?? "",
+                    hm.Kind ?? "",
+                    huntWorldId,
+                    playerCtx.CurrentWorld?.RowId ?? 0,
+                    playerCtx.CurrentRegion?.RowId ?? 0,
+                    huntWorld.DataCenter.ValueNullable?.Region.RowId ?? 0,
+                    DateTimeOffset.FromUnixTimeSeconds(hm.Posted_Epoch),
+                    hm.Posted_Epoch,
+                    aetheryteId,
+                    startTerritoryTypeId,
+                    instance,
+                    mapLocationCoords,
+                    openMapOnArrival,
+                    lifestreamHooked,
+                    creatureName);
+
                 var link = P.MessageCacheManager.AddMessage(htMessage);
                 Service.IPCManager.OnHuntTrainMessageReceived(htMessage);
+                Service.IPCManager.OnHuntAlertMessageReceived(typedAlert);
 
                 var label = instance > 1
                     ? $"{hm.Kind} S Rank {creatureName} (i{instance}) spawned on {hm.World}! (Click for info)"
@@ -503,28 +557,30 @@ namespace HuntAlerts
             }
         }
 
-        private readonly record struct PlayerContextSnapshot(
-            string? CurrentWorld,
-            string? HomeWorld,
-            string? CurrentDatacenter,
-            string? CurrentRegion);
+        private readonly record struct PlayerContextSnapshot(World? CurrentWorld, World? HomeWorld)
+        {
+            public WorldDCGroupType? CurrentDatacenter => CurrentWorld?.DataCenter.ValueNullable;
+            public WorldRegionGroup? CurrentRegion => CurrentDatacenter?.Region.ValueNullable;
+            public string CurrentWorldName => CurrentWorld?.Name.ExtractText() ?? "";
+            public string HomeWorldName => HomeWorld?.Name.ExtractText() ?? "";
+            public string CurrentDatacenterName => CurrentDatacenter?.Name.ExtractText() ?? "";
+            public string CurrentRegionName => CurrentRegion?.Name.ExtractText() ?? "";
+        }
 
         private PlayerContextSnapshot SnapshotPlayer()
         {
             if (!Svc.ClientState.IsLoggedIn || Svc.Objects.LocalPlayer == null)
-                return new PlayerContextSnapshot(null, null, null, null);
+                return new PlayerContextSnapshot(null, null);
 
-            var cw = Svc.Objects.LocalPlayer.CurrentWorld.ValueNullable?.Name.ToString();
-            var hw = Svc.Objects.LocalPlayer.HomeWorld.ValueNullable?.Name.ToString();
-            string? cdc = null;
-            string? cr  = null;
-            if (cw != null && WorldData.TryGetWorld(cw, out var info))
-            {
-                cdc = info.Datacenter;
-                cr  = WorldData.RegionLabel(info.Region);
-            }
-            PluginLog.Verbose($"Player ctx: world={cw} home={hw} dc={cdc} region={cr}");
-            return new PlayerContextSnapshot(cw, hw, cdc, cr);
+            var cw = Svc.Objects.LocalPlayer.CurrentWorld.ValueNullable;
+            var hw = Svc.Objects.LocalPlayer.HomeWorld.ValueNullable;
+            var cdc = cw?.DataCenter.ValueNullable;
+            var cr = cdc?.Region.ValueNullable;
+            if (cw == null || hw == null || cdc == null || cr == null)
+                return new PlayerContextSnapshot(null, null);
+
+            PluginLog.Verbose($"Player ctx: world={cw.Value.Name} home={hw.Value.Name} dc={cdc.Value.Name} region={cr.Value.Name}");
+            return new PlayerContextSnapshot(cw, hw);
         }
 
         private static bool IsLifestreamLoaded() =>
@@ -541,6 +597,13 @@ namespace HuntAlerts
                 return false;
             territoryType = match.RowId;
             return true;
+        }
+
+        private static bool TryGetWorld(string worldName, out World world)
+        {
+            world = default;
+            if (string.IsNullOrWhiteSpace(worldName)) return false;
+            return Svc.Data.GetExcelSheet<World>().TryGetFirst(w => w.IsPublic && w.Name.ExtractText().Equals(worldName, StringComparison.OrdinalIgnoreCase), out world);
         }
 
         private static SeString BuildLinkedLine(DalamudLinkPayload link, string text, int color)
