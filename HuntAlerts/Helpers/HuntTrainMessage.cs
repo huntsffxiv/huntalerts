@@ -41,7 +41,5 @@ public record struct HuntAlertMessage(
     uint StartingTerritoryTypeId,
     int Instance,
     Vector2? MapLocationCoords,
-    bool OpenMapOnArrival,
-    bool LifestreamEnabled,
-    string CreatureName
+    uint? creatureNameId
 );

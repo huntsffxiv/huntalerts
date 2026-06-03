@@ -1,3 +1,4 @@
+using ECommons.DalamudServices;
 using ECommons.EzIpcManager;
 using HuntAlerts.Helpers;
 using System;
@@ -16,4 +17,7 @@ public class IPCManager
 
     [EzIPCEvent] public Action<HuntTrainMessage> OnHuntTrainMessageReceived;
     [EzIPCEvent] public Action<HuntAlertMessage> OnHuntAlertMessageReceived;
+
+    [EzIPC] public bool LifestreamIntegrationEnabled() => HuntAlerts.P.Configuration.LifestreamIntegration;
+    [EzIPC] public bool OpenMapOnArrivalEnabled() => HuntAlerts.P.Configuration.OpenMapOnArrival;
 }

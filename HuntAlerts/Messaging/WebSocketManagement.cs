@@ -363,9 +363,7 @@ namespace HuntAlerts
                 startTerritoryTypeId,
                 1,
                 mapLocationCoords,
-                openMapOnArrival,
-                lifestreamHooked,
-                "");
+                0);
 
             var link = P.MessageCacheManager.AddMessage(htMessage);
             Service.IPCManager.OnHuntTrainMessageReceived(htMessage);
@@ -529,9 +527,7 @@ namespace HuntAlerts
                     startTerritoryTypeId,
                     instance,
                     mapLocationCoords,
-                    openMapOnArrival,
-                    lifestreamHooked,
-                    creatureName);
+                    Svc.Data.GetExcelSheet<BNpcName>().FirstOrNull(r => r.Singular.ExtractText().Equals(creatureName.Trim(), StringComparison.OrdinalIgnoreCase))?.RowId);
 
                 var link = P.MessageCacheManager.AddMessage(htMessage);
                 Service.IPCManager.OnHuntTrainMessageReceived(htMessage);
