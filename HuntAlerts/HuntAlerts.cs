@@ -1,55 +1,35 @@
 using Dalamud.Game.Command;
-using Dalamud.Game.Text.SeStringHandling.Payloads;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
 using ECommons;
-using ECommons.Automation;
 using ECommons.DalamudServices;
-using ECommons.Logging;
 using ECommons.Singletons;
-using HuntAlerts.Helpers;
 using HuntAlerts.Services;
 using HuntAlerts.Windows;
-using Microsoft.Win32.SafeHandles;
-using System;
-using System.Net.WebSockets;
-using System.Threading.Tasks;
 
 namespace HuntAlerts
 {
-    public sealed partial class HuntAlerts : IDalamudPlugin
+    public sealed class HuntAlerts : IDalamudPlugin
     {
-
         public string Name => "Hunt Alerts";
         private const string CommandName = "/huntalerts";
-        
+
+        public static Configuration C { get; private set; } = null!;
+
         public WindowSystem WindowSystem = new("HuntAlerts");
 
-        private ConfigWindow ConfigWindow { get; init; }
-        
-        public NotifyWindow NotifyWindow;
-
-        public HuntListWindow HuntListWindow;
-
-        public static HuntAlerts P; //have a static instance accessible from anywhere
-        public MessageCacheManager MessageCacheManager;
-
-        public HuntAlerts(
-            IDalamudPluginInterface pluginInterface
-        )
+        public HuntAlerts(IDalamudPluginInterface pluginInterface)
         {
-            P = this;
             ECommonsMain.Init(pluginInterface, this);
-            this.Configuration = ConfigMigrator.LoadOrMigrate();
-            this.Configuration.Initialize(Svc.PluginInterface);
+            C = ConfigMigrator.LoadOrMigrate();
+            C.Initialize(Svc.PluginInterface);
 
-
-            ConfigWindow = new ConfigWindow(this);
-            WindowSystem.AddWindow(ConfigWindow);
-            NotifyWindow = new();
-            WindowSystem.AddWindow(NotifyWindow);
-            HuntListWindow = new();
-            WindowSystem.AddWindow(HuntListWindow);
+            Service.ConfigWindow = new ConfigWindow();
+            WindowSystem.AddWindow(Service.ConfigWindow);
+            Service.NotifyWindow = new();
+            WindowSystem.AddWindow(Service.NotifyWindow);
+            Service.HuntListWindow = new();
+            WindowSystem.AddWindow(Service.HuntListWindow);
 
             Svc.Commands.AddHandler(CommandName, new CommandInfo(OnCommand)
             {
@@ -61,73 +41,45 @@ namespace HuntAlerts
                 HelpMessage = "Opens the HuntAlerts options"
             });
 
-
-
-
-
             Svc.PluginInterface.UiBuilder.Draw += DrawUI;
-            Svc.PluginInterface.UiBuilder.OpenConfigUi += DrawConfigUI;
+            Svc.PluginInterface.UiBuilder.OpenConfigUi += Service.OpenConfig;
 
-            InitializeSocketIO();
-            MessageCacheManager = new();
-            this.Configuration.Save();
             SingletonServiceManager.Initialize(typeof(Service));
+            C.Save();
         }
+
         public void Dispose()
         {
-            // Dispose of websocket
-            try
-            {
-
-                // First, signal the cancellation
-                _cancellationTokenSource?.Cancel();
-                _cancellationTokenSource?.Dispose();
-
-                _socket?.Dispose();
-                // Close the WebSocket connection synchronously
-                _socket?.DisconnectAsync().GetAwaiter().GetResult();
-            }
-            catch (Exception ex)
-            {
-                PluginLog.Error($"{ex}");
-            }
-
-            this.WindowSystem.RemoveAllWindows();
-
-            ConfigWindow.Dispose();
-
-            Svc.Chat.RemoveChatLinkHandler();
+            WindowSystem.RemoveAllWindows();
+            Service.ConfigWindow.Dispose();
 
             Svc.Commands.RemoveHandler(CommandName);
-            MessageCacheManager.Dispose();
             ECommonsMain.Dispose();
-            P = null; 
+            C = null!;
+            Service.ConfigWindow = null!;
+            Service.NotifyWindow = null!;
+            Service.HuntListWindow = null!;
         }
+
         private void OnCommand(string command, string args)
         {
-            if(args.EqualsIgnoreCaseAny("settings", "s"))
+            if (args.EqualsIgnoreCaseAny("settings", "s"))
             {
-                ConfigWindow.IsOpen = true;
+                Service.ConfigWindow.IsOpen = true;
             }
-            else if(args.EqualsIgnoreCaseAny("debug", "d"))
+            else if (args.EqualsIgnoreCaseAny("debug", "d"))
             {
-                ConfigWindow.OpenDebug();
+                Service.ConfigWindow.OpenDebug();
             }
             else
             {
-                HuntListWindow.IsOpen = true;
+                Service.HuntListWindow.IsOpen = true;
             }
-            // in response to the slash command, just display our main ui
-            
-        }
-        private void DrawUI()
-        {
-            this.WindowSystem.Draw();
-        }
-        public void DrawConfigUI()
-        {
-            ConfigWindow.IsOpen = true;
         }
 
+        private void DrawUI()
+        {
+            WindowSystem.Draw();
+        }
     }
 }

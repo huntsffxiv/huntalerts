@@ -4,7 +4,6 @@ using ECommons.DalamudServices;
 using ECommons.Logging;
 using Lumina.Excel.Sheets;
 using System;
-using System.Linq;
 
 namespace HuntAlerts.Helpers;
 public static class MapManager

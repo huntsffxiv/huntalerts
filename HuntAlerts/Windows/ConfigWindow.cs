@@ -6,6 +6,8 @@ using ECommons.IPC;
 using FFXIVClientStructs.FFXIV.Client.UI;
 using Dalamud.Bindings.ImGui;
 using HuntAlerts.Helpers;
+using HuntAlerts.Messaging;
+using HuntAlerts.Services;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -29,9 +31,6 @@ public class ConfigWindow : Window, IDisposable
         (Page.Debug,        "Debug",         FontAwesomeIcon.Bug),
     };
 
-    private readonly Configuration Configuration;
-    private readonly HuntAlerts Plugin;
-
     private Page _current = Page.HuntTrains;
     private string _worldSearch = "";
     private string _srankWorldSearch = "";
@@ -48,10 +47,8 @@ public class ConfigWindow : Window, IDisposable
     private string _dbgContent    = "";
     private string _dbgLastResult = "";
 
-    public ConfigWindow(HuntAlerts plugin) : base("HuntAlerts", ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse)
+    public ConfigWindow() : base("HuntAlerts", ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse)
     {
-        Plugin = plugin;
-        Configuration = plugin.Configuration;
         Size          = new Vector2(620, 520);
         SizeCondition = ImGuiCond.FirstUseEver;
         SizeConstraints = new WindowSizeConstraints
@@ -139,30 +136,30 @@ public class ConfigWindow : Window, IDisposable
     {
         Components.SectionHeader("General Options");
 
-        var sup = Configuration.SuppressDuplicates;
+        var sup = HuntAlerts.C.SuppressDuplicates;
         if (ImGui.Checkbox("Suppress Duplicate Messages", ref sup))
-        { Configuration.SuppressDuplicates = sup; Configuration.Save(); }
+        { HuntAlerts.C.SuppressDuplicates = sup; HuntAlerts.C.Save(); }
 
-        var flag = Configuration.OpenMapOnArrival;
+        var flag = HuntAlerts.C.OpenMapOnArrival;
         if (ImGui.Checkbox("Flag Map automatically on arrival", ref flag))
-        { Configuration.OpenMapOnArrival = flag; Configuration.Save(); }
+        { HuntAlerts.C.OpenMapOnArrival = flag; HuntAlerts.C.Save(); }
 
-        var useDalamud = Configuration.UseDalamudChat;
+        var useDalamud = HuntAlerts.C.UseDalamudChat;
         if (ImGui.Checkbox("Use Dalamud Default Chat", ref useDalamud))
-        { Configuration.UseDalamudChat = useDalamud; Configuration.Save(); }
+        { HuntAlerts.C.UseDalamudChat = useDalamud; HuntAlerts.C.Save(); }
 
-        ImGui.BeginDisabled(Configuration.UseDalamudChat);
+        ImGui.BeginDisabled(HuntAlerts.C.UseDalamudChat);
         var chatTypes = Enum.GetValues<XivChatType>().Where(v => v != XivChatType.None).ToArray();
         var chatNames = chatTypes.Select(c => c.ToString()).ToArray();
-        var chatIdx   = Array.IndexOf(chatTypes, Configuration.OutputChat);
+        var chatIdx   = Array.IndexOf(chatTypes, HuntAlerts.C.OutputChat);
         if (ImGui.Combo("Chat Channel", ref chatIdx, chatNames, chatNames.Length))
-        { Configuration.OutputChat = chatTypes[chatIdx]; Configuration.Save(); }
+        { HuntAlerts.C.OutputChat = chatTypes[chatIdx]; HuntAlerts.C.Save(); }
         ImGui.EndDisabled();
 
         var relayNames = RelayChannels.All.Select(c => $"{c.Display}  {c.Command}").ToArray();
-        var relayIdx   = RelayChannels.IndexOfCommand(Configuration.DefaultRelayChannel);
+        var relayIdx   = RelayChannels.IndexOfCommand(HuntAlerts.C.DefaultRelayChannel);
         if (ImGui.Combo("Default Relay Channel", ref relayIdx, relayNames, relayNames.Length))
-        { Configuration.DefaultRelayChannel = RelayChannels.All[relayIdx].Command; Configuration.Save(); }
+        { HuntAlerts.C.DefaultRelayChannel = RelayChannels.All[relayIdx].Command; HuntAlerts.C.Save(); }
 
         var colorOpts = new (string Name, int Value)[]
         {
@@ -170,48 +167,48 @@ public class ConfigWindow : Window, IDisposable
         };
         var colorNames = colorOpts.Select(o => o.Name).ToArray();
 
-        var textIdx = Array.FindIndex(colorOpts, o => o.Value == Configuration.TextColor);
+        var textIdx = Array.FindIndex(colorOpts, o => o.Value == HuntAlerts.C.TextColor);
         if (textIdx < 0) textIdx = 0;
         if (ImGui.Combo("Train Text Color", ref textIdx, colorNames, colorNames.Length))
-        { Configuration.TextColor = colorOpts[textIdx].Value; Configuration.Save(); }
+        { HuntAlerts.C.TextColor = colorOpts[textIdx].Value; HuntAlerts.C.Save(); }
 
-        var sIdx = Array.FindIndex(colorOpts, o => o.Value == Configuration.SRankTextColor);
+        var sIdx = Array.FindIndex(colorOpts, o => o.Value == HuntAlerts.C.SRankTextColor);
         if (sIdx < 0) sIdx = 0;
         if (ImGui.Combo("S Rank Text Color", ref sIdx, colorNames, colorNames.Length))
-        { Configuration.SRankTextColor = colorOpts[sIdx].Value; Configuration.Save(); }
+        { HuntAlerts.C.SRankTextColor = colorOpts[sIdx].Value; HuntAlerts.C.Save(); }
 
-        var skIdx = Array.FindIndex(colorOpts, o => o.Value == Configuration.SRankKillTextColor);
+        var skIdx = Array.FindIndex(colorOpts, o => o.Value == HuntAlerts.C.SRankKillTextColor);
         if (skIdx < 0) skIdx = 0;
         if (ImGui.Combo("S Rank Kill Text Color", ref skIdx, colorNames, colorNames.Length))
-        { Configuration.SRankKillTextColor = colorOpts[skIdx].Value; Configuration.Save(); }
+        { HuntAlerts.C.SRankKillTextColor = colorOpts[skIdx].Value; HuntAlerts.C.Save(); }
 
         var soundNames = Enumerable.Range(0, 17)
             .Select(i => i == 0 ? "None" : $"Sound {i}").ToArray();
-        var sound = Configuration.SoundEffect;
+        var sound = HuntAlerts.C.SoundEffect;
         if (ImGui.Combo("Sound Effect", ref sound, soundNames, soundNames.Length))
         {
-            Configuration.SoundEffect = sound;
+            HuntAlerts.C.SoundEffect = sound;
             if (sound != 0) UIGlobals.PlayChatSoundEffect((uint)sound);
-            Configuration.Save();
+            HuntAlerts.C.Save();
         }
 
         var snoozeOpts  = new (string Name, int Value)[] { ("5 min", 5), ("15 min", 15), ("30 min", 30), ("60 min", 60), ("2 hours", 120) };
         var snoozeNames = snoozeOpts.Select(o => o.Name).ToArray();
-        var snoozeIdx   = Array.FindIndex(snoozeOpts, o => o.Value == Configuration.SnoozeDefaultMinutes);
+        var snoozeIdx   = Array.FindIndex(snoozeOpts, o => o.Value == HuntAlerts.C.SnoozeDefaultMinutes);
         if (snoozeIdx < 0) snoozeIdx = 2;
         if (ImGui.Combo("Snooze Duration", ref snoozeIdx, snoozeNames, snoozeNames.Length))
-        { Configuration.SnoozeDefaultMinutes = snoozeOpts[snoozeIdx].Value; Configuration.Save(); }
+        { HuntAlerts.C.SnoozeDefaultMinutes = snoozeOpts[snoozeIdx].Value; HuntAlerts.C.Save(); }
         ImGui.SameLine();
-        if (HuntAlerts.P.IsSnoozed)
+        if (Service.Snooze.IsSnoozed)
         {
-            var rem = (int)Math.Ceiling(HuntAlerts.P.SnoozeRemaining.TotalMinutes);
+            var rem = (int)Math.Ceiling(Service.Snooze.SnoozeRemaining.TotalMinutes);
             if (Components.ActionButton(FontAwesomeIcon.Sun, $"Wake ({rem}m left)", ButtonRole.Accent))
-                HuntAlerts.P.ClearSnooze();
+                Service.Snooze.ClearSnooze();
         }
         else
         {
-            if (Components.ActionButton(FontAwesomeIcon.Moon, $"Snooze {Configuration.SnoozeDefaultMinutes}m", ButtonRole.Warn))
-                HuntAlerts.P.SnoozeDefault();
+            if (Components.ActionButton(FontAwesomeIcon.Moon, $"Snooze {HuntAlerts.C.SnoozeDefaultMinutes}m", ButtonRole.Warn))
+                Service.Snooze.SnoozeDefault();
         }
     }
 
@@ -221,15 +218,15 @@ public class ConfigWindow : Window, IDisposable
 
         var lifestreamInstalled = ECommonsIPC.Lifestream.Available;
         ImGui.BeginDisabled(!lifestreamInstalled);
-        var ls = Configuration.LifestreamIntegration;
+        var ls = HuntAlerts.C.LifestreamIntegration;
         if (ImGui.Checkbox("Enable Lifestream Integration", ref ls))
-        { Configuration.LifestreamIntegration = ls; Configuration.Save(); }
+        { HuntAlerts.C.LifestreamIntegration = ls; HuntAlerts.C.Save(); }
         ImGui.EndDisabled();
 
-        ImGui.BeginDisabled(!lifestreamInstalled || !Configuration.LifestreamIntegration);
-        var ctrl = Configuration.ctrlclickTeleport;
+        ImGui.BeginDisabled(!lifestreamInstalled || !HuntAlerts.C.LifestreamIntegration);
+        var ctrl = HuntAlerts.C.ctrlclickTeleport;
         if (ImGui.Checkbox("Ctrl-Click messages to teleport", ref ctrl))
-        { Configuration.ctrlclickTeleport = ctrl; Configuration.Save(); }
+        { HuntAlerts.C.ctrlclickTeleport = ctrl; HuntAlerts.C.Save(); }
         ImGui.EndDisabled();
     }
 
@@ -237,9 +234,9 @@ public class ConfigWindow : Window, IDisposable
     {
         Components.SectionHeader("S Rank Options");
 
-        var srankOn = Configuration.SRankEnabled;
+        var srankOn = HuntAlerts.C.SRankEnabled;
         if (ImGui.Checkbox("S Ranks Enabled", ref srankOn))
-        { Configuration.SRankEnabled = srankOn; Configuration.Save(); }
+        { HuntAlerts.C.SRankEnabled = srankOn; HuntAlerts.C.Save(); }
 
         ImGui.Spacing();
 
@@ -247,7 +244,7 @@ public class ConfigWindow : Window, IDisposable
 
         ImGui.TextUnformatted("S Rank Notifications");
         ImGui.Separator();
-        DrawHuntGroupCheckboxes(Configuration.EnabledSRankGroups, "SRank");
+        DrawHuntGroupCheckboxes(HuntAlerts.C.EnabledSRankGroups, "SRank");
 
         ImGui.Spacing();
         Components.SectionHeader("S Rank Scope");
@@ -262,18 +259,18 @@ public class ConfigWindow : Window, IDisposable
 
     private void DrawSRankScopeRadio(ScopeMode target, string label)
     {
-        var sel = Configuration.SRankScope == target;
+        var sel = HuntAlerts.C.SRankScope == target;
         if (ImGui.RadioButton($"{label}##SRankScope", sel) && !sel)
         {
-            Configuration.SRankScope = target;
-            Configuration.Save();
+            HuntAlerts.C.SRankScope = target;
+            HuntAlerts.C.Save();
         }
     }
 
     private void DrawTrainsSection()
     {
         Components.SectionHeader("Hunt Train Notifications");
-        DrawHuntGroupCheckboxes(Configuration.EnabledTrainGroups, "Train");
+        DrawHuntGroupCheckboxes(HuntAlerts.C.EnabledTrainGroups, "Train");
 
         ImGui.Spacing();
         Components.SectionHeader("Hunt Train Scope");
@@ -297,18 +294,18 @@ public class ConfigWindow : Window, IDisposable
             if (ImGui.Checkbox($"{label}##{idSuffix}-{group}", ref enabled))
             {
                 if (enabled) set.Add(group); else set.Remove(group);
-                Configuration.Save();
+                HuntAlerts.C.Save();
             }
         }
     }
 
     private void DrawScopeRadio(ScopeMode target, string label)
     {
-        var sel = Configuration.Scope == target;
+        var sel = HuntAlerts.C.Scope == target;
         if (ImGui.RadioButton(label, sel) && !sel)
         {
-            Configuration.Scope = target;
-            Configuration.Save();
+            HuntAlerts.C.Scope = target;
+            HuntAlerts.C.Save();
         }
     }
 
@@ -316,10 +313,10 @@ public class ConfigWindow : Window, IDisposable
     {
         DrawWorldsList(
             title: "Hunt Train Worlds",
-            scopeBlocks: Configuration.Scope != ScopeMode.AllConfigured,
+            scopeBlocks: HuntAlerts.C.Scope != ScopeMode.AllConfigured,
             scopeBlockedMessage: "World selection is ignored because the Hunt Train scope is set to one of the override modes. Switch to \"All configured datacenters/worlds\" to use this list.",
-            enabledDcs: Configuration.EnabledDatacenters,
-            enabledWorlds: Configuration.EnabledWorlds,
+            enabledDcs: HuntAlerts.C.EnabledDatacenters,
+            enabledWorlds: HuntAlerts.C.EnabledWorlds,
             searchRef: () => _worldSearch,
             setSearch: v => _worldSearch = v,
             idScope: "train");
@@ -329,10 +326,10 @@ public class ConfigWindow : Window, IDisposable
     {
         DrawWorldsList(
             title: "S Rank Worlds",
-            scopeBlocks: Configuration.SRankScope != ScopeMode.AllConfigured,
+            scopeBlocks: HuntAlerts.C.SRankScope != ScopeMode.AllConfigured,
             scopeBlockedMessage: "World selection is ignored because the S Rank scope is not \"All configured datacenters/worlds\". Switch on the S Ranks tab to use this list.",
-            enabledDcs: Configuration.EnabledSRankDatacenters,
-            enabledWorlds: Configuration.EnabledSRankWorlds,
+            enabledDcs: HuntAlerts.C.EnabledSRankDatacenters,
+            enabledWorlds: HuntAlerts.C.EnabledSRankWorlds,
             searchRef: () => _srankWorldSearch,
             setSearch: v => _srankWorldSearch = v,
             idScope: "srank");
@@ -407,19 +404,19 @@ public class ConfigWindow : Window, IDisposable
         {
             if (dcOn) enabledDcs.Remove(dc.Name);
             else      enabledDcs.Add(dc.Name);
-            Configuration.Save();
+            HuntAlerts.C.Save();
         }
         ImGui.SameLine();
         if (ImGui.SmallButton($"All##{idScope}-{dc.Name}"))
         {
             foreach (var w in dc.Worlds) enabledWorlds.Add(w);
-            Configuration.Save();
+            HuntAlerts.C.Save();
         }
         ImGui.SameLine();
         if (ImGui.SmallButton($"None##{idScope}-{dc.Name}"))
         {
             foreach (var w in dc.Worlds) enabledWorlds.Remove(w);
-            Configuration.Save();
+            HuntAlerts.C.Save();
         }
         ImGui.Separator();
 
@@ -434,7 +431,7 @@ public class ConfigWindow : Window, IDisposable
                 {
                     if (ticked) enabledWorlds.Add(w);
                     else        enabledWorlds.Remove(w);
-                    Configuration.Save();
+                    HuntAlerts.C.Save();
                 }
             }
             ImGui.EndTable();
@@ -446,56 +443,57 @@ public class ConfigWindow : Window, IDisposable
     {
         Components.SectionHeader("Connection");
 
-        var state = Plugin.SocketState;
+        var socket = Service.HuntSocketConnection;
+        var state = socket.SocketState;
         var (pillBg, pillBorder, pillFg, pillText) = state switch
         {
-            HuntAlerts.ConnectionState.Connected    => (0xFF1E5C3A, 0xFF40A080, 0xFF8AFFD5, "CONNECTED"),
-            HuntAlerts.ConnectionState.Connecting   => (0xFF3A3A5C, 0xFF7070C0, 0xFFB8B8FF, "CONNECTING"),
-            HuntAlerts.ConnectionState.Reconnecting => (0xFF5C4A1E, 0xFFC0A040, 0xFFFFD68A, "RECONNECTING"),
-            HuntAlerts.ConnectionState.Disconnected => (0xFF5C1E1E, 0xFFC04040, 0xFFFF8A8A, "DISCONNECTED"),
-            HuntAlerts.ConnectionState.Error        => (0xFF5C1E1E, 0xFFC04040, 0xFFFF8A8A, "ERROR"),
-            _                                       => (0xFF2A2A2A, 0xFF4A4A4A, 0xFFB8B8B8, "UNKNOWN"),
+            HuntSocketConnection.ConnectionState.Connected    => (0xFF1E5C3A, 0xFF40A080, 0xFF8AFFD5, "CONNECTED"),
+            HuntSocketConnection.ConnectionState.Connecting   => (0xFF3A3A5C, 0xFF7070C0, 0xFFB8B8FF, "CONNECTING"),
+            HuntSocketConnection.ConnectionState.Reconnecting => (0xFF5C4A1E, 0xFFC0A040, 0xFFFFD68A, "RECONNECTING"),
+            HuntSocketConnection.ConnectionState.Disconnected => (0xFF5C1E1E, 0xFFC04040, 0xFFFF8A8A, "DISCONNECTED"),
+            HuntSocketConnection.ConnectionState.Error        => (0xFF5C1E1E, 0xFFC04040, 0xFFFF8A8A, "ERROR"),
+            _                                                 => (0xFF2A2A2A, 0xFF4A4A4A, 0xFFB8B8B8, "UNKNOWN"),
         };
         DrawPill(pillText, pillBg, pillBorder, pillFg);
 
         ImGui.SameLine();
-        if (state == HuntAlerts.ConnectionState.Reconnecting)
+        if (state == HuntSocketConnection.ConnectionState.Reconnecting)
         {
             ImGui.PushStyleColor(ImGuiCol.Text, Theme.Subtle);
-            ImGui.TextUnformatted($"  attempt {Plugin.ReconnectAttemptCount}");
+            ImGui.TextUnformatted($"  attempt {socket.ReconnectAttemptCount}");
             ImGui.PopStyleColor();
         }
-        if (Plugin.LastStateChangeUtc.HasValue)
+        if (socket.LastStateChangeUtc.HasValue)
         {
             ImGui.SameLine();
             ImGui.PushStyleColor(ImGuiCol.Text, Theme.Subtle);
-            var ago = DateTime.UtcNow - Plugin.LastStateChangeUtc.Value;
+            var ago = DateTime.UtcNow - socket.LastStateChangeUtc.Value;
             ImGui.TextUnformatted($"  ·  {FormatAgo(ago)} ago");
             ImGui.PopStyleColor();
         }
 
         ImGui.Spacing();
-        Components.FieldRow("Server", Plugin.ServerUri);
+        Components.FieldRow("Server", socket.ServerUri);
 
-        if (!string.IsNullOrEmpty(Plugin.LastConnectionError))
+        if (!string.IsNullOrEmpty(socket.LastConnectionError))
         {
             ImGui.Spacing();
             ImGui.PushStyleColor(ImGuiCol.Text, 0xFFFF8A8A);
-            ImGui.TextWrapped($"Last error: {Plugin.LastConnectionError}");
+            ImGui.TextWrapped($"Last error: {socket.LastConnectionError}");
             ImGui.PopStyleColor();
         }
 
         ImGui.Spacing();
-        var busy = state == HuntAlerts.ConnectionState.Connecting || state == HuntAlerts.ConnectionState.Reconnecting;
+        var busy = state == HuntSocketConnection.ConnectionState.Connecting || state == HuntSocketConnection.ConnectionState.Reconnecting;
         ImGui.BeginDisabled(busy);
         if (Components.ActionButton(FontAwesomeIcon.Sync, busy ? "Reconnecting..." : "Reconnect", ButtonRole.Accent))
-            _ = Plugin.ReconnectAsync();
+            _ = socket.ReconnectAsync();
         ImGui.EndDisabled();
 
         ImGui.Spacing();
         Components.SectionHeader("Recent Activity");
 
-        var log = Plugin.ConnectionLog;
+        var log = socket.ConnectionLog;
         if (log.Count == 0)
         {
             ImGui.PushStyleColor(ImGuiCol.Text, Theme.Subtle);
@@ -640,7 +638,7 @@ public class ConfigWindow : Window, IDisposable
                 ? $"{kind} train starting at {_dbgZone} ({_dbgCoords}) - simulated"
                 : $"{kind} S Rank spotted at {_dbgZone} ({_dbgCoords}) - simulated");
 
-        var hm = new HuntAlerts.HuntMessage
+        var hm = new HuntMessage
         {
             Type           = isTrain ? "new_hunt" : "srank",
             Content        = content,
@@ -650,13 +648,13 @@ public class ConfigWindow : Window, IDisposable
             CreatureName   = _dbgCreature,
             LocationName   = _dbgZone,
             LocationCoords = _dbgCoords,
-            AetheriteName  = string.IsNullOrEmpty(_dbgAetheryte) ? "invalid" : _dbgAetheryte,
+            AetheryteName  = string.IsNullOrEmpty(_dbgAetheryte) ? "invalid" : _dbgAetheryte,
             Instance       = isTrain ? 0 : _dbgInstance,
             DeathTime      = 0,
-            AdditionalData = new Dictionary<string, object>(),
+            AdditionalData = [],
         };
 
-        Plugin.SimulateHuntMessage(hm);
+        Service.HuntSocketConnection.SimulateHuntMessage(hm);
         _dbgLastResult = $"Dispatched {(isTrain ? "train" : "S Rank")} for {kind} on '{_dbgWorld}'. Check chat / popup; verbose log captures any scope-filtering reason.";
     }
 

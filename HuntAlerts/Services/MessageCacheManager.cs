@@ -2,12 +2,13 @@ using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Game.Text.SeStringHandling.Payloads;
 using ECommons.DalamudServices;
 using ECommons.Logging;
+using HuntAlerts.Helpers;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
 
-namespace HuntAlerts.Helpers;
+namespace HuntAlerts.Services;
 
 #pragma warning disable IDE1006, IDE0040, IDE0044
 public class MessageCacheManager : IDisposable
@@ -67,9 +68,9 @@ public class MessageCacheManager : IDisposable
 
         var lifestreamInstalled = Svc.PluginInterface.InstalledPlugins.FirstOrDefault(x => x.InternalName == "Lifestream")?.IsLoaded == true;
         var ctrlHeld = (GetKeyState(VK_CONTROL) & 0x8000) != 0;
-        var ctrlClickTeleport = HuntAlerts.P.Configuration.ctrlclickTeleport
+        var ctrlClickTeleport = HuntAlerts.C.ctrlclickTeleport
                              && lifestreamInstalled
-                             && HuntAlerts.P.Configuration.LifestreamIntegration;
+                             && HuntAlerts.C.LifestreamIntegration;
 
         var msg = Messages[cmd]!;
 
@@ -83,8 +84,8 @@ public class MessageCacheManager : IDisposable
         }
         else
         {
-            HuntAlerts.P.NotifyWindow.IsOpen        = true;
-            HuntAlerts.P.NotifyWindow.CurrentMessage = msg;
+            Service.NotifyWindow.IsOpen        = true;
+            Service.NotifyWindow.CurrentMessage = msg;
         }
     }
 

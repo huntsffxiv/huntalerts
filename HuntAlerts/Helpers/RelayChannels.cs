@@ -66,7 +66,7 @@ public static class RelayChannels
         {
             try
             {
-                Chat.Instance.SendMessage(line);
+                Chat.SendMessage(line);
                 PluginLog.Verbose($"Relayed hunt to {channelCommand}: {text}");
             }
             catch (Exception ex)

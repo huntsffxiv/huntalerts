@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using ECommons.DalamudServices;
 using ECommons.Logging;
 using Lumina.Excel.Sheets;
@@ -101,7 +100,7 @@ public static class WorldData
 
                     if (!worldsByDcRow.TryGetValue(dcRowId, out var bucket))
                     {
-                        bucket = new List<string>();
+                        bucket = [];
                         worldsByDcRow[dcRowId] = bucket;
                     }
                     bucket.Add(name);

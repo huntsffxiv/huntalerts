@@ -47,15 +47,15 @@ namespace HuntAlerts
 
         public ScopeMode Scope { get; set; } = ScopeMode.AllConfigured;
 
-        public HashSet<string> EnabledTrainGroups { get; set; } = new();
-        public HashSet<string> EnabledDatacenters { get; set; } = new();
-        public HashSet<string> EnabledWorlds      { get; set; } = new();
+        public HashSet<string> EnabledTrainGroups { get; set; } = [];
+        public HashSet<string> EnabledDatacenters { get; set; } = [];
+        public HashSet<string> EnabledWorlds      { get; set; } = [];
 
         public bool SRankEnabled { get; set; } = true;
         public ScopeMode SRankScope { get; set; } = ScopeMode.CurrentDatacenterOnly;
-        public HashSet<string> EnabledSRankGroups       { get; set; } = new();
-        public HashSet<string> EnabledSRankDatacenters  { get; set; } = new();
-        public HashSet<string> EnabledSRankWorlds       { get; set; } = new();
+        public HashSet<string> EnabledSRankGroups       { get; set; } = [];
+        public HashSet<string> EnabledSRankDatacenters  { get; set; } = [];
+        public HashSet<string> EnabledSRankWorlds       { get; set; } = [];
 
         public int SnoozeDefaultMinutes { get; set; } = 30;
         public string DefaultRelayChannel { get; set; } = "/p";
@@ -72,10 +72,5 @@ namespace HuntAlerts
         {
             Svc.PluginInterface.SavePluginConfig(this);
         }
-    }
-
-    public sealed partial class HuntAlerts
-    {
-        public string serverURI = "wss://huntalerts.pro:24842";
     }
 }
