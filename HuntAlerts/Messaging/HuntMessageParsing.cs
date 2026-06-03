@@ -1,6 +1,7 @@
 using ECommons.Logging;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
 
@@ -36,8 +37,8 @@ namespace HuntAlerts
                 if (match.Success)
                 {
                     // Only processing the first match found
-                    float.TryParse(match.Groups[1].Value, out float x);
-                    float.TryParse(match.Groups[4].Value, out float y);
+                    float.TryParse(match.Groups[1].Value, NumberFormatInfo.InvariantInfo, out float x);
+                    float.TryParse(match.Groups[4].Value, NumberFormatInfo.InvariantInfo, out float y);
                     return (x, y);
                 }
 

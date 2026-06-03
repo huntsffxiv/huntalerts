@@ -21,7 +21,7 @@ public static class MapManager
         uint bestId = 0;
         var bestName = "";
         double distance = 0;
-        foreach (var data in Svc.Data.GetExcelSheet<Aetheryte>())
+        foreach (var data in Svc.Data.GetExcelSheet<Aetheryte>(Dalamud.Game.ClientLanguage.English))
         {
             if (!data.IsAetheryte) continue;
             if (data.Territory.ValueNullable == null) continue;
@@ -65,7 +65,7 @@ public static class MapManager
     public static (uint RowId, string Name)? LookupAetheryteByName(uint territoryType, string name)
     {
         if (string.IsNullOrWhiteSpace(name)) return null;
-        foreach (var data in Svc.Data.GetExcelSheet<Aetheryte>())
+        foreach (var data in Svc.Data.GetExcelSheet<Aetheryte>(Dalamud.Game.ClientLanguage.English))
         {
             if (!data.IsAetheryte) continue;
             if (data.Territory.ValueNullable == null) continue;
@@ -83,7 +83,7 @@ public static class MapManager
     public static (uint RowId, string Name, string ZoneName)? LookupAetheryteByNameAnywhere(string name)
     {
         if (string.IsNullOrWhiteSpace(name)) return null;
-        foreach (var data in Svc.Data.GetExcelSheet<Aetheryte>())
+        foreach (var data in Svc.Data.GetExcelSheet<Aetheryte>(Dalamud.Game.ClientLanguage.English))
         {
             if (!data.IsAetheryte) continue;
             if (data.PlaceName.ValueNullable == null) continue;

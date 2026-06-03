@@ -36,6 +36,7 @@ namespace HuntAlerts
         public bool SuppressDuplicates { get; set; } = true;
         public int TextColor { get; set; } = 57;
         public int SRankTextColor { get; set; } = 48;
+        public int SRankKillTextColor { get; set; } = 16;
         public bool UseDalamudChat { get; set; } = true;
         public XivChatType OutputChat { get; set; } = (XivChatType)56;
         public bool OpenMapOnArrival { get; set; } = true;

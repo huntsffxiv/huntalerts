@@ -180,6 +180,11 @@ public class ConfigWindow : Window, IDisposable
         if (ImGui.Combo("S Rank Text Color", ref sIdx, colorNames, colorNames.Length))
         { Configuration.SRankTextColor = colorOpts[sIdx].Value; Configuration.Save(); }
 
+        var skIdx = Array.FindIndex(colorOpts, o => o.Value == Configuration.SRankKillTextColor);
+        if (skIdx < 0) skIdx = 0;
+        if (ImGui.Combo("S Rank Kill Text Color", ref skIdx, colorNames, colorNames.Length))
+        { Configuration.SRankKillTextColor = colorOpts[skIdx].Value; Configuration.Save(); }
+
         var soundNames = Enumerable.Range(0, 17)
             .Select(i => i == 0 ? "None" : $"Sound {i}").ToArray();
         var sound = Configuration.SoundEffect;

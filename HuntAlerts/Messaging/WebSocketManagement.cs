@@ -550,9 +550,9 @@ namespace HuntAlerts
             {
                 var label = $"{hm.Kind} S Rank {creatureName} on {hm.World} was killed at {ConvertTime(deathTime)}.";
                 var b = new SeStringBuilder();
-                if (Configuration.SRankTextColor != 0) b.AddUiForeground((ushort)Configuration.SRankTextColor);
+                if (Configuration.SRankKillTextColor != 0) b.AddUiForeground((ushort)Configuration.SRankKillTextColor);
                 b.AddText(label);
-                if (Configuration.SRankTextColor != 0) b.AddUiForegroundOff();
+                if (Configuration.SRankKillTextColor != 0) b.AddUiForegroundOff();
                 PrintChat(b.Build());
             }
         }
@@ -590,7 +590,7 @@ namespace HuntAlerts
         {
             territoryType = 0;
             if (string.IsNullOrEmpty(zoneName)) return false;
-            if (!Svc.Data.GetExcelSheet<TerritoryType>().TryGetFirst(
+            if (!Svc.Data.GetExcelSheet<TerritoryType>(Dalamud.Game.ClientLanguage.English).TryGetFirst(
                     t => t.TerritoryIntendedUse.RowId == (uint)TerritoryIntendedUseEnum.Open_World
                       && (t.PlaceName.ValueNullable?.Name.ExtractText() ?? "").EqualsIgnoreCase(zoneName),
                     out var match))

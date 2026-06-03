@@ -73,7 +73,7 @@ namespace HuntAlerts.Helpers
                 //var (x, y) = (locationCoords.Split(',').Select(s => float.Parse(s.Trim())).ToArray() is float[] coords) ? (coords[0], coords[1]) : (0f, 0f);
                 var (x, y) = HuntAlerts.ExtractCoordinates(locationCoords);
 
-                if (Svc.Data.GetExcelSheet<TerritoryType>().TryGetFirst(x => x.TerritoryIntendedUse.RowId == (uint)TerritoryIntendedUseEnum.Open_World && (x.PlaceName.ValueNullable?.Name.ExtractText() ?? "").EqualsIgnoreCase(startZone), out var value))
+                if (Svc.Data.GetExcelSheet<TerritoryType>(Dalamud.Game.ClientLanguage.English).TryGetFirst(x => x.TerritoryIntendedUse.RowId == (uint)TerritoryIntendedUseEnum.Open_World && (x.PlaceName.ValueNullable?.Name.ExtractText() ?? "").EqualsIgnoreCase(startZone), out var value))
                 {
                     tt = value.RowId; //is territory id
                     MapManager.OpenMapWithMarker(tt, (float)x, (float)y);
@@ -205,7 +205,7 @@ namespace HuntAlerts.Helpers
                                         while (!token.IsCancellationRequested && (DateTime.Now - flagStartTime).TotalSeconds <= 60)
                                         {
                                             var territoryType = Svc.Framework.RunOnFrameworkThread(() => Svc.ClientState.TerritoryType).Result;
-                                            var territoryName = Svc.Framework.RunOnFrameworkThread(() => Svc.Data.GetExcelSheet<TerritoryType>()
+                                            var territoryName = Svc.Framework.RunOnFrameworkThread(() => Svc.Data.GetExcelSheet<TerritoryType>(Dalamud.Game.ClientLanguage.English)
                                                                  .GetRowOrDefault(territoryType)?.PlaceName.ValueNullable?.Name.ToString()).Result;
 
                                             PluginLog.Verbose($"Waiting on targetable + zone match. Current: {territoryName} | Destination: {startZone}");
