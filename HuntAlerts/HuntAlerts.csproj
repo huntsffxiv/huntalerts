@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Dalamud.NET.SDK/15.0.0">
     <PropertyGroup>
-        <Version>1.4.0.4</Version>
+        <Version>1.4.0.5</Version>
         <Description>HuntAlerts</Description>
         <PackageProjectUrl>https://github.com/goatcorp/HuntAlerts</PackageProjectUrl>
         <PackageLicenseExpression>AGPL-3.0-or-later</PackageLicenseExpression>

@@ -534,7 +534,7 @@ namespace HuntAlerts
         {
             territoryType = 0;
             if (string.IsNullOrEmpty(zoneName)) return false;
-            if (!Svc.Data.GetExcelSheet<TerritoryType>().TryGetFirst(
+            if (!Svc.Data.GetExcelSheet<TerritoryType>(Dalamud.Game.ClientLanguage.English).TryGetFirst(
                     t => t.TerritoryIntendedUse.RowId == (uint)TerritoryIntendedUseEnum.Open_World
                       && (t.PlaceName.ValueNullable?.Name.ExtractText() ?? "").EqualsIgnoreCase(zoneName),
                     out var match))
