@@ -43,8 +43,8 @@ namespace HuntAlerts
 
         private static void MigrateV2ToV3(Configuration c)
         {
-            c.EnabledSRankDatacenters ??= new System.Collections.Generic.HashSet<string>();
-            c.EnabledSRankWorlds      ??= new System.Collections.Generic.HashSet<string>();
+            c.EnabledSRankDatacenters ??= [];
+            c.EnabledSRankWorlds      ??= [];
 
             foreach (var dc in WorldData.DatacentersInOrder)
             {

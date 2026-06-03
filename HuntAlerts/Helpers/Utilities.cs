@@ -1,18 +1,14 @@
 using ECommons;
 using ECommons.Automation;
-using ECommons.Automation.LegacyTaskManager;
 using ECommons.DalamudServices;
 using ECommons.ExcelServices;
 using ECommons.IPC;
 using ECommons.Logging;
 using ECommons.Throttlers;
-using FFXIVClientStructs;
 using FFXIVClientStructs.FFXIV.Component.GUI;
+using HuntAlerts.Services;
 using Lumina.Excel.Sheets;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -20,23 +16,21 @@ namespace HuntAlerts.Helpers
 {
     public static class Utilities
     {
-        internal static TaskManager TaskManager;
-
         public static unsafe void OpenPartyFinder()
         {
-
             try
             {
                 if (EzThrottler.Throttle("OpenHuntPF", 1000))
                 {
-                    TaskManager = new() { AbortOnTimeout = true, TimeLimitMS = 5000 };
+                    Service.TaskManager.DefaultConfiguration.AbortOnTimeout = true;
+                    Service.TaskManager.DefaultConfiguration.TimeLimitMS = 5000;
 
                     if (!GenericHelpers.TryGetAddonByName<AtkUnitBase>("LookingForGroup", out var _))
                     {
-                        TaskManager.Enqueue(() => Chat.SendMessage("/partyfinder"));
-                        TaskManager.DelayNext(500);
+                        Service.TaskManager.Enqueue(() => Chat.SendMessage("/partyfinder"));
+                        Service.TaskManager.EnqueueDelay(500);
                     }
-                    TaskManager.Enqueue(() =>
+                    Service.TaskManager.Enqueue(() =>
                     {
                         if (GenericHelpers.TryGetAddonByName<AtkUnitBase>("LookingForGroup", out var addon))
                         {
@@ -71,9 +65,10 @@ namespace HuntAlerts.Helpers
                 PluginLog.Verbose($"Attempting to flag coords {startZone} {locationCoords} on Map");
                 uint tt;
                 //var (x, y) = (locationCoords.Split(',').Select(s => float.Parse(s.Trim())).ToArray() is float[] coords) ? (coords[0], coords[1]) : (0f, 0f);
-                var (x, y) = HuntAlerts.ExtractCoordinates(locationCoords);
+                var (x, y) = Messaging.HuntMessageParsing.ExtractCoordinates(locationCoords);
+                if (x is null || y is null) return;
 
-                if (Svc.Data.GetExcelSheet<TerritoryType>().TryGetFirst(x => x.TerritoryIntendedUse.RowId == (uint)TerritoryIntendedUseEnum.Open_World && (x.PlaceName.ValueNullable?.Name.ExtractText() ?? "").EqualsIgnoreCase(startZone), out var value))
+                if (Svc.Data.GetExcelSheet<TerritoryType>(Dalamud.Game.ClientLanguage.English).TryGetFirst(x => x.TerritoryIntendedUse.RowId == (uint)TerritoryIntendedUseEnum.Open_World && (x.PlaceName.ValueNullable?.Name.ExtractText() ?? "").EqualsIgnoreCase(startZone), out var value))
                 {
                     tt = value.RowId; //is territory id
                     MapManager.OpenMapWithMarker(tt, (float)x, (float)y);
@@ -87,18 +82,18 @@ namespace HuntAlerts.Helpers
         }
 
 
-        private static CancellationTokenSource _cancellationTokenSource;
-        private static int _isTaskRunning = 0; // 0 = idle, 1 = running. Use Interlocked.* only.
+        private static CancellationTokenSource? CancellationTokenSource;
+        private static int IsTaskRunning = 0; // 0 = idle, 1 = running. Use Interlocked.* only.
         public static async void ExecuteTeleport(string world, string startLocation, uint startLocationAetheryteId, string startZone, string locationCoords, int instance, bool openmaponArrival, bool lifestreamEnabled)
         {
             PluginLog.Information($"[Teleport] ENTER world={world} aetheryte={startLocation}(id={startLocationAetheryteId}) zone={startZone} lifestreamEnabled={lifestreamEnabled} coords={locationCoords}");
 
             // Atomically claim the running slot. If it was already 1, this is a "click while running" — cancel and return.
-            if (Interlocked.Exchange(ref _isTaskRunning, 1) == 1)
+            if (Interlocked.Exchange(ref IsTaskRunning, 1) == 1)
             {
                 PluginLog.Information("[Teleport] click-while-running detected; cancelling in-flight teleport.");
-                _cancellationTokenSource?.Cancel();
-                Interlocked.Exchange(ref _isTaskRunning, 0);
+                CancellationTokenSource?.Cancel();
+                Interlocked.Exchange(ref IsTaskRunning, 0);
                 return;
             }
 
@@ -111,9 +106,9 @@ namespace HuntAlerts.Helpers
                     return;
                 }
 
-                _cancellationTokenSource?.Dispose();
-                _cancellationTokenSource = new CancellationTokenSource();
-                var token = _cancellationTokenSource.Token;
+                CancellationTokenSource?.Dispose();
+                CancellationTokenSource = new CancellationTokenSource();
+                var token = CancellationTokenSource.Token;
 
                 string currentworldName = Svc.Framework.RunOnFrameworkThread(() => Svc.Objects.LocalPlayer?.CurrentWorld.ValueNullable?.Name.ToString()).Result ?? "";
                 if (currentworldName.IsNullOrEmpty())
@@ -158,7 +153,7 @@ namespace HuntAlerts.Helpers
                     bool localPlayerExists = Svc.Framework.RunOnFrameworkThread(() => Svc.Objects.LocalPlayer != null).Result;
                     if (isLoggedIn && localPlayerExists)
                     {
-                        currentworldName = Svc.Framework.RunOnFrameworkThread(() => Svc.Objects.LocalPlayer.CurrentWorld.Value.Name.ToString()).Result;
+                        currentworldName = Svc.Framework.RunOnFrameworkThread(() => Svc.Objects.LocalPlayer?.CurrentWorld.Value.Name.ToString() ?? "").Result;
                         PluginLog.Verbose($"Player is logged in. Currentworld: {currentworldName}");
 
                         var lifestreamBusy = ECommonsIPC.Lifestream.IsBusy();
@@ -169,7 +164,7 @@ namespace HuntAlerts.Helpers
                             var targetableStartTime = DateTime.Now;
                             while (!token.IsCancellationRequested && (DateTime.Now - targetableStartTime).TotalSeconds <= 60)
                             {
-                                bool isTargetable = Svc.Framework.RunOnFrameworkThread(() => Svc.Objects.LocalPlayer.IsTargetable).Result;
+                                bool isTargetable = Svc.Framework.RunOnFrameworkThread(() => Svc.Objects.LocalPlayer?.IsTargetable ?? false).Result;
                                 if (isTargetable)
                                 {
                                     PluginLog.Information($"[Teleport] player targetable. Will teleport to aetheryte '{startLocation}' (id {startLocationAetheryteId}).");
@@ -205,11 +200,11 @@ namespace HuntAlerts.Helpers
                                         while (!token.IsCancellationRequested && (DateTime.Now - flagStartTime).TotalSeconds <= 60)
                                         {
                                             var territoryType = Svc.Framework.RunOnFrameworkThread(() => Svc.ClientState.TerritoryType).Result;
-                                            var territoryName = Svc.Framework.RunOnFrameworkThread(() => Svc.Data.GetExcelSheet<TerritoryType>()
+                                            var territoryName = Svc.Framework.RunOnFrameworkThread(() => Svc.Data.GetExcelSheet<TerritoryType>(Dalamud.Game.ClientLanguage.English)
                                                                  .GetRowOrDefault(territoryType)?.PlaceName.ValueNullable?.Name.ToString()).Result;
 
                                             PluginLog.Verbose($"Waiting on targetable + zone match. Current: {territoryName} | Destination: {startZone}");
-                                            isTargetable = Svc.Framework.RunOnFrameworkThread(() => Svc.Objects.LocalPlayer.IsTargetable).Result;
+                                            isTargetable = Svc.Framework.RunOnFrameworkThread(() => Svc.Objects.LocalPlayer?.IsTargetable ?? false).Result;
                                             if (isTargetable && territoryName == startZone)
                                             {
                                                 await Task.Delay(1000, token);
@@ -247,7 +242,7 @@ namespace HuntAlerts.Helpers
             }
             finally
             {
-                Interlocked.Exchange(ref _isTaskRunning, 0);
+                Interlocked.Exchange(ref IsTaskRunning, 0);
             }
         }
     }

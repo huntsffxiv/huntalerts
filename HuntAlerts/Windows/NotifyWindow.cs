@@ -4,6 +4,7 @@ using Dalamud.Interface.Components;
 using Dalamud.Interface.Windowing;
 using ECommons.Logging;
 using HuntAlerts.Helpers;
+using HuntAlerts.Services;
 using System;
 using System.Numerics;
 
@@ -11,9 +12,8 @@ namespace HuntAlerts.Windows;
 
 public class NotifyWindow : Window
 {
-    public HuntTrainMessage CurrentMessage;
-
-    private readonly TitleBarButton _snoozeButton;
+    public HuntTrainMessage? CurrentMessage;
+    private readonly TitleBarButton snoozeButton;
 
     public NotifyWindow() : base("HuntAlerts Notification", ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse)
     {
@@ -28,36 +28,36 @@ public class NotifyWindow : Window
         {
             Icon        = FontAwesomeIcon.Cog,
             IconOffset  = new Vector2(2, 1),
-            Click       = _ => HuntAlerts.P.DrawConfigUI(),
+            Click       = _ => Service.OpenConfig(),
             ShowTooltip = () => ImGui.SetTooltip("Open settings"),
         });
-        _snoozeButton = new TitleBarButton
+        snoozeButton = new TitleBarButton
         {
             Icon        = FontAwesomeIcon.Bell,
             IconOffset  = new Vector2(2, 1),
-            Click       = _ => HuntAlerts.P.ToggleSnooze(),
+            Click       = _ => Service.Snooze.ToggleSnooze(),
             ShowTooltip = () => ImGui.SetTooltip(SnoozeTooltipText()),
         };
-        TitleBarButtons.Add(_snoozeButton);
+        TitleBarButtons.Add(snoozeButton);
         TitleBarButtons.Add(new TitleBarButton
         {
             Icon        = FontAwesomeIcon.History,
             IconOffset  = new Vector2(2, 1),
-            Click       = _ => HuntAlerts.P.HuntListWindow.IsOpen = true,
+            Click       = _ => Service.HuntListWindow.IsOpen = true,
             ShowTooltip = () => ImGui.SetTooltip("Recent Hunts"),
         });
     }
 
     public override void PreDraw()
     {
-        _snoozeButton.Icon = HuntAlerts.P.IsSnoozed ? FontAwesomeIcon.BellSlash : FontAwesomeIcon.Bell;
+        snoozeButton.Icon = Service.Snooze.IsSnoozed ? FontAwesomeIcon.BellSlash : FontAwesomeIcon.Bell;
     }
 
     private static string SnoozeTooltipText()
     {
-        if (HuntAlerts.P.IsSnoozed)
-            return $"Snoozed -{Math.Ceiling(HuntAlerts.P.SnoozeRemaining.TotalMinutes)}m remaining. Click to wake.";
-        var d = HuntAlerts.P.Configuration?.SnoozeDefaultMinutes ?? 30;
+        if (Service.Snooze.IsSnoozed)
+            return $"Snoozed -{Math.Ceiling(Service.Snooze.SnoozeRemaining.TotalMinutes)}m remaining. Click to wake.";
+        var d = HuntAlerts.C.SnoozeDefaultMinutes;
         return $"Snooze alerts for {d}m";
     }
 
@@ -185,9 +185,9 @@ public class NotifyWindow : Window
             Utilities.OpenPartyFinder();
 
         ImGui.SameLine();
-        var defaultChannel = string.IsNullOrEmpty(HuntAlerts.P.Configuration.DefaultRelayChannel)
+        var defaultChannel = string.IsNullOrEmpty(HuntAlerts.C.DefaultRelayChannel)
             ? "/p"
-            : HuntAlerts.P.Configuration.DefaultRelayChannel;
+            : HuntAlerts.C.DefaultRelayChannel;
         var defaultDisplay = RelayChannels.DisplayFor(defaultChannel);
         if (Components.ActionButton(FontAwesomeIcon.Bullhorn, "Relay", ButtonRole.Success))
             RelayChannels.RelayMessage(entry, defaultChannel);

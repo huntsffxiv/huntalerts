@@ -3,6 +3,7 @@ using Dalamud.Interface;
 using Dalamud.Interface.Windowing;
 using ECommons.Logging;
 using HuntAlerts.Helpers;
+using HuntAlerts.Services;
 using System;
 using System.Collections.Generic;
 using System.Numerics;
@@ -26,14 +27,14 @@ public class HuntListWindow : Window
         {
             Icon        = FontAwesomeIcon.Cog,
             IconOffset  = new Vector2(2, 1),
-            Click       = _ => HuntAlerts.P.DrawConfigUI(),
+            Click       = _ => Service.OpenConfig(),
             ShowTooltip = () => ImGui.SetTooltip("Open settings"),
         });
         _snoozeButton = new TitleBarButton
         {
             Icon        = FontAwesomeIcon.Bell,
             IconOffset  = new Vector2(2, 1),
-            Click       = _ => HuntAlerts.P.ToggleSnooze(),
+            Click       = _ => Service.Snooze.ToggleSnooze(),
             ShowTooltip = () => ImGui.SetTooltip(SnoozeTooltipText()),
         };
         TitleBarButtons.Add(_snoozeButton);
@@ -41,14 +42,14 @@ public class HuntListWindow : Window
 
     public override void PreDraw()
     {
-        _snoozeButton.Icon = HuntAlerts.P.IsSnoozed ? FontAwesomeIcon.BellSlash : FontAwesomeIcon.Bell;
+        _snoozeButton.Icon = Service.Snooze.IsSnoozed ? FontAwesomeIcon.BellSlash : FontAwesomeIcon.Bell;
     }
 
     private static string SnoozeTooltipText()
     {
-        if (HuntAlerts.P.IsSnoozed)
-            return $"Snoozed -{Math.Ceiling(HuntAlerts.P.SnoozeRemaining.TotalMinutes)}m remaining. Click to wake.";
-        var d = HuntAlerts.P.Configuration?.SnoozeDefaultMinutes ?? 30;
+        if (Service.Snooze.IsSnoozed)
+            return $"Snoozed -{Math.Ceiling(Service.Snooze.SnoozeRemaining.TotalMinutes)}m remaining. Click to wake.";
+        var d = HuntAlerts.C.SnoozeDefaultMinutes;
         return $"Snooze alerts for {d}m";
     }
 
@@ -56,7 +57,7 @@ public class HuntListWindow : Window
     {
         try
         {
-            var messages = HuntAlerts.P.MessageCacheManager.GetOrderedMessages();
+            var messages = Service.MessageCacheManager.GetOrderedMessages();
             messages.Reverse();
 
             DrawHeader(messages.Count);
@@ -110,10 +111,10 @@ public class HuntListWindow : Window
         ImGui.TextUnformatted($"  ·  {count} cached");
         ImGui.PopStyleColor();
 
-        if (HuntAlerts.P.IsSnoozed)
+        if (Service.Snooze.IsSnoozed)
         {
             ImGui.SameLine();
-            var remainingMin = (int)Math.Ceiling(HuntAlerts.P.SnoozeRemaining.TotalMinutes);
+            var remainingMin = (int)Math.Ceiling(Service.Snooze.SnoozeRemaining.TotalMinutes);
             ImGui.PushFont(UiBuilder.IconFont);
             ImGui.PushStyleColor(ImGuiCol.Text, Theme.AccentBtn);
             ImGui.TextUnformatted($"  {FontAwesomeIcon.BellSlash.ToIconString()}");
@@ -125,7 +126,7 @@ public class HuntListWindow : Window
             ImGui.PopStyleColor();
             ImGui.SameLine();
             if (Components.ActionButton(FontAwesomeIcon.Sun, "Wake", ButtonRole.Accent))
-                HuntAlerts.P.ClearSnooze();
+                Service.Snooze.ClearSnooze();
         }
 
         ImGui.Separator();
@@ -165,8 +166,8 @@ public class HuntListWindow : Window
 
             if (ImGui.InvisibleButton("##card", new Vector2(width, cardHeight)))
             {
-                HuntAlerts.P.NotifyWindow.IsOpen = true;
-                HuntAlerts.P.NotifyWindow.CurrentMessage = msg;
+                Service.NotifyWindow.IsOpen = true;
+                Service.NotifyWindow.CurrentMessage = msg;
             }
             var hovered = ImGui.IsItemHovered();
             if (hovered) ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);

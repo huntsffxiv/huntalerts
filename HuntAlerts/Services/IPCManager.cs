@@ -1,12 +1,10 @@
 using ECommons.EzIpcManager;
 using HuntAlerts.Helpers;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace HuntAlerts.Services;
+
+#nullable disable
 public class IPCManager
 {
     private IPCManager()
@@ -15,4 +13,8 @@ public class IPCManager
     }
 
     [EzIPCEvent] public Action<HuntTrainMessage> OnHuntTrainMessageReceived;
+    [EzIPCEvent] public Action<HuntAlertMessage> OnHuntAlertMessageReceived;
+
+    [EzIPC] public bool LifestreamIntegrationEnabled() => HuntAlerts.C.LifestreamIntegration;
+    [EzIPC] public bool OpenMapOnArrivalEnabled() => HuntAlerts.C.OpenMapOnArrival;
 }
