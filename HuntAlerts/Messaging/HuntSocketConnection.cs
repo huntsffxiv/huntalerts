@@ -352,21 +352,24 @@ public sealed class HuntSocketConnection : IDisposable
             $"World: {hm.World}{Environment.NewLine}Posted: {postedLocal}{Environment.NewLine}{Environment.NewLine}" +
             content;
 
+        var huntWorldId = TryGetWorld(hm.World, out var huntWorld) ? huntWorld.RowId : 0u;
+        var huntRegionRowId = huntWorld.DataCenter.ValueNullable?.Region.RowId ?? 0u;
+        var currentRegionRowId = playerCtx.CurrentRegion?.RowId ?? 0u;
+
         var htMessage = new HuntTrainMessage(
             formattedDetail, hm.Type, hm.Kind, hm.World,
             playerCtx.CurrentWorldName, currentRegion, huntRegion,
             postedLocal, hm.Posted_Epoch, aetheryteName, aetheryteId, startZone, instance: 1,
-            coordsStr, openMapOnArrival, lifestreamHooked);
-
-        var huntWorldId = TryGetWorld(hm.World, out var huntWorld) ? huntWorld.RowId : 0u;
+            coordsStr, openMapOnArrival, lifestreamHooked,
+            currentRegionRowId: currentRegionRowId, huntRegionRowId: huntRegionRowId);
         var typedAlert = new HuntAlertMessage(
             formattedDetail,
             hm.Type ?? "",
             hm.Kind ?? "",
             huntWorldId,
             playerCtx.CurrentWorld?.RowId ?? 0,
-            playerCtx.CurrentRegion?.RowId ?? 0,
-            huntWorld.DataCenter.ValueNullable?.Region.RowId ?? 0,
+            currentRegionRowId,
+            huntRegionRowId,
             DateTimeOffset.FromUnixTimeSeconds(hm.Posted_Epoch),
             hm.Posted_Epoch,
             aetheryteId,
@@ -518,21 +521,25 @@ public sealed class HuntSocketConnection : IDisposable
                 $"Posted: {postedLocal}{Environment.NewLine}Creature: {creatureName}{Environment.NewLine}{Environment.NewLine}" +
                 $"Location: {locationName} ({coordsStr}){Environment.NewLine}Aetherite: {aetheryteName}";
 
+            var huntWorldId = TryGetWorld(hm.World, out var huntWorld) ? huntWorld.RowId : 0u;
+            var huntRegionRowId = huntWorld.DataCenter.ValueNullable?.Region.RowId ?? 0u;
+            var currentRegionRowId = playerCtx.CurrentRegion?.RowId ?? 0u;
+
             var htMessage = new HuntTrainMessage(
                 detail, hm.Type, hm.Kind, hm.World,
                 playerCtx.CurrentWorldName ?? "", currentRegion, huntRegion,
                 postedLocal, hm.Posted_Epoch, startLocation, aetheryteId, locationName, instance,
-                coordsStr, openMapOnArrival, lifestreamHooked, creatureName);
+                coordsStr, openMapOnArrival, lifestreamHooked, creatureName,
+                currentRegionRowId: currentRegionRowId, huntRegionRowId: huntRegionRowId);
 
-            var huntWorldId = TryGetWorld(hm.World, out var huntWorld) ? huntWorld.RowId : 0u;
             var typedAlert = new HuntAlertMessage(
                 detail,
                 hm.Type ?? "",
                 hm.Kind ?? "",
                 huntWorldId,
                 playerCtx.CurrentWorld?.RowId ?? 0,
-                playerCtx.CurrentRegion?.RowId ?? 0,
-                huntWorld.DataCenter.ValueNullable?.Region.RowId ?? 0,
+                currentRegionRowId,
+                huntRegionRowId,
                 DateTimeOffset.FromUnixTimeSeconds(hm.Posted_Epoch),
                 hm.Posted_Epoch,
                 aetheryteId,

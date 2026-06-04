@@ -153,8 +153,8 @@ public class NotifyWindow : Window
         var canTeleport =
             entry.lifestreamEnabled &&
             !string.IsNullOrEmpty(entry.huntWorld) &&
-            !string.IsNullOrEmpty(entry.currentregionName) &&
-            entry.currentregionName == entry.huntregionName;
+            entry.currentRegionRowId != 0 &&
+            entry.currentRegionRowId == entry.huntRegionRowId;
 
         var first = true;
 
