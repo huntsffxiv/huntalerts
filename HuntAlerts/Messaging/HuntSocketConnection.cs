@@ -348,7 +348,7 @@ public sealed class HuntSocketConnection : IDisposable
 
         var formattedDetail =
             $"Kind: Hunt Train{Environment.NewLine}Hunt: {hm.Kind}{Environment.NewLine}" +
-            $"Start Zone: {startZone}{Environment.NewLine}Aetherite: {aetheryteName}{Environment.NewLine}" +
+            $"Start Zone: {startZone}{Environment.NewLine}Aetheryte: {aetheryteName}{Environment.NewLine}" +
             $"World: {hm.World}{Environment.NewLine}Posted: {postedLocal}{Environment.NewLine}{Environment.NewLine}" +
             content;
 
@@ -517,9 +517,9 @@ public sealed class HuntSocketConnection : IDisposable
             var detail =
                 $"Type: S Rank{Environment.NewLine}Hunt: {hm.Kind}{Environment.NewLine}" +
                 $"World: {hm.World}{Environment.NewLine}Start Zone: {locationName}{Environment.NewLine}" +
-                $"Instance: {instance}{Environment.NewLine}Aetherite: {startLocation}{Environment.NewLine}" +
+                $"Instance: {instance}{Environment.NewLine}Aetheryte: {startLocation}{Environment.NewLine}" +
                 $"Posted: {postedLocal}{Environment.NewLine}Creature: {creatureName}{Environment.NewLine}{Environment.NewLine}" +
-                $"Location: {locationName} ({coordsStr}){Environment.NewLine}Aetherite: {aetheryteName}";
+                $"Location: {locationName} ({coordsStr}){Environment.NewLine}Aetheryte: {aetheryteName}";
 
             var huntWorldId = TryGetWorld(hm.World, out var huntWorld) ? huntWorld.RowId : 0u;
             var huntRegionRowId = huntWorld.DataCenter.ValueNullable?.Region.RowId ?? 0u;
