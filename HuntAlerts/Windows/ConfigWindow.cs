@@ -238,6 +238,12 @@ public class ConfigWindow : Window, IDisposable
         if (ImGui.Checkbox("S Ranks Enabled", ref srankOn))
         { HuntAlerts.C.SRankEnabled = srankOn; HuntAlerts.C.Save(); }
 
+        ImGui.BeginDisabled(!srankOn);
+        var killOn = HuntAlerts.C.SRankKillNotifications;
+        if (ImGui.Checkbox("Show kill notifications", ref killOn))
+        { HuntAlerts.C.SRankKillNotifications = killOn; HuntAlerts.C.Save(); }
+        ImGui.EndDisabled();
+
         ImGui.Spacing();
 
         ImGui.BeginDisabled(!srankOn);

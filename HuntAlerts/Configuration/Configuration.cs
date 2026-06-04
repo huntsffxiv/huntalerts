@@ -52,6 +52,7 @@ namespace HuntAlerts
         public HashSet<string> EnabledWorlds      { get; set; } = [];
 
         public bool SRankEnabled { get; set; } = true;
+        public bool SRankKillNotifications { get; set; } = true;
         public ScopeMode SRankScope { get; set; } = ScopeMode.CurrentDatacenterOnly;
         public HashSet<string> EnabledSRankGroups       { get; set; } = [];
         public HashSet<string> EnabledSRankDatacenters  { get; set; } = [];

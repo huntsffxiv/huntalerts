@@ -563,6 +563,11 @@ public sealed class HuntSocketConnection : IDisposable
         }
         else
         {
+            if (!config.SRankKillNotifications)
+            {
+                PluginLog.Verbose("S Rank kill notification suppressed by setting.");
+                return;
+            }
             var label = $"{hm.Kind} S Rank {creatureName} on {hm.World} was killed at {HuntMessageFormatting.ConvertTime(deathTime)}.";
             var b = new SeStringBuilder();
             if (config.SRankKillTextColor != 0) b.AddUiForeground((ushort)config.SRankKillTextColor);
