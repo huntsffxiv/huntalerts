@@ -57,6 +57,24 @@ namespace HuntAlerts.Helpers
             }
         }
 
+        public static string SetNavigation(HuntTrainMessage entry)
+        {
+            ArrowWaypoint.Set(entry.startTerritoryTypeId, entry.mapLocationX, entry.mapLocationY, "manual", entry.huntWorld, force: true);
+
+            var inZone  = Svc.ClientState.TerritoryType == entry.startTerritoryTypeId;
+            var world   = Svc.Objects.LocalPlayer?.CurrentWorld.ValueNullable?.Name.ExtractText() ?? "";
+            var worldOk = string.IsNullOrEmpty(entry.huntWorld) ||
+                          world.Equals(entry.huntWorld, StringComparison.OrdinalIgnoreCase);
+
+            if (inZone && worldOk)
+                return "Navigation arrow set.";
+
+            var where = !string.IsNullOrEmpty(entry.huntWorld) && !string.IsNullOrEmpty(entry.startZone)
+                ? $"{entry.huntWorld}, {entry.startZone}"
+                : !string.IsNullOrEmpty(entry.startZone) ? entry.startZone : entry.huntWorld;
+            return $"Navigation set. The arrow appears once you are on {where}.";
+        }
+
         public static void FlagOnMap(string locationCoords, string startZone)
         {
             try

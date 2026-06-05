@@ -78,6 +78,8 @@ namespace HuntAlerts
 
             if (ECommonsIPC.Lifestream.Available)
                 c.LifestreamIntegration = true;
+
+            c.LastSeenChangelogVersion = Changelog.Revision;
         }
 
         private static void WipeFiles()

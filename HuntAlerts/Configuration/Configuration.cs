@@ -15,6 +15,14 @@ namespace HuntAlerts
         HomeWorldOnly,
     }
 
+    public enum ToastAnimation
+    {
+        None,
+        Fade,
+        Slide,
+        SlideFade,
+    }
+
     public static class HuntGroups
     {
         public const string Centurio       = "Centurio";
@@ -34,6 +42,7 @@ namespace HuntAlerts
         public int Version { get; set; } = 3;
 
         public bool SuppressDuplicates { get; set; } = true;
+        public bool ChatAlertsEnabled { get; set; } = true;
         public int TextColor { get; set; } = 57;
         public int SRankTextColor { get; set; } = 48;
         public int SRankKillTextColor { get; set; } = 16;
@@ -61,10 +70,17 @@ namespace HuntAlerts
         public int SnoozeDefaultMinutes { get; set; } = 30;
         public string DefaultRelayChannel { get; set; } = "/p";
         public bool WorldArrowEnabled { get; set; } = true;
-        public bool ArrowChatPickup { get; set; } = false;
+        public bool ArrowChatPickup { get; set; } = true;
         public bool ArrowChatPickupShout { get; set; } = true;
         public bool ArrowChatPickupYell { get; set; } = true;
-        public bool ArrowChatPickupParty { get; set; } = true;
+        public bool ArrowChatPickupParty { get; set; } = false;
+        public bool ToastEnabled { get; set; } = false;
+        public int ToastDurationSeconds { get; set; } = 5;
+        public ToastAnimation ToastAnimation { get; set; } = ToastAnimation.SlideFade;
+        public bool ToastPosSet { get; set; } = false;
+        public float ToastPosX { get; set; }
+        public float ToastPosY { get; set; }
+        public int LastSeenChangelogVersion { get; set; } = 0;
 
         [NonSerialized]
         private IDalamudPluginInterface? PluginInterface;

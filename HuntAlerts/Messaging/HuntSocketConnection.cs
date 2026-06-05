@@ -383,8 +383,10 @@ public sealed class HuntSocketConnection : IDisposable
         var link = Service.MessageCacheManager.AddMessage(htMessage);
         Service.IPCManager.OnHuntTrainMessageReceived(htMessage);
         Service.IPCManager.OnHuntAlertMessageReceived(typedAlert);
+        Service.ToastWindow.Show(htMessage);
 
-        PrintChat(BuildLinkedLine(link, $"{hm.Kind} train starting on {hm.World}! (Click for info)", config.TextColor));
+        if (config.ChatAlertsEnabled)
+            PrintChat(BuildLinkedLine(link, $"{hm.Kind} train starting on {hm.World}! (Click for info)", config.TextColor));
 
         if (config.SoundEffect != 0)
             UIGlobals.PlayChatSoundEffect((uint)config.SoundEffect);
@@ -555,19 +557,21 @@ public sealed class HuntSocketConnection : IDisposable
             var link = Service.MessageCacheManager.AddMessage(htMessage);
             Service.IPCManager.OnHuntTrainMessageReceived(htMessage);
             Service.IPCManager.OnHuntAlertMessageReceived(typedAlert);
+            Service.ToastWindow.Show(htMessage);
 
             var label = instance > 1
                 ? $"{hm.Kind} S Rank {creatureName} (i{instance}) spawned on {hm.World}! (Click for info)"
                 : $"{hm.Kind} S Rank {creatureName} spawned on {hm.World}! (Click for info)";
 
-            PrintChat(BuildLinkedLine(link, label, config.SRankTextColor));
+            if (config.ChatAlertsEnabled)
+                PrintChat(BuildLinkedLine(link, label, config.SRankTextColor));
 
             if (config.SoundEffect != 0)
                 UIGlobals.PlayChatSoundEffect((uint)config.SoundEffect);
         }
         else
         {
-            if (!config.SRankKillNotifications)
+            if (!config.SRankKillNotifications || !config.ChatAlertsEnabled)
             {
                 PluginLog.Verbose("S Rank kill notification suppressed by setting.");
                 return;

@@ -27,12 +27,12 @@ public class NotifyWindow : Window
 
     public NotifyWindow() : base("HuntAlerts Notification", ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse)
     {
-        Size          = new Vector2(440, 360);
+        Size          = new Vector2(540, 380);
         SizeCondition = ImGuiCond.FirstUseEver;
         SizeConstraints = new WindowSizeConstraints
         {
-            MinimumSize = new Vector2(360, 240),
-            MaximumSize = new Vector2(900, 1400),
+            MinimumSize = new Vector2(520, 240),
+            MaximumSize = new Vector2(1000, 1400),
         };
         TitleBarButtons.Add(new TitleBarButton
         {
@@ -118,6 +118,7 @@ public class NotifyWindow : Window
         var (badgeText, style, title) = isTrain
             ? ("TRAIN",  BadgeStyle.Train, $"{entry.huntKind} train")
             : ("S RANK", BadgeStyle.SRank, $"{entry.huntKind} S Rank");
+
         Components.Badge(badgeText, style);
         ImGui.SameLine();
         ImGui.PushFont(UiBuilder.DefaultFont);
@@ -158,7 +159,10 @@ public class NotifyWindow : Window
         ImGui.PopStyleColor();
     }
 
-    private static void DrawActions(HuntTrainMessage entry)
+    private string navMsg = "";
+    private long   navMsgAtMs = -1;
+
+    private void DrawActions(HuntTrainMessage entry)
     {
         var canTeleport =
             entry.lifestreamEnabled &&
@@ -198,7 +202,10 @@ public class NotifyWindow : Window
         {
             ImGui.SameLine();
             if (Components.ActionButton(FontAwesomeIcon.LocationArrow, "Nav", ButtonRole.Accent))
-                ArrowWaypoint.Set(entry.startTerritoryTypeId, entry.mapLocationX, entry.mapLocationY, "manual", entry.huntWorld, force: true);
+            {
+                navMsg     = Utilities.SetNavigation(entry);
+                navMsgAtMs = Environment.TickCount64;
+            }
             if (ImGui.IsItemHovered())
                 ImGui.SetTooltip("Point the navigation arrow at these coordinates");
         }
@@ -238,5 +245,13 @@ public class NotifyWindow : Window
             }
             ImGui.EndPopup();
         }
+
+        if (navMsgAtMs >= 0 && Environment.TickCount64 - navMsgAtMs < 6000 && !string.IsNullOrEmpty(navMsg))
+        {
+            ImGui.PushStyleColor(ImGuiCol.Text, Theme.Accent);
+            ImGui.TextWrapped(navMsg);
+            ImGui.PopStyleColor();
+        }
     }
+
 }
