@@ -348,25 +348,30 @@ public sealed class HuntSocketConnection : IDisposable
 
         var formattedDetail =
             $"Kind: Hunt Train{Environment.NewLine}Hunt: {hm.Kind}{Environment.NewLine}" +
-            $"Start Zone: {startZone}{Environment.NewLine}Aetherite: {aetheryteName}{Environment.NewLine}" +
+            $"Start Zone: {startZone}{Environment.NewLine}Aetheryte: {aetheryteName}{Environment.NewLine}" +
             $"World: {hm.World}{Environment.NewLine}Posted: {postedLocal}{Environment.NewLine}{Environment.NewLine}" +
             content;
+
+        var huntWorldId = TryGetWorld(hm.World, out var huntWorld) ? huntWorld.RowId : 0u;
+        var huntRegionRowId = huntWorld.DataCenter.ValueNullable?.Region.RowId ?? 0u;
+        var currentRegionRowId = playerCtx.CurrentRegion?.RowId ?? 0u;
 
         var htMessage = new HuntTrainMessage(
             formattedDetail, hm.Type, hm.Kind, hm.World,
             playerCtx.CurrentWorldName, currentRegion, huntRegion,
             postedLocal, hm.Posted_Epoch, aetheryteName, aetheryteId, startZone, instance: 1,
-            coordsStr, openMapOnArrival, lifestreamHooked);
-
-        var huntWorldId = TryGetWorld(hm.World, out var huntWorld) ? huntWorld.RowId : 0u;
+            coordsStr, openMapOnArrival, lifestreamHooked,
+            currentRegionRowId: currentRegionRowId, huntRegionRowId: huntRegionRowId,
+            startTerritoryTypeId: startTerritoryTypeId,
+            mapLocationX: mapLocationCoords?.X ?? 0f, mapLocationY: mapLocationCoords?.Y ?? 0f);
         var typedAlert = new HuntAlertMessage(
             formattedDetail,
             hm.Type ?? "",
             hm.Kind ?? "",
             huntWorldId,
             playerCtx.CurrentWorld?.RowId ?? 0,
-            playerCtx.CurrentRegion?.RowId ?? 0,
-            huntWorld.DataCenter.ValueNullable?.Region.RowId ?? 0,
+            currentRegionRowId,
+            huntRegionRowId,
             DateTimeOffset.FromUnixTimeSeconds(hm.Posted_Epoch),
             hm.Posted_Epoch,
             aetheryteId,
@@ -378,8 +383,10 @@ public sealed class HuntSocketConnection : IDisposable
         var link = Service.MessageCacheManager.AddMessage(htMessage);
         Service.IPCManager.OnHuntTrainMessageReceived(htMessage);
         Service.IPCManager.OnHuntAlertMessageReceived(typedAlert);
+        Service.ToastWindow.Show(htMessage);
 
-        PrintChat(BuildLinkedLine(link, $"{hm.Kind} train starting on {hm.World}! (Click for info)", config.TextColor));
+        if (config.ChatAlertsEnabled)
+            PrintChat(BuildLinkedLine(link, $"{hm.Kind} train starting on {hm.World}! (Click for info)", config.TextColor));
 
         if (config.SoundEffect != 0)
             UIGlobals.PlayChatSoundEffect((uint)config.SoundEffect);
@@ -514,25 +521,31 @@ public sealed class HuntSocketConnection : IDisposable
             var detail =
                 $"Type: S Rank{Environment.NewLine}Hunt: {hm.Kind}{Environment.NewLine}" +
                 $"World: {hm.World}{Environment.NewLine}Start Zone: {locationName}{Environment.NewLine}" +
-                $"Instance: {instance}{Environment.NewLine}Aetherite: {startLocation}{Environment.NewLine}" +
+                $"Instance: {instance}{Environment.NewLine}Aetheryte: {startLocation}{Environment.NewLine}" +
                 $"Posted: {postedLocal}{Environment.NewLine}Creature: {creatureName}{Environment.NewLine}{Environment.NewLine}" +
-                $"Location: {locationName} ({coordsStr}){Environment.NewLine}Aetherite: {aetheryteName}";
+                $"Location: {locationName} ({coordsStr}){Environment.NewLine}Aetheryte: {aetheryteName}";
+
+            var huntWorldId = TryGetWorld(hm.World, out var huntWorld) ? huntWorld.RowId : 0u;
+            var huntRegionRowId = huntWorld.DataCenter.ValueNullable?.Region.RowId ?? 0u;
+            var currentRegionRowId = playerCtx.CurrentRegion?.RowId ?? 0u;
 
             var htMessage = new HuntTrainMessage(
                 detail, hm.Type, hm.Kind, hm.World,
                 playerCtx.CurrentWorldName ?? "", currentRegion, huntRegion,
                 postedLocal, hm.Posted_Epoch, startLocation, aetheryteId, locationName, instance,
-                coordsStr, openMapOnArrival, lifestreamHooked, creatureName);
+                coordsStr, openMapOnArrival, lifestreamHooked, creatureName,
+                currentRegionRowId: currentRegionRowId, huntRegionRowId: huntRegionRowId,
+                startTerritoryTypeId: startTerritoryTypeId,
+                mapLocationX: mapLocationCoords?.X ?? 0f, mapLocationY: mapLocationCoords?.Y ?? 0f);
 
-            var huntWorldId = TryGetWorld(hm.World, out var huntWorld) ? huntWorld.RowId : 0u;
             var typedAlert = new HuntAlertMessage(
                 detail,
                 hm.Type ?? "",
                 hm.Kind ?? "",
                 huntWorldId,
                 playerCtx.CurrentWorld?.RowId ?? 0,
-                playerCtx.CurrentRegion?.RowId ?? 0,
-                huntWorld.DataCenter.ValueNullable?.Region.RowId ?? 0,
+                currentRegionRowId,
+                huntRegionRowId,
                 DateTimeOffset.FromUnixTimeSeconds(hm.Posted_Epoch),
                 hm.Posted_Epoch,
                 aetheryteId,
@@ -544,18 +557,25 @@ public sealed class HuntSocketConnection : IDisposable
             var link = Service.MessageCacheManager.AddMessage(htMessage);
             Service.IPCManager.OnHuntTrainMessageReceived(htMessage);
             Service.IPCManager.OnHuntAlertMessageReceived(typedAlert);
+            Service.ToastWindow.Show(htMessage);
 
             var label = instance > 1
                 ? $"{hm.Kind} S Rank {creatureName} (i{instance}) spawned on {hm.World}! (Click for info)"
                 : $"{hm.Kind} S Rank {creatureName} spawned on {hm.World}! (Click for info)";
 
-            PrintChat(BuildLinkedLine(link, label, config.SRankTextColor));
+            if (config.ChatAlertsEnabled)
+                PrintChat(BuildLinkedLine(link, label, config.SRankTextColor));
 
             if (config.SoundEffect != 0)
                 UIGlobals.PlayChatSoundEffect((uint)config.SoundEffect);
         }
         else
         {
+            if (!config.SRankKillNotifications || !config.ChatAlertsEnabled)
+            {
+                PluginLog.Verbose("S Rank kill notification suppressed by setting.");
+                return;
+            }
             var label = $"{hm.Kind} S Rank {creatureName} on {hm.World} was killed at {HuntMessageFormatting.ConvertTime(deathTime)}.";
             var b = new SeStringBuilder();
             if (config.SRankKillTextColor != 0) b.AddUiForeground((ushort)config.SRankKillTextColor);

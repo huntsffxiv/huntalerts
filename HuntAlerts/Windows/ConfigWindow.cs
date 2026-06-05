@@ -60,6 +60,11 @@ public class ConfigWindow : Window, IDisposable
 
     public void Dispose() { }
 
+    public override void OnClose()
+    {
+        if (Service.ToastWindow != null) Service.ToastWindow.PositionMode = false;
+    }
+
     public void OpenDebug()
     {
         _debugUnlocked = true;
@@ -103,12 +108,15 @@ public class ConfigWindow : Window, IDisposable
             ImGui.TextUnformatted(label);
         }
 
-        var btnHeight = ImGui.GetFrameHeight() + 4f;
-        var avail = ImGui.GetContentRegionAvail();
-        if (avail.Y > btnHeight + 8f)
-            ImGui.Dummy(new Vector2(0, avail.Y - btnHeight - 4f));
+        var spacing  = ImGui.GetStyle().ItemSpacing.Y;
+        var reserved = ImGui.GetFrameHeight() * 2 + spacing * 3 + 8f;
+        var avail    = ImGui.GetContentRegionAvail();
+        if (avail.Y > reserved)
+            ImGui.Dummy(new Vector2(0, avail.Y - reserved));
 
         ImGui.Separator();
+        if (Components.ActionButton(FontAwesomeIcon.Gift, "What's New", ButtonRole.Info))
+            Service.WhatsNewWindow.IsOpen = true;
         if (Components.ActionButton(FontAwesomeIcon.Comments, "Discord", ButtonRole.Accent))
             Dalamud.Utility.Util.OpenLink("https://discord.gg/punishxiv");
         if (ImGui.IsItemHovered())
@@ -144,6 +152,14 @@ public class ConfigWindow : Window, IDisposable
         if (ImGui.Checkbox("Flag Map automatically on arrival", ref flag))
         { HuntAlerts.C.OpenMapOnArrival = flag; HuntAlerts.C.Save(); }
 
+        ImGui.Spacing();
+        Components.SectionHeader("Chat");
+
+        var chatAlerts = HuntAlerts.C.ChatAlertsEnabled;
+        if (ImGui.Checkbox("Show alerts in chat", ref chatAlerts))
+        { HuntAlerts.C.ChatAlertsEnabled = chatAlerts; HuntAlerts.C.Save(); }
+
+        ImGui.BeginDisabled(!chatAlerts);
         var useDalamud = HuntAlerts.C.UseDalamudChat;
         if (ImGui.Checkbox("Use Dalamud Default Chat", ref useDalamud))
         { HuntAlerts.C.UseDalamudChat = useDalamud; HuntAlerts.C.Save(); }
@@ -155,11 +171,6 @@ public class ConfigWindow : Window, IDisposable
         if (ImGui.Combo("Chat Channel", ref chatIdx, chatNames, chatNames.Length))
         { HuntAlerts.C.OutputChat = chatTypes[chatIdx]; HuntAlerts.C.Save(); }
         ImGui.EndDisabled();
-
-        var relayNames = RelayChannels.All.Select(c => $"{c.Display}  {c.Command}").ToArray();
-        var relayIdx   = RelayChannels.IndexOfCommand(HuntAlerts.C.DefaultRelayChannel);
-        if (ImGui.Combo("Default Relay Channel", ref relayIdx, relayNames, relayNames.Length))
-        { HuntAlerts.C.DefaultRelayChannel = RelayChannels.All[relayIdx].Command; HuntAlerts.C.Save(); }
 
         var colorOpts = new (string Name, int Value)[]
         {
@@ -181,6 +192,15 @@ public class ConfigWindow : Window, IDisposable
         if (skIdx < 0) skIdx = 0;
         if (ImGui.Combo("S Rank Kill Text Color", ref skIdx, colorNames, colorNames.Length))
         { HuntAlerts.C.SRankKillTextColor = colorOpts[skIdx].Value; HuntAlerts.C.Save(); }
+        ImGui.EndDisabled();
+
+        ImGui.Spacing();
+        Components.SectionHeader("Notifications");
+
+        var relayNames = RelayChannels.All.Select(c => $"{c.Display}  {c.Command}").ToArray();
+        var relayIdx   = RelayChannels.IndexOfCommand(HuntAlerts.C.DefaultRelayChannel);
+        if (ImGui.Combo("Default Relay Channel", ref relayIdx, relayNames, relayNames.Length))
+        { HuntAlerts.C.DefaultRelayChannel = RelayChannels.All[relayIdx].Command; HuntAlerts.C.Save(); }
 
         var soundNames = Enumerable.Range(0, 17)
             .Select(i => i == 0 ? "None" : $"Sound {i}").ToArray();
@@ -210,6 +230,99 @@ public class ConfigWindow : Window, IDisposable
             if (Components.ActionButton(FontAwesomeIcon.Moon, $"Snooze {HuntAlerts.C.SnoozeDefaultMinutes}m", ButtonRole.Warn))
                 Service.Snooze.SnoozeDefault();
         }
+
+        ImGui.Spacing();
+        Components.SectionHeader("Toast Banner");
+
+        var toast = HuntAlerts.C.ToastEnabled;
+        if (ImGui.Checkbox("Show a toast banner for new alerts", ref toast))
+        { HuntAlerts.C.ToastEnabled = toast; HuntAlerts.C.Save(); }
+
+        ImGui.BeginDisabled(!toast);
+        var toastOpts  = new (string Name, int Value)[] { ("3s", 3), ("5s", 5), ("8s", 8), ("12s", 12) };
+        var toastNames = toastOpts.Select(o => o.Name).ToArray();
+        var toastIdx   = Array.FindIndex(toastOpts, o => o.Value == HuntAlerts.C.ToastDurationSeconds);
+        if (toastIdx < 0) toastIdx = 1;
+        if (ImGui.Combo("Toast Duration", ref toastIdx, toastNames, toastNames.Length))
+        { HuntAlerts.C.ToastDurationSeconds = toastOpts[toastIdx].Value; HuntAlerts.C.Save(); }
+
+        var animOpts  = new (string Name, ToastAnimation Value)[]
+        {
+            ("None", ToastAnimation.None), ("Fade", ToastAnimation.Fade),
+            ("Slide", ToastAnimation.Slide), ("Slide + Fade", ToastAnimation.SlideFade),
+        };
+        var animNames = animOpts.Select(o => o.Name).ToArray();
+        var animIdx   = Array.FindIndex(animOpts, o => o.Value == HuntAlerts.C.ToastAnimation);
+        if (animIdx < 0) animIdx = 3;
+        if (ImGui.Combo("Toast Animation", ref animIdx, animNames, animNames.Length))
+        { HuntAlerts.C.ToastAnimation = animOpts[animIdx].Value; HuntAlerts.C.Save(); }
+        ImGui.SameLine();
+        if (ImGui.SmallButton("Test##toastanim"))
+        {
+            var ordered = Service.MessageCacheManager.GetOrderedMessages();
+            if (ordered.Count > 0) Service.ToastWindow.Show(ordered[^1]);
+        }
+        ImGui.SameLine();
+        var positioning = Service.ToastWindow.PositionMode;
+        if (Components.ActionButton(positioning ? FontAwesomeIcon.Check : FontAwesomeIcon.ArrowsAlt,
+                positioning ? "Done" : "Position", positioning ? ButtonRole.Success : ButtonRole.Accent))
+            Service.ToastWindow.PositionMode = !positioning;
+        ImGui.SameLine();
+        if (Components.ActionButton(FontAwesomeIcon.Undo, "Reset", ButtonRole.Warn))
+            Service.ToastWindow.ResetPosition();
+        if (positioning)
+        {
+            ImGui.PushStyleColor(ImGuiCol.Text, Theme.Subtle);
+            ImGui.TextWrapped("The banner is shown on screen - drag it where you want it, then click Done.");
+            ImGui.PopStyleColor();
+        }
+        ImGui.EndDisabled();
+
+        ImGui.Spacing();
+        Components.SectionHeader("Navigation Arrow");
+
+        var arrowOn = HuntAlerts.C.WorldArrowEnabled;
+        if (ImGui.Checkbox("Show navigation arrow", ref arrowOn))
+        { HuntAlerts.C.WorldArrowEnabled = arrowOn; HuntAlerts.C.Save(); }
+
+        ImGui.PushStyleColor(ImGuiCol.Text, Theme.Subtle);
+        ImGui.TextWrapped("A draggable on-screen arrow points to the most recent hunt you opened while you are in its zone.");
+        ImGui.PopStyleColor();
+
+        ImGui.BeginDisabled(!arrowOn);
+
+        var pickup = HuntAlerts.C.ArrowChatPickup;
+        if (ImGui.Checkbox("Auto-pick up coordinates from chat flags", ref pickup))
+        { HuntAlerts.C.ArrowChatPickup = pickup; HuntAlerts.C.Save(); }
+
+        ImGui.PushStyleColor(ImGuiCol.Text, Theme.Subtle);
+        ImGui.TextWrapped("When someone posts a map flag (<flag> link) in the channels below, the arrow retargets to those coordinates.");
+        ImGui.PopStyleColor();
+
+        ImGui.BeginDisabled(!pickup);
+        ImGui.Indent();
+        var sh = HuntAlerts.C.ArrowChatPickupShout;
+        if (ImGui.Checkbox("Shout", ref sh)) { HuntAlerts.C.ArrowChatPickupShout = sh; HuntAlerts.C.Save(); }
+        ImGui.SameLine();
+        var ye = HuntAlerts.C.ArrowChatPickupYell;
+        if (ImGui.Checkbox("Yell", ref ye)) { HuntAlerts.C.ArrowChatPickupYell = ye; HuntAlerts.C.Save(); }
+        ImGui.SameLine();
+        var pa = HuntAlerts.C.ArrowChatPickupParty;
+        if (ImGui.Checkbox("Party", ref pa)) { HuntAlerts.C.ArrowChatPickupParty = pa; HuntAlerts.C.Save(); }
+        ImGui.Unindent();
+        ImGui.EndDisabled();
+
+        if (ArrowWaypoint.IsActive)
+        {
+            ImGui.Spacing();
+            ImGui.PushStyleColor(ImGuiCol.Text, Theme.Accent);
+            ImGui.TextUnformatted($"Active waypoint (from {ArrowWaypoint.Source}).");
+            ImGui.PopStyleColor();
+            ImGui.SameLine();
+            if (ImGui.SmallButton("Clear##arrowwp")) ArrowWaypoint.Clear();
+        }
+
+        ImGui.EndDisabled();
     }
 
     private void DrawIntegrationsSection()
@@ -237,6 +350,12 @@ public class ConfigWindow : Window, IDisposable
         var srankOn = HuntAlerts.C.SRankEnabled;
         if (ImGui.Checkbox("S Ranks Enabled", ref srankOn))
         { HuntAlerts.C.SRankEnabled = srankOn; HuntAlerts.C.Save(); }
+
+        ImGui.BeginDisabled(!srankOn);
+        var killOn = HuntAlerts.C.SRankKillNotifications;
+        if (ImGui.Checkbox("Show kill notifications", ref killOn))
+        { HuntAlerts.C.SRankKillNotifications = killOn; HuntAlerts.C.Save(); }
+        ImGui.EndDisabled();
 
         ImGui.Spacing();
 

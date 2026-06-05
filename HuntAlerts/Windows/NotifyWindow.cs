@@ -12,17 +12,27 @@ namespace HuntAlerts.Windows;
 
 public class NotifyWindow : Window
 {
-    public HuntTrainMessage? CurrentMessage;
+    private HuntTrainMessage? currentMessage;
+    public HuntTrainMessage? CurrentMessage
+    {
+        get => currentMessage;
+        set
+        {
+            currentMessage = value;
+            if (value != null)
+                ArrowWaypoint.Set(value.startTerritoryTypeId, value.mapLocationX, value.mapLocationY, "notification", value.huntWorld);
+        }
+    }
     private readonly TitleBarButton snoozeButton;
 
     public NotifyWindow() : base("HuntAlerts Notification", ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse)
     {
-        Size          = new Vector2(440, 360);
+        Size          = new Vector2(540, 380);
         SizeCondition = ImGuiCond.FirstUseEver;
         SizeConstraints = new WindowSizeConstraints
         {
-            MinimumSize = new Vector2(360, 240),
-            MaximumSize = new Vector2(900, 1400),
+            MinimumSize = new Vector2(520, 240),
+            MaximumSize = new Vector2(1000, 1400),
         };
         TitleBarButtons.Add(new TitleBarButton
         {
@@ -108,6 +118,7 @@ public class NotifyWindow : Window
         var (badgeText, style, title) = isTrain
             ? ("TRAIN",  BadgeStyle.Train, $"{entry.huntKind} train")
             : ("S RANK", BadgeStyle.SRank, $"{entry.huntKind} S Rank");
+
         Components.Badge(badgeText, style);
         ImGui.SameLine();
         ImGui.PushFont(UiBuilder.DefaultFont);
@@ -148,13 +159,16 @@ public class NotifyWindow : Window
         ImGui.PopStyleColor();
     }
 
-    private static void DrawActions(HuntTrainMessage entry)
+    private string navMsg = "";
+    private long   navMsgAtMs = -1;
+
+    private void DrawActions(HuntTrainMessage entry)
     {
         var canTeleport =
             entry.lifestreamEnabled &&
             !string.IsNullOrEmpty(entry.huntWorld) &&
-            !string.IsNullOrEmpty(entry.currentregionName) &&
-            entry.currentregionName == entry.huntregionName;
+            entry.currentRegionRowId != 0 &&
+            entry.currentRegionRowId == entry.huntRegionRowId;
 
         var first = true;
 
@@ -183,6 +197,18 @@ public class NotifyWindow : Window
         if (!first) ImGui.SameLine();
         if (Components.ActionButton(FontAwesomeIcon.Users, "Party Finder", ButtonRole.Info))
             Utilities.OpenPartyFinder();
+
+        if (entry.startTerritoryTypeId != 0 && !(entry.mapLocationX == 0f && entry.mapLocationY == 0f))
+        {
+            ImGui.SameLine();
+            if (Components.ActionButton(FontAwesomeIcon.LocationArrow, "Nav", ButtonRole.Accent))
+            {
+                navMsg     = Utilities.SetNavigation(entry);
+                navMsgAtMs = Environment.TickCount64;
+            }
+            if (ImGui.IsItemHovered())
+                ImGui.SetTooltip("Point the navigation arrow at these coordinates");
+        }
 
         ImGui.SameLine();
         var defaultChannel = string.IsNullOrEmpty(HuntAlerts.C.DefaultRelayChannel)
@@ -219,5 +245,13 @@ public class NotifyWindow : Window
             }
             ImGui.EndPopup();
         }
+
+        if (navMsgAtMs >= 0 && Environment.TickCount64 - navMsgAtMs < 6000 && !string.IsNullOrEmpty(navMsg))
+        {
+            ImGui.PushStyleColor(ImGuiCol.Text, Theme.Accent);
+            ImGui.TextWrapped(navMsg);
+            ImGui.PopStyleColor();
+        }
     }
+
 }

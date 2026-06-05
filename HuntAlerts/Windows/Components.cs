@@ -16,7 +16,7 @@ internal static class Components
         ImGui.Spacing();
     }
 
-    public static void Badge(string text, BadgeStyle style)
+    public static void Badge(string text, BadgeStyle style, float alpha = 1f)
     {
         var (bg, border, fg) = style switch
         {
@@ -26,6 +26,12 @@ internal static class Components
             BadgeStyle.World => (Theme.WorldBg, Theme.WorldBorder, Theme.WorldText),
             _                => (Theme.KindBg,  Theme.KindBorder,  Theme.KindText),
         };
+        if (alpha < 1f)
+        {
+            bg     = Theme.WithAlpha(bg, alpha);
+            border = Theme.WithAlpha(border, alpha);
+            fg     = Theme.WithAlpha(fg, alpha);
+        }
         var pad   = Theme.BadgePadding;
         var draw  = ImGui.GetWindowDrawList();
         var size  = ImGui.CalcTextSize(text);

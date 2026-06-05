@@ -57,6 +57,24 @@ namespace HuntAlerts.Helpers
             }
         }
 
+        public static string SetNavigation(HuntTrainMessage entry)
+        {
+            ArrowWaypoint.Set(entry.startTerritoryTypeId, entry.mapLocationX, entry.mapLocationY, "manual", entry.huntWorld, force: true);
+
+            var inZone  = Svc.ClientState.TerritoryType == entry.startTerritoryTypeId;
+            var world   = Svc.Objects.LocalPlayer?.CurrentWorld.ValueNullable?.Name.ExtractText() ?? "";
+            var worldOk = string.IsNullOrEmpty(entry.huntWorld) ||
+                          world.Equals(entry.huntWorld, StringComparison.OrdinalIgnoreCase);
+
+            if (inZone && worldOk)
+                return "Navigation arrow set.";
+
+            var where = !string.IsNullOrEmpty(entry.huntWorld) && !string.IsNullOrEmpty(entry.startZone)
+                ? $"{entry.huntWorld}, {entry.startZone}"
+                : !string.IsNullOrEmpty(entry.startZone) ? entry.startZone : entry.huntWorld;
+            return $"Navigation set. The arrow appears once you are on {where}.";
+        }
+
         public static void FlagOnMap(string locationCoords, string startZone)
         {
             try
@@ -170,8 +188,8 @@ namespace HuntAlerts.Helpers
                                     PluginLog.Information($"[Teleport] player targetable. Will teleport to aetheryte '{startLocation}' (id {startLocationAetheryteId}).");
                                     if (hasToServerTransfer)
                                     {
-                                        PluginLog.Information("[Teleport] post-transfer settle: sleeping 2s.");
-                                        await Task.Delay(2000, token);
+                                        PluginLog.Information("[Teleport] post-transfer settle: sleeping 1s.");
+                                        await Task.Delay(1000, token);
                                     }
 
                                     // Lifestream may have become busy between the world-change settle and now (e.g.,
@@ -229,7 +247,7 @@ namespace HuntAlerts.Helpers
                         PluginLog.Verbose($"Player is still transferring");
                     }
 
-                    await Task.Delay(5000, token);
+                    await Task.Delay(500, token);
                 }
             }
             catch (TaskCanceledException)

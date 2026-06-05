@@ -53,6 +53,13 @@ internal static class Theme
 
     public static Vector2 BadgePadding => new(6, 1);
 
+    public static uint WithAlpha(uint abgr, float mult)
+    {
+        var a = (abgr >> 24) & 0xFF;
+        a = (uint)System.Math.Clamp(a * mult, 0, 255);
+        return (abgr & 0x00FFFFFF) | (a << 24);
+    }
+
     public static readonly uint CardBg        = 0x18FFFFFF;
     public static readonly uint CardBgHover   = 0x30FFFFFF;
     public static readonly uint CardBorder    = 0x40FFFFFF;
