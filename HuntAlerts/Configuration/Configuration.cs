@@ -60,6 +60,11 @@ namespace HuntAlerts
 
         public int SnoozeDefaultMinutes { get; set; } = 30;
         public string DefaultRelayChannel { get; set; } = "/p";
+        public bool WorldArrowEnabled { get; set; } = true;
+        public bool ArrowChatPickup { get; set; } = false;
+        public bool ArrowChatPickupShout { get; set; } = true;
+        public bool ArrowChatPickupYell { get; set; } = true;
+        public bool ArrowChatPickupParty { get; set; } = true;
 
         [NonSerialized]
         private IDalamudPluginInterface? PluginInterface;

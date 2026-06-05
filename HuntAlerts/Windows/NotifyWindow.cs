@@ -12,7 +12,17 @@ namespace HuntAlerts.Windows;
 
 public class NotifyWindow : Window
 {
-    public HuntTrainMessage? CurrentMessage;
+    private HuntTrainMessage? currentMessage;
+    public HuntTrainMessage? CurrentMessage
+    {
+        get => currentMessage;
+        set
+        {
+            currentMessage = value;
+            if (value != null)
+                ArrowWaypoint.Set(value.startTerritoryTypeId, value.mapLocationX, value.mapLocationY, "notification", value.huntWorld);
+        }
+    }
     private readonly TitleBarButton snoozeButton;
 
     public NotifyWindow() : base("HuntAlerts Notification", ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse)
@@ -183,6 +193,15 @@ public class NotifyWindow : Window
         if (!first) ImGui.SameLine();
         if (Components.ActionButton(FontAwesomeIcon.Users, "Party Finder", ButtonRole.Info))
             Utilities.OpenPartyFinder();
+
+        if (entry.startTerritoryTypeId != 0 && !(entry.mapLocationX == 0f && entry.mapLocationY == 0f))
+        {
+            ImGui.SameLine();
+            if (Components.ActionButton(FontAwesomeIcon.LocationArrow, "Nav", ButtonRole.Accent))
+                ArrowWaypoint.Set(entry.startTerritoryTypeId, entry.mapLocationX, entry.mapLocationY, "manual", entry.huntWorld, force: true);
+            if (ImGui.IsItemHovered())
+                ImGui.SetTooltip("Point the navigation arrow at these coordinates");
+        }
 
         ImGui.SameLine();
         var defaultChannel = string.IsNullOrEmpty(HuntAlerts.C.DefaultRelayChannel)

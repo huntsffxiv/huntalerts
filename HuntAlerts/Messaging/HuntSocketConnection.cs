@@ -361,7 +361,9 @@ public sealed class HuntSocketConnection : IDisposable
             playerCtx.CurrentWorldName, currentRegion, huntRegion,
             postedLocal, hm.Posted_Epoch, aetheryteName, aetheryteId, startZone, instance: 1,
             coordsStr, openMapOnArrival, lifestreamHooked,
-            currentRegionRowId: currentRegionRowId, huntRegionRowId: huntRegionRowId);
+            currentRegionRowId: currentRegionRowId, huntRegionRowId: huntRegionRowId,
+            startTerritoryTypeId: startTerritoryTypeId,
+            mapLocationX: mapLocationCoords?.X ?? 0f, mapLocationY: mapLocationCoords?.Y ?? 0f);
         var typedAlert = new HuntAlertMessage(
             formattedDetail,
             hm.Type ?? "",
@@ -530,7 +532,9 @@ public sealed class HuntSocketConnection : IDisposable
                 playerCtx.CurrentWorldName ?? "", currentRegion, huntRegion,
                 postedLocal, hm.Posted_Epoch, startLocation, aetheryteId, locationName, instance,
                 coordsStr, openMapOnArrival, lifestreamHooked, creatureName,
-                currentRegionRowId: currentRegionRowId, huntRegionRowId: huntRegionRowId);
+                currentRegionRowId: currentRegionRowId, huntRegionRowId: huntRegionRowId,
+                startTerritoryTypeId: startTerritoryTypeId,
+                mapLocationX: mapLocationCoords?.X ?? 0f, mapLocationY: mapLocationCoords?.Y ?? 0f);
 
             var typedAlert = new HuntAlertMessage(
                 detail,

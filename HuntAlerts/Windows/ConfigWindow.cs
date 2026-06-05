@@ -210,6 +210,52 @@ public class ConfigWindow : Window, IDisposable
             if (Components.ActionButton(FontAwesomeIcon.Moon, $"Snooze {HuntAlerts.C.SnoozeDefaultMinutes}m", ButtonRole.Warn))
                 Service.Snooze.SnoozeDefault();
         }
+
+        ImGui.Spacing();
+        Components.SectionHeader("Navigation Arrow");
+
+        var arrowOn = HuntAlerts.C.WorldArrowEnabled;
+        if (ImGui.Checkbox("Show navigation arrow", ref arrowOn))
+        { HuntAlerts.C.WorldArrowEnabled = arrowOn; HuntAlerts.C.Save(); }
+
+        ImGui.PushStyleColor(ImGuiCol.Text, Theme.Subtle);
+        ImGui.TextWrapped("A draggable on-screen arrow points to the most recent hunt you opened while you are in its zone.");
+        ImGui.PopStyleColor();
+
+        ImGui.BeginDisabled(!arrowOn);
+
+        var pickup = HuntAlerts.C.ArrowChatPickup;
+        if (ImGui.Checkbox("Auto-pick up coordinates from chat flags", ref pickup))
+        { HuntAlerts.C.ArrowChatPickup = pickup; HuntAlerts.C.Save(); }
+
+        ImGui.PushStyleColor(ImGuiCol.Text, Theme.Subtle);
+        ImGui.TextWrapped("When someone posts a map flag (<flag> link) in the channels below, the arrow retargets to those coordinates.");
+        ImGui.PopStyleColor();
+
+        ImGui.BeginDisabled(!pickup);
+        ImGui.Indent();
+        var sh = HuntAlerts.C.ArrowChatPickupShout;
+        if (ImGui.Checkbox("Shout", ref sh)) { HuntAlerts.C.ArrowChatPickupShout = sh; HuntAlerts.C.Save(); }
+        ImGui.SameLine();
+        var ye = HuntAlerts.C.ArrowChatPickupYell;
+        if (ImGui.Checkbox("Yell", ref ye)) { HuntAlerts.C.ArrowChatPickupYell = ye; HuntAlerts.C.Save(); }
+        ImGui.SameLine();
+        var pa = HuntAlerts.C.ArrowChatPickupParty;
+        if (ImGui.Checkbox("Party", ref pa)) { HuntAlerts.C.ArrowChatPickupParty = pa; HuntAlerts.C.Save(); }
+        ImGui.Unindent();
+        ImGui.EndDisabled();
+
+        if (ArrowWaypoint.IsActive)
+        {
+            ImGui.Spacing();
+            ImGui.PushStyleColor(ImGuiCol.Text, Theme.Accent);
+            ImGui.TextUnformatted($"Active waypoint (from {ArrowWaypoint.Source}).");
+            ImGui.PopStyleColor();
+            ImGui.SameLine();
+            if (ImGui.SmallButton("Clear##arrowwp")) ArrowWaypoint.Clear();
+        }
+
+        ImGui.EndDisabled();
     }
 
     private void DrawIntegrationsSection()

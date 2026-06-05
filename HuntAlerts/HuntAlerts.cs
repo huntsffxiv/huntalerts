@@ -4,6 +4,7 @@ using Dalamud.Plugin;
 using ECommons;
 using ECommons.DalamudServices;
 using ECommons.Singletons;
+using HuntAlerts.Messaging;
 using HuntAlerts.Services;
 using HuntAlerts.Windows;
 
@@ -30,6 +31,8 @@ namespace HuntAlerts
             WindowSystem.AddWindow(Service.NotifyWindow);
             Service.HuntListWindow = new();
             WindowSystem.AddWindow(Service.HuntListWindow);
+            Service.WorldArrowWindow = new();
+            WindowSystem.AddWindow(Service.WorldArrowWindow);
 
             Svc.Commands.AddHandler(CommandName, new CommandInfo(OnCommand)
             {
@@ -45,11 +48,13 @@ namespace HuntAlerts
             Svc.PluginInterface.UiBuilder.OpenConfigUi += Service.OpenConfig;
 
             SingletonServiceManager.Initialize(typeof(Service));
+            ChatWaypointListener.Enable();
             C.Save();
         }
 
         public void Dispose()
         {
+            ChatWaypointListener.Disable();
             WindowSystem.RemoveAllWindows();
             Service.ConfigWindow.Dispose();
 
@@ -59,6 +64,7 @@ namespace HuntAlerts
             Service.ConfigWindow = null!;
             Service.NotifyWindow = null!;
             Service.HuntListWindow = null!;
+            Service.WorldArrowWindow = null!;
         }
 
         private void OnCommand(string command, string args)
