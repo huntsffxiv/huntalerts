@@ -2,12 +2,18 @@ namespace HuntAlerts
 {
     public static class Changelog
     {
-        public const int Revision = 1;
+        public const int Revision = 2;
 
         public sealed record Entry(string Version, string[] Features, string[] BugFixes);
 
         public static readonly Entry[] Entries =
         {
+            new("1.4.0.11",
+                Features: new string[0],
+                BugFixes: new[]
+                {
+                    "Fixed nav arrow flipping when looking over the horizon.",
+                }),
             new("1.4.0.10",
                 Features: new[]
                 {

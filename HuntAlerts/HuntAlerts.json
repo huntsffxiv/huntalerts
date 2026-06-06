@@ -1,8 +1,8 @@
 {
-    "Author": "FFXIV Hunts",
+    "Author": "Asuna",
     "Name": "HuntAlerts",
-    "Punchline": "Notifies you when hunt trains are starting soon",
-    "Description": "Notifies you when hunt trains are starting soon",
+    "Punchline": "Notifies you when hunt trains are starting soon\nSupports NA/EU/OCE",
+    "Description": "Notifies you when hunt trains are starting soon\nSupports NA/EU/OCE",
     "ApplicableVersion": "any",
     "DalamudApiLevel": 15,
     "IconUrl": "https://projects.gamba.pro/Asuna/releases/-/raw/main/HuntAlerts/FFXIV_Hunts_logo.png",
