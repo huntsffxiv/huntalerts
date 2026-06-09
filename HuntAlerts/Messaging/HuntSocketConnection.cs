@@ -275,12 +275,12 @@ public sealed class HuntSocketConnection : IDisposable
         var content = HuntMessageFormatting.ReplaceTimestampsWithLocalTime(hm.Content ?? "");
         content = HuntMessageFormatting.RemoveDiscordEmojis(content);
 
-        var aetheryteName = hm.AetheryteName;
+        var aetheryteName = HuntMessageParsing.StripLocalized(hm.AetheryteName);
         uint aetheryteId = 0;
         uint startTerritoryTypeId = 0;
         string coordsStr = "";
         Vector2? mapLocationCoords = null;
-        var startZone = hm.LocationName ?? "";
+        var startZone = HuntMessageParsing.StripLocalized(hm.LocationName ?? "");
 
         try
         {
@@ -454,10 +454,10 @@ public sealed class HuntSocketConnection : IDisposable
                 break;
         }
 
-        var creatureName = hm.CreatureName ?? "";
-        var locationName = hm.LocationName ?? "";
+        var creatureName = HuntMessageParsing.StripLocalized(hm.CreatureName ?? "");
+        var locationName = HuntMessageParsing.StripLocalized(hm.LocationName ?? "");
         var coordsStr = hm.LocationCoords ?? "";
-        var aetheryteName = hm.AetheryteName ?? "";
+        var aetheryteName = HuntMessageParsing.StripLocalized(hm.AetheryteName ?? "");
         var instance = hm.Instance < 1 ? 1 : hm.Instance;
         var deathTime = hm.DeathTime;
         var postedLocal = HuntMessageFormatting.ConvertTime(hm.Posted_Epoch);

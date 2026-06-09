@@ -31,4 +31,13 @@ public static partial class HuntMessageParsing
 
     [GeneratedRegex(@"\b(-?\d+(\.\d+)?)(\s*,\s*|\s+|\s*-\s*)(-?\d+(\.\d+)?)\b")]
     private static partial Regex CoordsRegex();
+
+    public static string StripLocalized(string s)
+    {
+        if (string.IsNullOrEmpty(s)) return s ?? "";
+        var idx = s.IndexOf('［');
+        if (idx < 0) idx = s.IndexOf('[');
+        if (idx >= 0) s = s.Substring(0, idx);
+        return s.Trim();
+    }
 }
