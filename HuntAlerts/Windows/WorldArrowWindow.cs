@@ -2,6 +2,7 @@ using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Windowing;
 using ECommons.DalamudServices;
 using ECommons.Logging;
+using FFXIVClientStructs.FFXIV.Client.Game.Control;
 using HuntAlerts.Helpers;
 using HuntAlerts.Services;
 using Lumina.Excel.Sheets;
@@ -33,6 +34,12 @@ public class WorldArrowWindow : Window
     }
 
     private static long _lastAngleLog;
+    private static float _cachedHand = 1f;
+    private static float _yawSign = 1f;
+    private static float _yawOffset;
+    private static bool  _yawCalibrated;
+    private static float _prevDirH = float.NaN;
+    private static float _prevRefAz = float.NaN;
 
     public override bool DrawConditions()
     {
@@ -78,17 +85,46 @@ public class WorldArrowWindow : Window
             var bx = sx - s0;
             var bz = sz - s0;
 
-            float rotation;
-            var det = bx.X * bz.Y - bz.X * bx.Y;
-            if (MathF.Abs(det) > 1e-3f)
+            var det     = bx.X * bz.Y - bz.X * bx.Y;
+            var dirH    = GetCameraYaw();
+            float? refAz = null;
+            if (det > 1e-2f)
             {
                 var upX = bz.X / det;  var upZ = -bx.X / det;
                 var rtX = bz.Y / det;  var rtZ = -bx.Y / det;
-                var camAz   = MathF.Atan2(upX, upZ);
-                var camRtAz = MathF.Atan2(rtX, rtZ);
-                var hand    = NormalizeAngle(camRtAz - camAz) > 0f ? 1f : -1f;
-                var targetAz = MathF.Atan2(dx, dz);
-                rotation = hand * NormalizeAngle(targetAz - camAz);
+                var camAzBasis = MathF.Atan2(upX, upZ);
+                var camRtAz    = MathF.Atan2(rtX, rtZ);
+                _cachedHand    = NormalizeAngle(camRtAz - camAzBasis) > 0f ? 1f : -1f;
+                refAz = camAzBasis;
+            }
+
+            if (dirH is { } h && refAz is { } r)
+            {
+                if (!float.IsNaN(_prevDirH))
+                {
+                    var dH = NormalizeAngle(h - _prevDirH);
+                    var dR = NormalizeAngle(r - _prevRefAz);
+                    if (MathF.Abs(dH) > 0.02f && MathF.Abs(dR) > 0.005f)
+                    {
+                        _yawSign       = dH * dR > 0f ? 1f : -1f;
+                        _yawOffset     = NormalizeAngle(r - _yawSign * h);
+                        _yawCalibrated = true;
+                    }
+                }
+                _prevDirH  = h;
+                _prevRefAz = r;
+            }
+
+            float rotation;
+            var targetAz = MathF.Atan2(dx, dz);
+            if (dirH is { } hh && _yawCalibrated)
+            {
+                var camAz = NormalizeAngle(_yawSign * hh + _yawOffset);
+                rotation = _cachedHand * NormalizeAngle(targetAz - camAz);
+            }
+            else if (refAz is { } r2)
+            {
+                rotation = _cachedHand * NormalizeAngle(targetAz - r2);
             }
             else
             {
@@ -186,5 +222,21 @@ public class WorldArrowWindow : Window
         while (a >   MathF.PI) a -= MathF.PI * 2f;
         while (a <= -MathF.PI) a += MathF.PI * 2f;
         return a;
+    }
+
+    private static unsafe float? GetCameraYaw()
+    {
+        try
+        {
+            var cm = CameraManager.Instance();
+            if (cm == null) return null;
+            var cam = cm->GetActiveCamera();
+            if (cam == null) return null;
+            return cam->DirH;
+        }
+        catch
+        {
+            return null;
+        }
     }
 }

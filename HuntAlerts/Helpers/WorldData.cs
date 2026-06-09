@@ -90,8 +90,6 @@ public static class WorldData
 
                     var region = (RegionId)dcRef.Region.RowId;
 
-                    if (region == RegionId.JP) continue;
-
                     if (region == RegionId.Unknown) continue;
 
 

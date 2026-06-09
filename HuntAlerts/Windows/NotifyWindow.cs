@@ -2,6 +2,7 @@ using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Components;
 using Dalamud.Interface.Windowing;
+using ECommons.DalamudServices;
 using ECommons.Logging;
 using HuntAlerts.Helpers;
 using HuntAlerts.Services;
@@ -164,11 +165,12 @@ public class NotifyWindow : Window
 
     private void DrawActions(HuntTrainMessage entry)
     {
+        var currentRegionRowId = Svc.Objects.LocalPlayer?.CurrentWorld.ValueNullable?.DataCenter.ValueNullable?.Region.RowId ?? 0u;
         var canTeleport =
             entry.lifestreamEnabled &&
             !string.IsNullOrEmpty(entry.huntWorld) &&
-            entry.currentRegionRowId != 0 &&
-            entry.currentRegionRowId == entry.huntRegionRowId;
+            currentRegionRowId != 0 &&
+            currentRegionRowId == entry.huntRegionRowId;
 
         var first = true;
 
